@@ -62,9 +62,11 @@ button, a, input, select, textarea {
 }
 
 /* Fokus keyboard yang jelas, hanya muncul saat navigasi keyboard */
-:focus-visible {
-  outline: 2px solid var(--color-navy-500);
-  outline-offset: 2px;
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-navy-500);
+    outline-offset: 2px;
+  }
 }
 
 /* Angka rata di kolom tabel dan nilai */

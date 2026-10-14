@@ -20,7 +20,6 @@ export default function HalamanLogin() {
             Pantau kelengkapan dokumen dan nilai ujian setiap OPD dalam satu tempat.
           </p>
         </div>
-        <p className="text-xs text-white/50">Versi demo, data bersifat contoh.</p>
       </section>
 
       <section className="flex items-center justify-center bg-surface-muted p-6">

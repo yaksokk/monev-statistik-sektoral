@@ -1,7 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
-
-const NAMA_COOKIE = "sesi_monev";
+import { NAMA_COOKIE } from "@/lib/akses";
 const DURASI_DETIK = 60 * 60 * 8;
 
 export async function buatSesi(penggunaId: string) {

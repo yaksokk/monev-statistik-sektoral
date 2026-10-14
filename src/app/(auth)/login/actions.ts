@@ -2,16 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { AKUN_DUMMY } from "@/data/akun-dummy";
-import { buatSesi } from "@/lib/sesi";
-import type { Peran } from "@/lib/types";
+import { BERANDA } from "@/lib/akses";
+import { buatSesi, hapusSesi } from "@/lib/sesi";
 
 export type StateLogin = { pesan: string | null; email: string };
-
-const TUJUAN: Record<Peran, string> = {
-  admin: "/admin/dashboard",
-  operator: "/opd/dashboard",
-  pimpinan: "/pimpinan",
-};
 
 export async function masuk(_: StateLogin, data: FormData): Promise<StateLogin> {
   const email = String(data.get("email") ?? "").trim().toLowerCase();
@@ -27,5 +21,10 @@ export async function masuk(_: StateLogin, data: FormData): Promise<StateLogin> 
   }
 
   await buatSesi(akun.penggunaId);
-  redirect(TUJUAN[akun.peran]);
+  redirect(BERANDA[akun.peran]);
+}
+
+export async function keluar() {
+  await hapusSesi();
+  redirect("/login");
 }

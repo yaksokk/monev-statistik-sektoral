@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { MENU } from "./menu";
 import type { Peran } from "@/lib/types";
+import { keluar } from "@/app/(auth)/login/actions";
 
 const TAUTAN =
   "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-white";
@@ -38,10 +39,12 @@ export function Sidebar({ peran, onNavigate }: { peran: Peran; onNavigate?: () =
       </nav>
 
       <div className="border-t border-navy-700 p-3">
-        <Link href="/login" className={`${TAUTAN} hover:bg-navy-700/60 hover:text-white`}>
-          <LogOut className="size-4 shrink-0" aria-hidden="true" />
-          Keluar
-        </Link>
+        <form action={keluar}>
+          <button type="submit" className="...className tautan Keluar yang lama...">
+            <LogOut className="size-4" />
+            Keluar
+          </button>
+        </form>
       </div>
     </div>
   );

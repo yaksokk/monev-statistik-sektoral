@@ -27,7 +27,7 @@ export const OPD_LIST: Opd[] = [
 
 export const TAHAP_LIST: Tahap[] = [
   { id: "tahap-1", urutan: 1, nama: "Tahap 1", bobot: 40 },
-  { id: "tahap-2", urutan: 2, nama: "Tahap 2 – MOOC", bobot: 30 },
+  { id: "tahap-2", urutan: 2, nama: "Tahap 2", bobot: 30 },
   { id: "tahap-3", urutan: 3, nama: "Tahap 3", bobot: 30 },
 ];
 

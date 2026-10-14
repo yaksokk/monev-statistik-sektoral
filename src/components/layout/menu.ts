@@ -4,7 +4,7 @@ import {
   CalendarRange,
   ClipboardCheck,
   LayoutDashboard,
-  type LucideIcon,
+  type LucideIcon, Upload
 } from "lucide-react";
 import type { Peran } from "@/lib/types";
 
@@ -22,6 +22,9 @@ export const MENU: Record<Peran, ItemMenu[]> = {
     { label: "Kegiatan", href: "/admin/kegiatan", ikon: CalendarRange },
     { label: "Nilai", href: "/admin/nilai", ikon: Award },
   ],
-  operator: [{ label: "Dashboard", href: "/opd/dashboard", ikon: LayoutDashboard }],
+  operator: [
+  { label: "Dashboard", href: "/opd/dashboard", ikon: LayoutDashboard },
+  { label: "Unggah Dokumen", href: "/opd/unggah", ikon: Upload },
+],
   pimpinan: [{ label: "Rekap", href: "/pimpinan", ikon: LayoutDashboard }],
 };

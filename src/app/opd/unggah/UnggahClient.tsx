@@ -14,6 +14,8 @@ type Props = {
   tahap: Tahap[];
   item: ItemTahap[];
   dokumen: Dokumen[];
+  kegiatanAwal?: string;
+  tahapAwal?: string;
 };
 
 function tanggal(iso: string) {
@@ -35,10 +37,22 @@ function waktu(iso: string) {
   });
 }
 
-export default function UnggahClient({ opd, kegiatan, tahap, item, dokumen }: Props) {
+export default function UnggahClient({
+  opd,
+  kegiatan,
+  tahap,
+  item,
+  dokumen,
+  kegiatanAwal,
+  tahapAwal,
+}: Props) {
   const [daftar, setDaftar] = useState(dokumen);
-  const [kegiatanId, setKegiatanId] = useState(kegiatan[0].id);
-  const [tahapId, setTahapId] = useState(tahap[0].id);
+  const [kegiatanId, setKegiatanId] = useState(
+    kegiatan.find((k) => k.id === kegiatanAwal)?.id ?? kegiatan[0].id,
+  );
+  const [tahapId, setTahapId] = useState(
+    tahap.find((t) => t.id === tahapAwal)?.id ?? tahap[0].id,
+  );
   const [galat, setGalat] = useState<{ dokId: string; pesan: string } | null>(null);
   const [hariIni, setHariIni] = useState<string | null>(null);
 

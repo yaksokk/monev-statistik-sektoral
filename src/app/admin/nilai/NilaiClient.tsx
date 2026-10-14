@@ -201,14 +201,14 @@ export default function NilaiClient({
             type="checkbox"
             checked={hanyaKosong}
             onChange={(e) => setHanyaKosong(e.target.checked)}
-            className="size-4 accent-[var(--color-primary)]"
+            className="size-4 accent-(--color-primary)"
           />
           Hanya yang belum lengkap
         </label>
       </div>
 
       <div className="overflow-x-auto rounded-card border border-line bg-surface shadow-card">
-        <table className="w-full min-w-[46rem] text-left text-sm">
+        <table className="w-full min-w-184 text-left text-sm">
           <thead className="bg-surface-muted text-ink-muted">
             <tr>
               <th scope="col" className="px-4 py-3 font-medium">

@@ -184,7 +184,7 @@ export default function OpdClient({ awal }: { awal: BarisOpd[] }) {
       </p>
 
       <div className="overflow-x-auto rounded-card border border-line bg-surface shadow-card">
-        <table className="w-full min-w-[40rem] text-left text-sm">
+        <table className="w-full min-w-160 text-left text-sm">
           <thead className="bg-surface-muted text-ink-muted">
             <tr>
               <th className="px-4 py-3 font-medium">OPD</th>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CalendarClock, Pencil, Plus } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
 import type { Kegiatan, Tahap } from "@/lib/types";
@@ -21,8 +21,7 @@ function tanggal(iso: string) {
   });
 }
 
-function status(k: Kegiatan) {
-  const hariIni = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Makassar" });
+function status(k: Kegiatan, hariIni: string) {
   if (hariIni < k.tanggalMulai) return { label: "Belum mulai", aktif: false };
   if (hariIni > k.tanggalSelesai) return { label: "Selesai", aktif: false };
   return { label: "Berlangsung", aktif: true };
@@ -120,6 +119,12 @@ export default function KegiatanClient({ awal, tahap }: { awal: Kegiatan[]; taha
   const [daftar, setDaftar] = useState(awal);
   const [form, setForm] = useState<{ id: string | null } | null>(null);
   const [pesan, setPesan] = useState("");
+  // Tanggal hari ini dibaca setelah hidrasi agar tidak dibekukan saat prerender.
+  const [hariIni, setHariIni] = useState<string | null>(null);
+
+  useEffect(() => {
+    setHariIni(new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Makassar" }));
+  }, []);
 
   const diedit = form?.id ? daftar.find((k) => k.id === form.id) : undefined;
 
@@ -161,7 +166,7 @@ export default function KegiatanClient({ awal, tahap }: { awal: Kegiatan[]; taha
 
       <div className="grid gap-4 lg:grid-cols-2">
         {daftar.map((k) => {
-          const s = status(k);
+          const s = hariIni ? status(k, hariIni) : null;
           return (
             <section key={k.id} className="rounded-card border border-line bg-surface shadow-card">
               <div className="flex items-start justify-between gap-3 border-b border-line p-4 sm:p-5">
@@ -171,13 +176,15 @@ export default function KegiatanClient({ awal, tahap }: { awal: Kegiatan[]; taha
                     {tanggal(k.tanggalMulai)} sampai {tanggal(k.tanggalSelesai)}
                   </p>
                 </div>
-                <span
-                  className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
-                    s.aktif ? "bg-primary-soft text-primary" : "bg-surface-muted text-ink-muted"
-                  }`}
-                >
-                  {s.label}
-                </span>
+                {s && (
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
+                      s.aktif ? "bg-primary-soft text-primary" : "bg-surface-muted text-ink-muted"
+                    }`}
+                  >
+                    {s.label}
+                  </span>
+                )}
               </div>
 
               <ul className="divide-y divide-line">

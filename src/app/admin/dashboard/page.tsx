@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DOKUMEN_LIST, KEGIATAN_LIST, TAHAP_LIST } from "@/data/dummy";
@@ -6,11 +7,23 @@ import { STATUS_LABEL, type StatusDokumen } from "@/lib/types";
 
 const fmt = (n: number) => n.toLocaleString("id-ID", { maximumFractionDigits: 1 });
 
-export default async function DashboardAdmin({
-  searchParams,
-}: {
-  searchParams: Promise<{ kegiatan?: string }>;
-}) {
+type SearchParams = Promise<{ kegiatan?: string }>;
+
+export default function DashboardAdmin({ searchParams }: { searchParams: SearchParams }) {
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold text-primary">Dashboard</h1>
+      <p className="mt-1 text-ink-muted">Ringkasan kelengkapan dokumen seluruh OPD.</p>
+
+      {/* isi bergantung pada ?kegiatan=, jadi dialirkan di balik Suspense */}
+      <Suspense fallback={<p className="mt-6 text-sm text-ink-muted">Memuat ringkasan…</p>}>
+        <IsiDashboard searchParams={searchParams} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function IsiDashboard({ searchParams }: { searchParams: SearchParams }) {
   const { kegiatan: kegiatanParam } = await searchParams;
   const kegiatan = KEGIATAN_LIST.find((k) => k.id === kegiatanParam) ?? KEGIATAN_LIST[0];
 
@@ -25,10 +38,7 @@ export default async function DashboardAdmin({
   const { baris, rataRata } = rekapSemuaOpd(kegiatan.id);
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold text-primary">Dashboard</h1>
-      <p className="mt-1 text-ink-muted">Ringkasan kelengkapan dokumen seluruh OPD.</p>
-
+    <>
       {/* pilih kegiatan */}
       <div className="mt-6 flex flex-wrap gap-2">
         {KEGIATAN_LIST.map((k) => {
@@ -115,6 +125,6 @@ export default async function DashboardAdmin({
           </table>
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LoginForm } from "./LoginForm";
+import Image from "next/image";
 
 export const metadata: Metadata = { title: "Masuk | Monev Statistik Sektoral" };
 
@@ -7,9 +8,24 @@ export default function HalamanLogin() {
   return (
     <main className="grid min-h-dvh lg:grid-cols-2">
       <section className="hidden flex-col justify-between bg-navy-800 p-12 text-white lg:flex">
-        <p className="text-sm font-medium tracking-wide text-white/70">
-          BPS Kabupaten Minahasa Tenggara
-        </p>
+        <div className="flex items-center gap-3">
+          <Image
+            src="/logo_bps.png"
+            alt="Logo BPS"
+            width={48}
+            height={48}
+            className="h-12 w-auto"
+            priority
+          />
+          <div>
+            <p className="text-sm font-medium tracking-wide text-white/70">
+              Badan Pusat Statistik
+            </p>
+            <p className="text-sm font-medium tracking-wide text-white/70">
+              Kabupaten Minahasa Tenggara
+            </p>
+          </div>
+        </div>
         <div>
           <h1 className="text-3xl font-semibold leading-tight">
             Monitoring dan Evaluasi

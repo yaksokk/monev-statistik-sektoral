@@ -8,7 +8,6 @@ import type { Peran } from "@/lib/types";
 const LABEL_PERAN: Record<Peran, string> = {
   admin: "Admin",
   operator: "Operator OPD",
-  pimpinan: "Pimpinan",
 };
 
 interface AppShellProps {

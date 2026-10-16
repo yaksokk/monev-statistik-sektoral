@@ -27,9 +27,5 @@ export const MENU: Record<Peran, ItemMenu[]> = {
   { label: "Dashboard", href: "/opd/dashboard", ikon: LayoutDashboard },
   { label: "Unggah Dokumen", href: "/opd/unggah", ikon: Upload },
 ],
-  pimpinan: [
-    { label: "Rekap", href: "/pimpinan", ikon: LayoutDashboard },
-    { label: "Dokumen", href: "/pimpinan/dokumen", ikon: FileText },
-  ],
   
 };

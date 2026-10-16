@@ -78,7 +78,6 @@ export const KEGIATAN_LIST: Kegiatan[] = [
 
 export const PENGGUNA_LIST: Pengguna[] = [
   { id: "usr-admin", nama: "Admin BPS", email: "admin@example.com", peran: "admin" },
-  { id: "usr-pimpinan", nama: "Pimpinan BPS", email: "pimpinan@example.com", peran: "pimpinan" },
   ...OPD_LIST.map<Pengguna>((opd, i) => ({
     id: `usr-op-${String(i + 1).padStart(2, "0")}`,
     nama: `Operator ${opd.singkatan}`,

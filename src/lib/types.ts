@@ -1,4 +1,4 @@
-export type Peran = "admin" | "operator" | "pimpinan";
+export type Peran = "admin" | "operator";
 
 export type StatusDokumen = "belum" | "menunggu" | "disetujui" | "revisi";
 

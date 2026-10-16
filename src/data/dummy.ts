@@ -1,12 +1,11 @@
 import type {
   Dokumen,
-  ItemTahap,
+  ItemDokumen,
   Kegiatan,
   NilaiUjian,
   Opd,
   Pengguna,
   StatusDokumen,
-  Tahap,
 } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
@@ -25,31 +24,24 @@ export const OPD_LIST: Opd[] = [
   { id: "opd-08", nama: "Dinas Kependudukan dan Pencatatan Sipil", singkatan: "Disdukcapil" },
 ];
 
-export const TAHAP_LIST: Tahap[] = [
-  { id: "tahap-1", urutan: 1, nama: "Tahap 1", bobot: 40 },
-  { id: "tahap-2", urutan: 2, nama: "Tahap 2", bobot: 30 },
-  { id: "tahap-3", urutan: 3, nama: "Tahap 3", bobot: 30 },
-];
-
-export const ITEM_LIST: ItemTahap[] = [
-  // Tahap 1 (10 item). Item 7–10 masih nama sementara.
-  { id: "t1-01", tahapId: "tahap-1", nama: "Output per kegiatan" },
-  { id: "t1-02", tahapId: "tahap-1", nama: "Monitoring web kelengkapan" },
-  { id: "t1-03", tahapId: "tahap-1", nama: "Daftar hadir" },
-  { id: "t1-04", tahapId: "tahap-1", nama: "Dokumentasi" },
-  { id: "t1-05", tahapId: "tahap-1", nama: "Undangan" },
-  { id: "t1-06", tahapId: "tahap-1", nama: "Tabulasi identifikasi kegiatan statistik" },
-  { id: "t1-07", tahapId: "tahap-1", nama: "Dokumen tahap 1 – item 7" },
-  { id: "t1-08", tahapId: "tahap-1", nama: "Dokumen tahap 1 – item 8" },
-  { id: "t1-09", tahapId: "tahap-1", nama: "Dokumen tahap 1 – item 9" },
-  { id: "t1-10", tahapId: "tahap-1", nama: "Dokumen tahap 1 – item 10" },
-  // Tahap 2 – MOOC (3 item)
-  { id: "t2-01", tahapId: "tahap-2", nama: "Daftar hadir dan sertifikat" },
-  { id: "t2-02", tahapId: "tahap-2", nama: "Screenshot hasil MOOC" },
-  { id: "t2-03", tahapId: "tahap-2", nama: "Screenshot hasil pretest" },
-  // Tahap 3 (2 item)
-  { id: "t3-01", tahapId: "tahap-3", nama: "Dokumen statistik sektoral" },
-  { id: "t3-02", tahapId: "tahap-3", nama: "Hasil ujian dan pembinaan" },
+// Dokumen yang harus diunggah OPD (sama untuk setiap kegiatan).
+// Item 7–10 masih nama sementara.
+export const ITEM_LIST: ItemDokumen[] = [
+  { id: "item-01", nama: "Output per kegiatan" },
+  { id: "item-02", nama: "Monitoring web kelengkapan" },
+  { id: "item-03", nama: "Daftar hadir" },
+  { id: "item-04", nama: "Dokumentasi" },
+  { id: "item-05", nama: "Undangan" },
+  { id: "item-06", nama: "Tabulasi identifikasi kegiatan statistik" },
+  { id: "item-07", nama: "Dokumen – item 7" },
+  { id: "item-08", nama: "Dokumen – item 8" },
+  { id: "item-09", nama: "Dokumen – item 9" },
+  { id: "item-10", nama: "Dokumen – item 10" },
+  { id: "item-11", nama: "Daftar hadir dan sertifikat" },
+  { id: "item-12", nama: "Screenshot hasil MOOC" },
+  { id: "item-13", nama: "Screenshot hasil pretest" },
+  { id: "item-14", nama: "Dokumen statistik sektoral" },
+  { id: "item-15", nama: "Hasil ujian dan pembinaan" },
 ];
 
 export const KEGIATAN_LIST: Kegiatan[] = [
@@ -58,21 +50,24 @@ export const KEGIATAN_LIST: Kegiatan[] = [
     nama: "Kegiatan Statistik Sektoral 1",
     tanggalMulai: "2026-10-01",
     tanggalSelesai: "2026-10-31",
-    tenggat: { "tahap-1": "2026-10-15", "tahap-2": "2026-10-22", "tahap-3": "2026-10-30" },
+    tenggat: "2026-10-30",
+    bobot: 40,
   },
   {
     id: "kegiatan-2",
     nama: "Kegiatan Statistik Sektoral 2",
     tanggalMulai: "2026-11-01",
     tanggalSelesai: "2026-11-30",
-    tenggat: { "tahap-1": "2026-11-15", "tahap-2": "2026-11-22", "tahap-3": "2026-11-30" },
+    tenggat: "2026-11-30",
+    bobot: 30,
   },
   {
     id: "kegiatan-3",
     nama: "Kegiatan Statistik Sektoral 3",
     tanggalMulai: "2026-12-01",
     tanggalSelesai: "2026-12-19",
-    tenggat: { "tahap-1": "2026-12-08", "tahap-2": "2026-12-14", "tahap-3": "2026-12-19" },
+    tenggat: "2026-12-19",
+    bobot: 30,
   },
 ];
 
@@ -105,8 +100,6 @@ function mulberry32(seed: number) {
 const PROFIL_OPD = [0.95, 0.85, 0.75, 0.65, 0.55, 0.4, 0.25, 0.1];
 // Kegiatan yang lebih jauh = lebih sedikit yang sudah terisi
 const FAKTOR_KEGIATAN = [1, 0.6, 0.25];
-// Tahap yang lebih akhir = lebih sedikit yang sudah terisi
-const FAKTOR_TAHAP = [1, 0.8, 0.6];
 
 const CATATAN_REVISI = [
   "Berkas tidak terbaca, mohon unggah ulang dengan resolusi lebih jelas.",
@@ -120,8 +113,7 @@ const rand = mulberry32(2026);
 export const DOKUMEN_LIST: Dokumen[] = OPD_LIST.flatMap((opd, o) =>
   KEGIATAN_LIST.flatMap((kegiatan, k) =>
     ITEM_LIST.map<Dokumen>((item) => {
-      const tahap = TAHAP_LIST.find((t) => t.id === item.tahapId)!;
-      const peluangTerisi = PROFIL_OPD[o] * FAKTOR_KEGIATAN[k] * FAKTOR_TAHAP[tahap.urutan - 1];
+      const peluangTerisi = PROFIL_OPD[o] * FAKTOR_KEGIATAN[k];
 
       let status: StatusDokumen = "belum";
       if (rand() < peluangTerisi) {
@@ -136,7 +128,6 @@ export const DOKUMEN_LIST: Dokumen[] = OPD_LIST.flatMap((opd, o) =>
         id: `dok-${opd.id}-${kegiatan.id}-${item.id}`,
         opdId: opd.id,
         kegiatanId: kegiatan.id,
-        tahapId: item.tahapId,
         itemId: item.id,
         status,
         namaFile: sudahUnggah ? `${opd.singkatan.toLowerCase()}-${item.id}.pdf` : null,
@@ -149,17 +140,16 @@ export const DOKUMEN_LIST: Dokumen[] = OPD_LIST.flatMap((opd, o) =>
 );
 
 /* ------------------------------------------------------------------ */
-/* Nilai ujian dummy (diinput admin, per OPD per tahap)                */
+/* Nilai ujian dummy (diinput admin, per OPD per kegiatan)             */
 /* ------------------------------------------------------------------ */
 
 // OPD yang cukup rajin sudah punya nilai ujian; sisanya null (belum diinput)
 const AMBANG_NILAI = [0.25, 0.55, 0.75];
 
 export const NILAI_UJIAN_LIST: NilaiUjian[] = OPD_LIST.flatMap((opd, o) =>
-  TAHAP_LIST.map<NilaiUjian>((tahap) => ({
+  KEGIATAN_LIST.map<NilaiUjian>((kegiatan, k) => ({
     opdId: opd.id,
-    tahapId: tahap.id,
-    nilai:
-      PROFIL_OPD[o] >= AMBANG_NILAI[tahap.urutan - 1] ? Math.round(65 + rand() * 33) : null,
+    kegiatanId: kegiatan.id,
+    nilai: PROFIL_OPD[o] >= AMBANG_NILAI[k] ? Math.round(65 + rand() * 33) : null,
   })),
 );

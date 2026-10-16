@@ -23,16 +23,9 @@ export interface Pengguna {
   opdId?: string; // hanya untuk peran "operator"
 }
 
-export interface Tahap {
+// Dokumen yang harus diunggah OPD pada setiap kegiatan
+export interface ItemDokumen {
   id: string;
-  urutan: 1 | 2 | 3;
-  nama: string;
-  bobot: number; // persen
-}
-
-export interface ItemTahap {
-  id: string;
-  tahapId: string;
   nama: string;
 }
 
@@ -41,14 +34,14 @@ export interface Kegiatan {
   nama: string;
   tanggalMulai: string; // ISO yyyy-mm-dd
   tanggalSelesai: string;
-  tenggat: Record<string, string>; // tahapId -> tanggal tenggat
+  tenggat: string; // ISO yyyy-mm-dd, batas akhir unggah dokumen
+  bobot: number; // persen, bobot kegiatan terhadap nilai keseluruhan
 }
 
 export interface Dokumen {
   id: string;
   opdId: string;
   kegiatanId: string;
-  tahapId: string;
   itemId: string;
   status: StatusDokumen;
   namaFile: string | null;
@@ -58,6 +51,6 @@ export interface Dokumen {
 
 export interface NilaiUjian {
   opdId: string;
-  tahapId: string;
+  kegiatanId: string;
   nilai: number | null; // null = belum diinput admin
 }

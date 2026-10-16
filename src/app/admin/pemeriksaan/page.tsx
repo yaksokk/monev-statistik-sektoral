@@ -1,4 +1,4 @@
-import { DOKUMEN_LIST, ITEM_LIST, KEGIATAN_LIST, OPD_LIST, TAHAP_LIST } from "@/data/dummy";
+import { DOKUMEN_LIST, ITEM_LIST, KEGIATAN_LIST, OPD_LIST } from "@/data/dummy";
 import { PemeriksaanClient } from "./PemeriksaanClient";
 
 export default function PemeriksaanAdmin() {
@@ -12,7 +12,6 @@ export default function PemeriksaanAdmin() {
         <PemeriksaanClient
           dokumenAwal={DOKUMEN_LIST}
           opdList={OPD_LIST}
-          tahapList={TAHAP_LIST}
           itemList={ITEM_LIST}
           kegiatanList={KEGIATAN_LIST}
         />

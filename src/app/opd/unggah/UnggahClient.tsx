@@ -3,7 +3,7 @@
 import { useEffect, useState, type ChangeEvent } from "react";
 import { CalendarClock, FileUp, Lock, MessageSquareWarning, RefreshCw } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import type { Dokumen, ItemTahap, Kegiatan, Opd, Tahap } from "@/lib/types";
+import type { Dokumen, ItemDokumen, Kegiatan, Opd } from "@/lib/types";
 
 const MAKS_MB = 10;
 const TIPE_BOLEH = ["application/pdf", "image/jpeg", "image/png"];
@@ -11,15 +11,13 @@ const TIPE_BOLEH = ["application/pdf", "image/jpeg", "image/png"];
 type Props = {
   opd: Opd;
   kegiatan: Kegiatan[];
-  tahap: Tahap[];
-  item: ItemTahap[];
+  item: ItemDokumen[];
   dokumen: Dokumen[];
   kegiatanAwal?: string;
-  tahapAwal?: string;
 };
 
 function tanggal(iso: string) {
-  return new Date(iso).toLocaleDateString("id-ID", {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("id-ID", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -37,21 +35,10 @@ function waktu(iso: string) {
   });
 }
 
-export default function UnggahClient({
-  opd,
-  kegiatan,
-  tahap,
-  item,
-  dokumen,
-  kegiatanAwal,
-  tahapAwal,
-}: Props) {
+export default function UnggahClient({ opd, kegiatan, item, dokumen, kegiatanAwal }: Props) {
   const [daftar, setDaftar] = useState(dokumen);
   const [kegiatanId, setKegiatanId] = useState(
     kegiatan.find((k) => k.id === kegiatanAwal)?.id ?? kegiatan[0].id,
-  );
-  const [tahapId, setTahapId] = useState(
-    tahap.find((t) => t.id === tahapAwal)?.id ?? tahap[0].id,
   );
   const [galat, setGalat] = useState<{ dokId: string; pesan: string } | null>(null);
   const [hariIni, setHariIni] = useState<string | null>(null);
@@ -62,17 +49,7 @@ export default function UnggahClient({
   }, []);
 
   const kegiatanAktif = kegiatan.find((k) => k.id === kegiatanId)!;
-  const tahapAktif = tahap.find((t) => t.id === tahapId)!;
-  const tenggat = kegiatanAktif.tenggat[tahapId];
-  const lewat = hariIni !== null && hariIni > tenggat;
-
-  function hitung(tid: string) {
-    const items = item.filter((i) => i.tahapId === tid);
-    const ok = items.filter((i) =>
-      daftar.some((d) => d.kegiatanId === kegiatanId && d.itemId === i.id && d.status === "disetujui"),
-    ).length;
-    return { ok, total: items.length };
-  }
+  const lewat = hariIni !== null && hariIni > kegiatanAktif.tenggat;
 
   function pilihFile(dok: Dokumen, e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -106,14 +83,14 @@ export default function UnggahClient({
   }
 
   const baris = item
-    .filter((i) => i.tahapId === tahapId)
     .map((i) => ({
       item: i,
       dok: daftar.find((d) => d.kegiatanId === kegiatanId && d.itemId === i.id),
     }))
-    .filter((b): b is { item: ItemTahap; dok: Dokumen } => !!b.dok);
+    .filter((b): b is { item: ItemDokumen; dok: Dokumen } => !!b.dok);
 
-  const { ok, total } = hitung(tahapId);
+  const total = baris.length;
+  const ok = baris.filter((b) => b.dok.status === "disetujui").length;
   const persen = total ? Math.round((ok / total) * 100) : 0;
 
   return (
@@ -144,45 +121,30 @@ export default function UnggahClient({
         ))}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        {tahap.map((t) => {
-          const h = hitung(t.id);
-          const aktif = t.id === tahapId;
-          return (
-            <button
-              key={t.id}
-              onClick={() => {
-                setTahapId(t.id);
-                setGalat(null);
-              }}
-              aria-pressed={aktif}
-              className={`rounded-card border p-4 text-left shadow-card transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                aktif ? "border-primary bg-primary-soft" : "border-line bg-surface hover:bg-surface-muted"
-              }`}
-            >
-              <p className="text-sm font-medium text-ink">{t.nama}</p>
-              <p className="mt-1 text-xs text-ink-muted">Bobot {t.bobot}%</p>
-              <p className="tabular mt-3 text-sm text-ink">
-                {h.ok} dari {h.total} disetujui
-              </p>
-            </button>
-          );
-        })}
-      </div>
-
       <section className="rounded-card border border-line bg-surface shadow-card">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4 sm:p-5">
           <div>
-            <h2 className="text-base font-semibold text-ink">{tahapAktif.nama}</h2>
-            <p className={`mt-1 flex items-center gap-1.5 text-sm ${lewat ? "text-status-revisi-fg" : "text-ink-muted"}`}>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-semibold text-ink">{kegiatanAktif.nama}</h2>
+              <span className="tabular rounded-md bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">
+                Bobot {kegiatanAktif.bobot}%
+              </span>
+            </div>
+            <p
+              className={`mt-1 flex items-center gap-1.5 text-sm ${
+                lewat ? "text-status-revisi-fg" : "text-ink-muted"
+              }`}
+            >
               <CalendarClock className="size-4" aria-hidden />
-              Tenggat {tanggal(tenggat)}
+              Tenggat {tanggal(kegiatanAktif.tenggat)}
               {lewat && " (sudah lewat)"}
             </p>
           </div>
           <div className="w-full sm:w-56">
             <div className="tabular mb-1 flex justify-between text-xs text-ink-muted">
-              <span>Disetujui</span>
+              <span>
+                Disetujui {ok} dari {total}
+              </span>
               <span>{persen}%</span>
             </div>
             <div
@@ -191,6 +153,7 @@ export default function UnggahClient({
               aria-valuenow={persen}
               aria-valuemin={0}
               aria-valuemax={100}
+              aria-label={`Dokumen disetujui ${kegiatanAktif.nama}`}
             >
               <div className="h-full bg-primary" style={{ width: `${persen}%` }} />
             </div>

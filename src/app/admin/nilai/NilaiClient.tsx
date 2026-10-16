@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, FileSpreadsheet, Search } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
-import type { NilaiUjian, Opd, Tahap } from "@/lib/types";
+import type { Kegiatan, NilaiUjian, Opd } from "@/lib/types";
 
 const tombolUtama =
   "inline-flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50";
@@ -17,7 +17,7 @@ const KOLOM_TOTAL = "total";
 type Peta = Record<string, string>;
 type Urutan = { kolom: string; arah: "desc" | "asc" } | null;
 
-const kunci = (opdId: string, tahapId: string) => `${opdId}|${tahapId}`;
+const kunci = (opdId: string, kegiatanId: string) => `${opdId}|${kegiatanId}`;
 
 function tidakValid(v: string) {
   if (v === "") return false;
@@ -72,15 +72,15 @@ function KepalaUrut({
 
 export default function NilaiClient({
   opd,
-  tahap,
+  kegiatan,
   nilai,
 }: {
   opd: Opd[];
-  tahap: Tahap[];
+  kegiatan: Kegiatan[];
   nilai: NilaiUjian[];
 }) {
   const [tersimpan, setTersimpan] = useState<Peta>(() =>
-    Object.fromEntries(nilai.map((n) => [kunci(n.opdId, n.tahapId), n.nilai === null ? "" : String(n.nilai)])),
+    Object.fromEntries(nilai.map((n) => [kunci(n.opdId, n.kegiatanId), n.nilai === null ? "" : String(n.nilai)])),
   );
   const [isian, setIsian] = useState<Peta>(tersimpan);
   const [cari, setCari] = useState("");
@@ -91,17 +91,17 @@ export default function NilaiClient({
   const [pesan, setPesan] = useState("");
   const [galat, setGalat] = useState("");
 
-  const ambil = (p: Peta, o: string, t: string) => p[kunci(o, t)] ?? "";
-  const semuaKunci = opd.flatMap((o) => tahap.map((t) => kunci(o.id, t.id)));
+  const ambil = (p: Peta, o: string, g: string) => p[kunci(o, g)] ?? "";
+  const semuaKunci = opd.flatMap((o) => kegiatan.map((g) => kunci(o.id, g.id)));
   const berubah = semuaKunci.filter((k) => (isian[k] ?? "") !== (tersimpan[k] ?? ""));
 
-  // total berbobot; kosong jika ada tahap yang belum terisi atau tidak valid
+  // total berbobot; kosong jika ada kegiatan yang belum terisi atau tidak valid
   function total(p: Peta, o: string): number | null {
     let jumlah = 0;
-    for (const t of tahap) {
-      const v = ambil(p, o, t.id);
+    for (const g of kegiatan) {
+      const v = ambil(p, o, g.id);
       if (v === "" || tidakValid(v)) return null;
-      jumlah += (Number(v) * t.bobot) / 100;
+      jumlah += (Number(v) * g.bobot) / 100;
     }
     return jumlah;
   }
@@ -123,7 +123,7 @@ export default function NilaiClient({
 
   const tampil = opd.filter((o) => {
     const cocok = `${o.nama} ${o.singkatan}`.toLowerCase().includes(cari.toLowerCase());
-    const kosong = tahap.some((t) => ambil(isian, o.id, t.id) === "");
+    const kosong = kegiatan.some((g) => ambil(isian, o.id, g.id) === "");
     return cocok && (!hanyaKosong || kosong);
   });
 
@@ -140,10 +140,10 @@ export default function NilaiClient({
 
   const belumTerisi = semuaKunci.filter((k) => (tersimpan[k] ?? "") === "").length;
 
-  function rataRata(tahapId: string) {
+  function rataRata(kegiatanId: string) {
     return rata(
       opd
-        .map((o) => ambil(tersimpan, o.id, tahapId))
+        .map((o) => ambil(tersimpan, o.id, kegiatanId))
         .filter((v) => v !== "")
         .map(Number),
     );
@@ -214,8 +214,8 @@ export default function NilaiClient({
               <th scope="col" className="px-4 py-3 font-medium">
                 OPD
               </th>
-              {tahap.map((t) => (
-                <KepalaUrut key={t.id} kolom={t.id} label={t.nama} urutan={urutan} onUbah={ubahUrutan} />
+              {kegiatan.map((g) => (
+                <KepalaUrut key={g.id} kolom={g.id} label={g.nama} urutan={urutan} onUbah={ubahUrutan} />
               ))}
               <KepalaUrut kolom={KOLOM_TOTAL} label="Total nilai" urutan={urutan} onUbah={ubahUrutan} />
             </tr>
@@ -229,13 +229,13 @@ export default function NilaiClient({
                     <p className="font-medium text-ink">{o.singkatan}</p>
                     <p className="text-ink-muted">{o.nama}</p>
                   </td>
-                  {tahap.map((t) => {
-                    const k = kunci(o.id, t.id);
-                    const v = isian[k] ?? "";
-                    const ubah = v !== (tersimpan[k] ?? "");
+                  {kegiatan.map((g) => {
+                    const kn = kunci(o.id, g.id);
+                    const v = isian[kn] ?? "";
+                    const ubah = v !== (tersimpan[kn] ?? "");
                     const salah = tidakValid(v);
                     return (
-                      <td key={t.id} className="px-4 py-2.5">
+                      <td key={g.id} className="px-4 py-2.5">
                         <input
                           type="number"
                           inputMode="decimal"
@@ -244,10 +244,10 @@ export default function NilaiClient({
                           step="any"
                           value={v}
                           placeholder="-"
-                          aria-label={`Nilai ${t.nama} ${o.singkatan}`}
+                          aria-label={`Nilai ${g.nama} ${o.singkatan}`}
                           aria-invalid={salah}
                           onChange={(e) => {
-                            setIsian({ ...isian, [k]: e.target.value });
+                            setIsian({ ...isian, [kn]: e.target.value });
                             setPesan("");
                             setGalat("");
                           }}
@@ -264,7 +264,7 @@ export default function NilaiClient({
                   })}
                   <td className="tabular px-4 py-2.5 font-semibold text-ink">
                     {tot === null ? (
-                      <span className="font-normal text-ink-muted" title="Muncul setelah ketiga tahap terisi">
+                      <span className="font-normal text-ink-muted" title="Muncul setelah semua kegiatan terisi">
                         -
                       </span>
                     ) : (
@@ -276,7 +276,7 @@ export default function NilaiClient({
             })}
             {terurut.length === 0 && (
               <tr>
-                <td colSpan={tahap.length + 2} className="px-4 py-10 text-center text-ink-muted">
+                <td colSpan={kegiatan.length + 2} className="px-4 py-10 text-center text-ink-muted">
                   Tidak ada OPD yang cocok.
                 </td>
               </tr>
@@ -285,9 +285,9 @@ export default function NilaiClient({
           <tfoot className="border-t border-line bg-surface-muted">
             <tr>
               <th className="px-4 py-3 font-medium text-ink">Rata-rata semua OPD</th>
-              {tahap.map((t) => (
-                <td key={t.id} className="tabular px-4 py-3 font-semibold text-ink">
-                  {rataRata(t.id)}
+              {kegiatan.map((g) => (
+                <td key={g.id} className="tabular px-4 py-3 font-semibold text-ink">
+                  {rataRata(g.id)}
                 </td>
               ))}
               <td className="tabular px-4 py-3 font-semibold text-ink">{rataRataTotal()}</td>
@@ -297,7 +297,7 @@ export default function NilaiClient({
       </div>
 
       <p className="text-xs text-ink-muted">
-        Total nilai = nilai tiap tahap dikali bobotnya ({tahap.map((t) => `${t.nama} ${t.bobot}%`).join(", ")}). Klik judul kolom
+        Total nilai = nilai tiap kegiatan dikali bobotnya ({kegiatan.map((g) => `${g.nama} ${g.bobot}%`).join(", ")}). Klik judul kolom
         untuk mengurutkan dari tertinggi ke terendah, klik lagi untuk sebaliknya, dan sekali lagi untuk mengembalikan urutan awal.
       </p>
 
@@ -332,7 +332,7 @@ export default function NilaiClient({
 
       <Dialog buka={impor} onTutup={() => setImpor(false)} judul="Impor nilai dari Excel">
         <p className="text-sm text-ink-muted">
-          Siapkan file .xlsx atau .csv dengan kolom: Singkatan OPD, lalu satu kolom nilai untuk tiap tahap. Satu baris untuk satu OPD.
+          Siapkan file .xlsx atau .csv dengan kolom: Singkatan OPD, lalu satu kolom nilai untuk tiap kegiatan. Satu baris untuk satu OPD.
         </p>
         <input
           type="file"

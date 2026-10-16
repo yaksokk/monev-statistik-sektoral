@@ -5,18 +5,16 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   STATUS_LABEL,
   type Dokumen,
-  type ItemTahap,
+  type ItemDokumen,
   type Kegiatan,
   type Opd,
   type StatusDokumen,
-  type Tahap,
 } from "@/lib/types";
 
 interface Props {
   dokumenAwal: Dokumen[];
   opdList: Opd[];
-  tahapList: Tahap[];
-  itemList: ItemTahap[];
+  itemList: ItemDokumen[];
   kegiatanList: Kegiatan[];
 }
 
@@ -35,13 +33,11 @@ const tanggal = (iso: string) =>
 export function PemeriksaanClient({
   dokumenAwal,
   opdList,
-  tahapList,
   itemList,
   kegiatanList,
 }: Props) {
   const [dokumen, setDokumen] = useState(dokumenAwal);
   const [kegiatanId, setKegiatanId] = useState(kegiatanList[0].id);
-  const [tahapId, setTahapId] = useState(SEMUA);
   const [opdId, setOpdId] = useState(SEMUA);
   const [status, setStatus] = useState<StatusDokumen | typeof SEMUA>("menunggu");
   const [revisiId, setRevisiId] = useState<string | null>(null);
@@ -49,13 +45,11 @@ export function PemeriksaanClient({
   const [info, setInfo] = useState("");
 
   const namaOpd = (id: string) => opdList.find((o) => o.id === id)?.nama ?? id;
-  const namaTahap = (id: string) => tahapList.find((t) => t.id === id)?.nama ?? id;
   const namaItem = (id: string) => itemList.find((i) => i.id === id)?.nama ?? id;
 
   const tampil = dokumen.filter(
     (d) =>
       d.kegiatanId === kegiatanId &&
-      (tahapId === SEMUA || d.tahapId === tahapId) &&
       (opdId === SEMUA || d.opdId === opdId) &&
       (status === SEMUA || d.status === status),
   );
@@ -95,21 +89,6 @@ export function PemeriksaanClient({
             {kegiatanList.map((k) => (
               <option key={k.id} value={k.id}>
                 {k.nama}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-sm text-ink-muted">
-          Tahap
-          <select
-            className={`${KELAS_FILTER} mt-1 block`}
-            value={tahapId}
-            onChange={(e) => setTahapId(e.target.value)}
-          >
-            <option value={SEMUA}>Semua tahap</option>
-            {tahapList.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.nama}
               </option>
             ))}
           </select>
@@ -178,10 +157,7 @@ export function PemeriksaanClient({
                 <Fragment key={d.id}>
                   <tr>
                     <td className="px-5 py-3 font-medium text-ink">{namaOpd(d.opdId)}</td>
-                    <td className="px-5 py-3">
-                      <span className="text-ink">{namaItem(d.itemId)}</span>
-                      <span className="block text-xs text-ink-muted">{namaTahap(d.tahapId)}</span>
-                    </td>
+                    <td className="px-5 py-3 text-ink">{namaItem(d.itemId)}</td>
                     <td className="tabular px-5 py-3">
                       {d.namaFile ? (
                         <>

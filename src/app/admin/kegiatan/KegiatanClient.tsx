@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { CalendarClock, Pencil, Plus } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
-import type { Kegiatan, Tahap } from "@/lib/types";
+import type { Kegiatan } from "@/lib/types";
 
 const tombolUtama =
   "inline-flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
@@ -27,16 +27,14 @@ function status(k: Kegiatan, hariIni: string) {
   return { label: "Berlangsung", aktif: true };
 }
 
-type Isian = { nama: string; mulai: string; selesai: string; tenggat: Record<string, string> };
+type Isian = { nama: string; mulai: string; selesai: string; tenggat: string; bobot: string };
 
 function FormKegiatan({
   awal,
-  tahap,
   onSimpan,
   onBatal,
 }: {
   awal: Isian;
-  tahap: Tahap[];
   onSimpan: (v: Isian) => void;
   onBatal: () => void;
 }) {
@@ -44,9 +42,14 @@ function FormKegiatan({
   const [galat, setGalat] = useState("");
 
   function kirim() {
-    const lengkap = v.nama.trim() && v.mulai && v.selesai && tahap.every((t) => v.tenggat[t.id]);
-    if (!lengkap) return setGalat("Semua kolom wajib diisi.");
+    if (!v.nama.trim() || !v.mulai || !v.selesai || !v.tenggat || v.bobot === "") {
+      return setGalat("Semua kolom wajib diisi.");
+    }
     if (v.selesai < v.mulai) return setGalat("Tanggal selesai tidak boleh sebelum tanggal mulai.");
+    const bobot = Number(v.bobot);
+    if (Number.isNaN(bobot) || bobot < 0 || bobot > 100) {
+      return setGalat("Bobot harus berupa angka 0 sampai 100.");
+    }
     onSimpan({ ...v, nama: v.nama.trim() });
   }
 
@@ -80,23 +83,36 @@ function FormKegiatan({
         </div>
       </div>
 
-      <fieldset className="space-y-3 rounded-lg border border-line p-4">
-        <legend className="px-1 text-sm font-medium">Tenggat per tahap</legend>
-        {tahap.map((t) => (
-          <div key={t.id} className="grid items-center gap-2 sm:grid-cols-[1fr_11rem]">
-            <label htmlFor={`k-${t.id}`} className="text-sm text-ink">
-              {t.nama}
-            </label>
-            <input
-              id={`k-${t.id}`}
-              type="date"
-              value={v.tenggat[t.id] ?? ""}
-              onChange={(e) => setV({ ...v, tenggat: { ...v.tenggat, [t.id]: e.target.value } })}
-              className={kolomInput}
-            />
-          </div>
-        ))}
-      </fieldset>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <label htmlFor="k-tenggat" className="text-sm font-medium">
+            Tenggat unggah dokumen
+          </label>
+          <input
+            id="k-tenggat"
+            type="date"
+            value={v.tenggat}
+            onChange={(e) => setV({ ...v, tenggat: e.target.value })}
+            className={kolomInput}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="k-bobot" className="text-sm font-medium">
+            Bobot nilai (%)
+          </label>
+          <input
+            id="k-bobot"
+            type="number"
+            inputMode="decimal"
+            min={0}
+            max={100}
+            step="any"
+            value={v.bobot}
+            onChange={(e) => setV({ ...v, bobot: e.target.value })}
+            className={kolomInput}
+          />
+        </div>
+      </div>
 
       {galat && (
         <p role="alert" className="text-sm text-status-revisi-fg">
@@ -115,7 +131,7 @@ function FormKegiatan({
   );
 }
 
-export default function KegiatanClient({ awal, tahap }: { awal: Kegiatan[]; tahap: Tahap[] }) {
+export default function KegiatanClient({ awal }: { awal: Kegiatan[] }) {
   const [daftar, setDaftar] = useState(awal);
   const [form, setForm] = useState<{ id: string | null } | null>(null);
   const [pesan, setPesan] = useState("");
@@ -127,12 +143,16 @@ export default function KegiatanClient({ awal, tahap }: { awal: Kegiatan[]; taha
   }, []);
 
   const diedit = form?.id ? daftar.find((k) => k.id === form.id) : undefined;
+  const totalBobot = daftar.reduce((s, k) => s + k.bobot, 0);
 
   function simpan(v: Isian) {
+    const bobot = Number(v.bobot);
     if (diedit) {
       setDaftar((prev) =>
         prev.map((k) =>
-          k.id === diedit.id ? { ...k, nama: v.nama, tanggalMulai: v.mulai, tanggalSelesai: v.selesai, tenggat: v.tenggat } : k,
+          k.id === diedit.id
+            ? { ...k, nama: v.nama, tanggalMulai: v.mulai, tanggalSelesai: v.selesai, tenggat: v.tenggat, bobot }
+            : k,
         ),
       );
       setPesan(`${v.nama} diperbarui.`);
@@ -140,7 +160,14 @@ export default function KegiatanClient({ awal, tahap }: { awal: Kegiatan[]; taha
       const no = daftar.reduce((m, k) => Math.max(m, Number(k.id.replace(/\D/g, ""))), 0) + 1;
       setDaftar((prev) => [
         ...prev,
-        { id: `kegiatan-${no}`, nama: v.nama, tanggalMulai: v.mulai, tanggalSelesai: v.selesai, tenggat: v.tenggat },
+        {
+          id: `kegiatan-${no}`,
+          nama: v.nama,
+          tanggalMulai: v.mulai,
+          tanggalSelesai: v.selesai,
+          tenggat: v.tenggat,
+          bobot,
+        },
       ]);
       setPesan(`${v.nama} ditambahkan.`);
     }
@@ -188,15 +215,17 @@ export default function KegiatanClient({ awal, tahap }: { awal: Kegiatan[]; taha
               </div>
 
               <ul className="divide-y divide-line">
-                {tahap.map((t) => (
-                  <li key={t.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5">
-                    <span className="text-ink">{t.nama}</span>
-                    <span className="tabular flex items-center gap-1.5 text-ink-muted">
-                      <CalendarClock className="size-4" aria-hidden />
-                      {k.tenggat[t.id] ? tanggal(k.tenggat[t.id]) : "Belum diatur"}
-                    </span>
-                  </li>
-                ))}
+                <li className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5">
+                  <span className="text-ink">Tenggat unggah dokumen</span>
+                  <span className="tabular flex items-center gap-1.5 text-ink-muted">
+                    <CalendarClock className="size-4" aria-hidden />
+                    {k.tenggat ? tanggal(k.tenggat) : "Belum diatur"}
+                  </span>
+                </li>
+                <li className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5">
+                  <span className="text-ink">Bobot nilai</span>
+                  <span className="tabular font-semibold text-ink">{k.bobot}%</span>
+                </li>
               </ul>
 
               <div className="flex justify-end border-t border-line p-3 sm:px-5">
@@ -211,26 +240,31 @@ export default function KegiatanClient({ awal, tahap }: { awal: Kegiatan[]; taha
       </div>
 
       <section className="rounded-card border border-line bg-surface p-4 shadow-card sm:p-5">
-        <h2 className="font-semibold text-ink">Bobot tahap</h2>
-        <p className="mt-1 text-sm text-ink-muted">Dipakai untuk menghitung nilai akhir tiap OPD. Bobot tahap belum bisa diubah dari halaman ini.</p>
-        <ul className="mt-3 grid gap-2 sm:grid-cols-3">
-          {tahap.map((t) => (
-            <li key={t.id} className="rounded-lg bg-surface-muted px-4 py-3 text-sm">
-              <p className="text-ink">{t.nama}</p>
-              <p className="tabular mt-1 font-semibold text-ink">{t.bobot}%</p>
-            </li>
-          ))}
-        </ul>
+        <h2 className="font-semibold text-ink">Total bobot</h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          Bobot tiap kegiatan dipakai untuk menghitung nilai akhir OPD. Totalnya sebaiknya 100%.
+        </p>
+        <p className="tabular mt-3 text-2xl font-semibold text-ink">{totalBobot}%</p>
+        {totalBobot !== 100 && (
+          <p role="alert" className="mt-1 text-sm text-status-revisi-fg">
+            Total bobot belum 100%. Periksa bobot tiap kegiatan.
+          </p>
+        )}
       </section>
 
       <Dialog buka={!!form} onTutup={() => setForm(null)} judul={diedit ? "Ubah kegiatan" : "Tambah kegiatan"}>
         <FormKegiatan
           awal={
             diedit
-              ? { nama: diedit.nama, mulai: diedit.tanggalMulai, selesai: diedit.tanggalSelesai, tenggat: diedit.tenggat }
-              : { nama: "", mulai: "", selesai: "", tenggat: {} }
+              ? {
+                  nama: diedit.nama,
+                  mulai: diedit.tanggalMulai,
+                  selesai: diedit.tanggalSelesai,
+                  tenggat: diedit.tenggat,
+                  bobot: String(diedit.bobot),
+                }
+              : { nama: "", mulai: "", selesai: "", tenggat: "", bobot: "" }
           }
-          tahap={tahap}
           onSimpan={simpan}
           onBatal={() => setForm(null)}
         />

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { DOKUMEN_LIST, ITEM_LIST, KEGIATAN_LIST, TAHAP_LIST } from "@/data/dummy";
+import { DOKUMEN_LIST, ITEM_LIST, KEGIATAN_LIST } from "@/data/dummy";
 import { ambilOperator } from "@/lib/operator";
-import { hitungKelengkapan, hitungStatus, rekapOpd } from "@/lib/rekap";
+import { hitungStatus, rekapOpd } from "@/lib/rekap";
 import { STATUS_LABEL, type StatusDokumen } from "@/lib/types";
 
 const URUTAN_STATUS: StatusDokumen[] = ["belum", "menunggu", "disetujui", "revisi"];
@@ -19,23 +19,24 @@ function formatNilai(n: number) {
   return n.toLocaleString("id-ID", { maximumFractionDigits: 1 });
 }
 
-export default async function DashboardOpdPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ kegiatan?: string }>;
-}) {
-  const { kegiatan: kegiatanId } = await searchParams;
+export default async function DashboardOpdPage() {
   const { opd } = await ambilOperator();
+  const rekap = rekapOpd(opd.id);
 
-  const kegiatan =
-    KEGIATAN_LIST.find((k) => k.id === kegiatanId) ?? KEGIATAN_LIST[0];
-
-  const jumlahStatus = hitungStatus(opd.id, kegiatan.id);
-  const rekap = rekapOpd(opd.id, kegiatan.id);
+  // jumlah dokumen per status, dijumlahkan dari semua kegiatan
+  const jumlahStatus: Record<StatusDokumen, number> = {
+    belum: 0,
+    menunggu: 0,
+    disetujui: 0,
+    revisi: 0,
+  };
+  for (const k of KEGIATAN_LIST) {
+    const per = hitungStatus(opd.id, k.id);
+    for (const s of URUTAN_STATUS) jumlahStatus[s] += per[s];
+  }
 
   const perluRevisi = DOKUMEN_LIST.filter(
-    (d) =>
-      d.opdId === opd.id && d.kegiatanId === kegiatan.id && d.status === "revisi",
+    (d) => d.opdId === opd.id && d.status === "revisi",
   );
 
   return (
@@ -44,26 +45,6 @@ export default async function DashboardOpdPage({
         <h1 className="text-2xl font-semibold text-ink">Dashboard OPD</h1>
         <p className="mt-1 text-sm text-ink-muted">{opd.nama}</p>
       </header>
-
-      <nav className="flex flex-wrap gap-2" aria-label="Pilih kegiatan">
-        {KEGIATAN_LIST.map((k) => {
-          const aktif = k.id === kegiatan.id;
-          return (
-            <Link
-              key={k.id}
-              href={`/opd/dashboard?kegiatan=${k.id}`}
-              aria-current={aktif ? "page" : undefined}
-              className={
-                aktif
-                  ? "rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-white"
-                  : "rounded-full border border-line bg-surface px-4 py-1.5 text-sm text-ink hover:bg-surface-muted"
-              }
-            >
-              {k.nama}
-            </Link>
-          );
-        })}
-      </nav>
 
       <section
         aria-label="Ringkasan status dokumen"
@@ -78,14 +59,14 @@ export default async function DashboardOpdPage({
             <p className="tabular mt-3 text-3xl font-semibold text-ink">
               {jumlahStatus[status]}
             </p>
-            <p className="text-xs text-ink-muted">dokumen</p>
+            <p className="text-xs text-ink-muted">dokumen, semua kegiatan</p>
           </div>
         ))}
       </section>
 
-      <section aria-label="Progres per tahap" className="space-y-3">
+      <section aria-label="Progres per kegiatan" className="space-y-3">
         <div className="flex items-end justify-between">
-          <h2 className="text-lg font-semibold text-ink">Progres per tahap</h2>
+          <h2 className="text-lg font-semibold text-ink">Progres per kegiatan</h2>
           <p className="text-sm text-ink-muted">
             Nilai akhir sementara:{" "}
             <span className="tabular font-semibold text-ink">
@@ -95,25 +76,25 @@ export default async function DashboardOpdPage({
         </div>
 
         <div className="grid gap-4 lg:grid-cols-3">
-          {TAHAP_LIST.map((tahap) => {
-            const kelengkapan = hitungKelengkapan(opd.id, kegiatan.id, tahap.id);
-            const ujian = rekap.perTahap.find((t) => t.tahapId === tahap.id)?.ujian;
-            const totalItem = ITEM_LIST.filter((i) => i.tahapId === tahap.id).length;
+          {KEGIATAN_LIST.map((kegiatan) => {
+            const data = rekap.perKegiatan.find((k) => k.kegiatanId === kegiatan.id);
+            const kelengkapan = data?.kelengkapan ?? 0;
+            const ujian = data?.ujian ?? null;
 
             return (
               <article
-                key={tahap.id}
+                key={kegiatan.id}
                 className="flex flex-col rounded-card border border-line bg-surface p-5 shadow-card"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-ink">{tahap.nama}</h3>
+                  <h3 className="font-semibold text-ink">{kegiatan.nama}</h3>
                   <span className="tabular rounded-md bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">
-                    {tahap.bobot}%
+                    Bobot {kegiatan.bobot}%
                   </span>
                 </div>
 
                 <p className="mt-1 text-xs text-ink-muted">
-                  Tenggat {formatTanggal(kegiatan.tenggat[tahap.id])} · {totalItem} item
+                  Tenggat {formatTanggal(kegiatan.tenggat)} · {ITEM_LIST.length} item
                 </p>
 
                 <div className="mt-4">
@@ -129,7 +110,7 @@ export default async function DashboardOpdPage({
                     aria-valuenow={Math.round(kelengkapan)}
                     aria-valuemin={0}
                     aria-valuemax={100}
-                    aria-label={`Kelengkapan ${tahap.nama}`}
+                    aria-label={`Kelengkapan ${kegiatan.nama}`}
                   >
                     <div
                       className="h-full rounded-full bg-primary"
@@ -146,7 +127,7 @@ export default async function DashboardOpdPage({
                 </p>
 
                 <Link
-                  href={`/opd/unggah?kegiatan=${kegiatan.id}&tahap=${tahap.id}`}
+                  href={`/opd/unggah?kegiatan=${kegiatan.id}`}
                   className="mt-5 rounded-lg bg-primary px-4 py-2 text-center text-sm font-medium text-white hover:bg-primary-hover"
                 >
                   Lihat &amp; unggah
@@ -168,6 +149,7 @@ export default async function DashboardOpdPage({
           <ul className="mt-3 divide-y divide-line">
             {perluRevisi.map((d) => {
               const item = ITEM_LIST.find((i) => i.id === d.itemId);
+              const kegiatan = KEGIATAN_LIST.find((k) => k.id === d.kegiatanId);
               return (
                 <li
                   key={d.id}
@@ -175,12 +157,13 @@ export default async function DashboardOpdPage({
                 >
                   <div>
                     <p className="text-sm font-medium text-ink">{item?.nama}</p>
+                    <p className="text-xs text-ink-muted">{kegiatan?.nama}</p>
                     <p className="text-sm text-ink-muted">
                       {d.catatanRevisi ?? "Tanpa catatan dari admin."}
                     </p>
                   </div>
                   <Link
-                    href={`/opd/unggah?kegiatan=${kegiatan.id}&tahap=${d.tahapId}`}
+                    href={`/opd/unggah?kegiatan=${d.kegiatanId}`}
                     className="text-sm font-medium text-primary hover:underline"
                   >
                     Perbaiki

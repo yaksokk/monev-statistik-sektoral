@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { DOKUMEN_LIST, KEGIATAN_LIST, TAHAP_LIST } from "@/data/dummy";
+import { DOKUMEN_LIST, KEGIATAN_LIST } from "@/data/dummy";
 import { rekapSemuaOpd } from "@/lib/rekap";
 import { STATUS_LABEL, type StatusDokumen } from "@/lib/types";
 
@@ -35,7 +35,7 @@ async function IsiDashboard({ searchParams }: { searchParams: SearchParams }) {
   }
   const total = semuaStatus.reduce((s, k) => s + jumlah[k], 0);
 
-  const { baris, rataRata } = rekapSemuaOpd(kegiatan.id);
+  const { baris, rataRata } = rekapSemuaOpd();
 
   return (
     <>
@@ -78,7 +78,7 @@ async function IsiDashboard({ searchParams }: { searchParams: SearchParams }) {
         <div className="border-b border-line px-5 py-4">
           <h2 className="text-base font-semibold text-ink">Rekap nilai per OPD</h2>
           <p className="text-sm text-ink-muted">
-            Nilai tahap = rata-rata kelengkapan dan ujian (rumus sementara).
+            Nilai kegiatan = rata-rata kelengkapan dan ujian (rumus sementara).
           </p>
         </div>
         <div className="overflow-x-auto">
@@ -86,9 +86,9 @@ async function IsiDashboard({ searchParams }: { searchParams: SearchParams }) {
             <thead className="bg-surface-muted text-ink-muted">
               <tr>
                 <th className="px-5 py-3 font-medium">OPD</th>
-                {TAHAP_LIST.map((t) => (
-                  <th key={t.id} className="px-5 py-3 font-medium">
-                    {t.nama} <span className="font-normal">({t.bobot}%)</span>
+                {KEGIATAN_LIST.map((k) => (
+                  <th key={k.id} className="px-5 py-3 font-medium">
+                    {k.nama} <span className="font-normal">({k.bobot}%)</span>
                   </th>
                 ))}
                 <th className="px-5 py-3 text-right font-medium">Nilai akhir</th>
@@ -98,11 +98,11 @@ async function IsiDashboard({ searchParams }: { searchParams: SearchParams }) {
               {baris.map((b) => (
                 <tr key={b.opd.id}>
                   <td className="px-5 py-3 font-medium text-ink">{b.opd.nama}</td>
-                  {b.perTahap.map((t) => (
-                    <td key={t.tahapId} className="tabular px-5 py-3">
-                      <span className="font-medium text-ink">{fmt(t.nilai)}</span>
+                  {b.perKegiatan.map((k) => (
+                    <td key={k.kegiatanId} className="tabular px-5 py-3">
+                      <span className="font-medium text-ink">{fmt(k.nilai)}</span>
                       <span className="block text-xs text-ink-muted">
-                        Kelengkapan {fmt(t.kelengkapan)} · Ujian {t.ujian ?? "-"}
+                        Kelengkapan {fmt(k.kelengkapan)} · Ujian {k.ujian ?? "-"}
                       </span>
                     </td>
                   ))}
@@ -114,7 +114,7 @@ async function IsiDashboard({ searchParams }: { searchParams: SearchParams }) {
             </tbody>
             <tfoot className="border-t border-line bg-surface-muted">
               <tr>
-                <td className="px-5 py-3 font-semibold text-ink" colSpan={TAHAP_LIST.length + 1}>
+                <td className="px-5 py-3 font-semibold text-ink" colSpan={KEGIATAN_LIST.length + 1}>
                   Rata-rata seluruh OPD
                 </td>
                 <td className="tabular px-5 py-3 text-right font-semibold text-primary">

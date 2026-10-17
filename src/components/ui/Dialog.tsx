@@ -6,10 +6,17 @@ type Props = {
   buka: boolean;
   onTutup: () => void;
   judul: string;
+  lebar?: string;
   children: ReactNode;
 };
 
-export function Dialog({ buka, onTutup, judul, children }: Props) {
+export function Dialog({
+  buka,
+  onTutup,
+  judul,
+  lebar = "w-[min(32rem,calc(100%-2rem))]",
+  children,
+}: Props) {
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -23,7 +30,7 @@ export function Dialog({ buka, onTutup, judul, children }: Props) {
     <dialog
       ref={ref}
       onClose={onTutup}
-      className="m-auto w-[min(32rem,calc(100%-2rem))] rounded-card border border-line bg-surface p-0 text-ink shadow-card backdrop:bg-black/40"
+      className={`m-auto ${lebar} rounded-card border border-line bg-surface p-0 text-ink shadow-card backdrop:bg-black/40`}
     >
       {buka && (
         <div className="space-y-4 p-5 sm:p-6">

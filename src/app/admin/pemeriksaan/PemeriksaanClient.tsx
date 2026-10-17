@@ -1,6 +1,8 @@
 "use client";
 
 import { Fragment, useState, type FormEvent } from "react";
+import { Eye } from "lucide-react";
+import { Dialog } from "@/components/ui/Dialog";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   STATUS_LABEL,
@@ -21,6 +23,9 @@ interface Props {
 const SEMUA = "semua";
 const KELAS_FILTER =
   "rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink";
+
+// Sementara semua dokumen menampilkan berkas contoh yang sama
+const BERKAS_CONTOH = "/contoh/contoh-dokumen.pdf";
 
 const tanggal = (iso: string) =>
   new Date(iso).toLocaleDateString("id-ID", {
@@ -43,6 +48,7 @@ export function PemeriksaanClient({
   const [revisiId, setRevisiId] = useState<string | null>(null);
   const [catatan, setCatatan] = useState("");
   const [info, setInfo] = useState("");
+  const [lihat, setLihat] = useState<Dokumen | null>(null);
 
   const namaOpd = (id: string) => opdList.find((o) => o.id === id)?.nama ?? id;
   const namaItem = (id: string) => itemList.find((i) => i.id === id)?.nama ?? id;
@@ -181,27 +187,40 @@ export function PemeriksaanClient({
                       )}
                     </td>
                     <td className="px-5 py-3 text-right">
-                      {d.status === "menunggu" && (
-                        <div className="flex justify-end gap-2">
+                      <div className="flex items-center justify-end gap-2">
+                        {d.namaFile && (
                           <button
                             type="button"
-                            onClick={() => setujui(d)}
-                            className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-hover"
+                            onClick={() => setLihat(d)}
+                            aria-label={`Lihat ${d.namaFile}`}
+                            title="Lihat dokumen"
+                            className="rounded-md border border-line bg-surface p-1.5 text-ink hover:bg-surface-muted"
                           >
-                            Setujui
+                            <Eye className="size-4" aria-hidden="true" />
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setRevisiId(d.id);
-                              setCatatan("");
-                            }}
-                            className="rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:bg-surface-muted"
-                          >
-                            Minta revisi
-                          </button>
-                        </div>
-                      )}
+                        )}
+                        {d.status === "menunggu" && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setujui(d)}
+                              className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-hover"
+                            >
+                              Setujui
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRevisiId(d.id);
+                                setCatatan("");
+                              }}
+                              className="rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:bg-surface-muted"
+                            >
+                              Minta revisi
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                   {revisiId === d.id && (
@@ -243,6 +262,44 @@ export function PemeriksaanClient({
           </table>
         </div>
       </div>
+
+      {/* pratinjau dokumen */}
+      <Dialog
+        buka={lihat !== null}
+        onTutup={() => setLihat(null)}
+        judul={lihat ? namaItem(lihat.itemId) : ""}
+        lebar="w-[min(60rem,calc(100%-2rem))]"
+      >
+        {lihat && (
+          <>
+            <p className="text-sm text-ink-muted">
+              {namaOpd(lihat.opdId)} · {lihat.namaFile}
+            </p>
+            <iframe
+              src={BERKAS_CONTOH}
+              title={`Pratinjau ${lihat.namaFile}`}
+              className="h-[65vh] w-full rounded-lg border border-line"
+            />
+            <div className="flex justify-between gap-2">
+              <a
+                href={BERKAS_CONTOH}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:bg-surface-muted"
+              >
+                Buka di tab baru
+              </a>
+              <button
+                type="button"
+                onClick={() => setLihat(null)}
+                className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-hover"
+              >
+                Tutup
+              </button>
+            </div>
+          </>
+        )}
+      </Dialog>
     </div>
   );
 }

@@ -24,24 +24,25 @@ export const OPD_LIST: Opd[] = [
   { id: "opd-08", nama: "Dinas Kependudukan dan Pencatatan Sipil", singkatan: "Disdukcapil" },
 ];
 
-// Dokumen yang harus diunggah OPD (sama untuk setiap kegiatan).
+// Dokumen yang harus diunggah OPD, berbeda per kegiatan:
+// kegiatan 1 = 10 dokumen, kegiatan 2 = 3, kegiatan 3 = 2.
 // Item 7–10 masih nama sementara.
 export const ITEM_LIST: ItemDokumen[] = [
-  { id: "item-01", nama: "Output per kegiatan" },
-  { id: "item-02", nama: "Monitoring web kelengkapan" },
-  { id: "item-03", nama: "Daftar hadir" },
-  { id: "item-04", nama: "Dokumentasi" },
-  { id: "item-05", nama: "Undangan" },
-  { id: "item-06", nama: "Tabulasi identifikasi kegiatan statistik" },
-  { id: "item-07", nama: "Dokumen – item 7" },
-  { id: "item-08", nama: "Dokumen – item 8" },
-  { id: "item-09", nama: "Dokumen – item 9" },
-  { id: "item-10", nama: "Dokumen – item 10" },
-  { id: "item-11", nama: "Daftar hadir dan sertifikat" },
-  { id: "item-12", nama: "Screenshot hasil MOOC" },
-  { id: "item-13", nama: "Screenshot hasil pretest" },
-  { id: "item-14", nama: "Dokumen statistik sektoral" },
-  { id: "item-15", nama: "Hasil ujian dan pembinaan" },
+  { id: "item-01", kegiatanId: "kegiatan-1", nama: "Output per kegiatan" },
+  { id: "item-02", kegiatanId: "kegiatan-1", nama: "Monitoring web kelengkapan" },
+  { id: "item-03", kegiatanId: "kegiatan-1", nama: "Daftar hadir" },
+  { id: "item-04", kegiatanId: "kegiatan-1", nama: "Dokumentasi" },
+  { id: "item-05", kegiatanId: "kegiatan-1", nama: "Undangan" },
+  { id: "item-06", kegiatanId: "kegiatan-1", nama: "Tabulasi identifikasi kegiatan statistik" },
+  { id: "item-07", kegiatanId: "kegiatan-1", nama: "Dokumen – item 7" },
+  { id: "item-08", kegiatanId: "kegiatan-1", nama: "Dokumen – item 8" },
+  { id: "item-09", kegiatanId: "kegiatan-1", nama: "Dokumen – item 9" },
+  { id: "item-10", kegiatanId: "kegiatan-1", nama: "Dokumen – item 10" },
+  { id: "item-11", kegiatanId: "kegiatan-2", nama: "Daftar hadir dan sertifikat" },
+  { id: "item-12", kegiatanId: "kegiatan-2", nama: "Screenshot hasil MOOC" },
+  { id: "item-13", kegiatanId: "kegiatan-2", nama: "Screenshot hasil pretest" },
+  { id: "item-14", kegiatanId: "kegiatan-3", nama: "Dokumen statistik sektoral" },
+  { id: "item-15", kegiatanId: "kegiatan-3", nama: "Hasil ujian dan pembinaan" },
 ];
 
 export const KEGIATAN_LIST: Kegiatan[] = [
@@ -112,7 +113,7 @@ const rand = mulberry32(2026);
 
 export const DOKUMEN_LIST: Dokumen[] = OPD_LIST.flatMap((opd, o) =>
   KEGIATAN_LIST.flatMap((kegiatan, k) =>
-    ITEM_LIST.map<Dokumen>((item) => {
+    ITEM_LIST.filter((i) => i.kegiatanId === kegiatan.id).map<Dokumen>((item) => {
       const peluangTerisi = PROFIL_OPD[o] * FAKTOR_KEGIATAN[k];
 
       let status: StatusDokumen = "belum";

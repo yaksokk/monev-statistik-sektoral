@@ -26,6 +26,7 @@ export interface Pengguna {
 // Dokumen yang harus diunggah OPD pada setiap kegiatan
 export interface ItemDokumen {
   id: string;
+  kegiatanId: string;
   nama: string;
 }
 

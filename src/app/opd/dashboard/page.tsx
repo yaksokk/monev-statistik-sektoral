@@ -80,6 +80,7 @@ export default async function DashboardOpdPage() {
             const data = rekap.perKegiatan.find((k) => k.kegiatanId === kegiatan.id);
             const kelengkapan = data?.kelengkapan ?? 0;
             const ujian = data?.ujian ?? null;
+            const jumlahItem = ITEM_LIST.filter((i) => i.kegiatanId === kegiatan.id).length;
 
             return (
               <article
@@ -94,7 +95,7 @@ export default async function DashboardOpdPage() {
                 </div>
 
                 <p className="mt-1 text-xs text-ink-muted">
-                  Tenggat {formatTanggal(kegiatan.tenggat)} · {ITEM_LIST.length} item
+                  Tenggat {formatTanggal(kegiatan.tenggat)} · {jumlahItem} item
                 </p>
 
                 <div className="mt-4">

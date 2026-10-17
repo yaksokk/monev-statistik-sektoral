@@ -14,7 +14,7 @@ export function hitungStatus(opdId: string, kegiatanId: string) {
 
 /** Nilai kelengkapan (0–100): persentase item yang berstatus "disetujui". */
 export function hitungKelengkapan(opdId: string, kegiatanId: string) {
-  const total = ITEM_LIST.length;
+  const total = ITEM_LIST.filter((i) => i.kegiatanId === kegiatanId).length;
   if (total === 0) return 0;
   return Math.round((hitungStatus(opdId, kegiatanId).disetujui / total) * 100);
 }

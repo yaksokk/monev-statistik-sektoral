@@ -113,3 +113,27 @@ export interface HasilQuiz {
   selesai: string; // yyyy-mm-ddTHH:mm
   otomatis: boolean; // true bila terkirim karena waktu habis
 }
+
+
+export interface ModulPembelajaran {
+  id: string;
+  urutan: number;
+  judul: string;
+  subjudul: string;
+}
+ 
+// Satu bab = satu link materi di Google Drive
+export interface BabModul {
+  id: string;
+  modulId: string;
+  urutan: number;
+  judul: string;
+  linkMateri: string;
+}
+ 
+// Catatan OPD menandai bab selesai; dipakai admin nanti untuk melihat siapa yang sudah belajar
+export interface BabSelesai {
+  opdId: string;
+  babId: string;
+  selesaiPada: string; // yyyy-mm-ddTHH:mm
+}

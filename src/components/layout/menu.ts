@@ -7,6 +7,7 @@ import {
   ClipboardList,
   GraduationCap,
   LayoutDashboard,
+  BookOpen,
   type LucideIcon,
   Upload,
 } from "lucide-react";
@@ -29,6 +30,7 @@ export const MENU: Record<Peran, ItemMenu[]> = {
   operator: [
     { label: "Dashboard", href: "/opd/dashboard", ikon: LayoutDashboard },
     { label: "Daftar Hadir", href: "/opd/daftar-hadir", ikon: CalendarCheck },
+    { label: "Modul Pembelajaran", href: "/opd/modul-pembelajaran", ikon: BookOpen },
     { label: "Pre-Test", href: "/opd/pre-test", ikon: ClipboardList },
     { label: "Post-Test", href: "/opd/post-test", ikon: ClipboardCheck },
     { label: "Evaluasi Pendalaman", href: "/opd/evaluasi-pendalaman", ikon: GraduationCap },

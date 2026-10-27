@@ -55,3 +55,30 @@ export interface NilaiUjian {
   kegiatanId: string;
   nilai: number | null; // null = belum diinput admin
 }
+
+export type StatusKehadiran = "tepat_waktu" | "terlambat" | "izin";
+
+export const STATUS_KEHADIRAN_LABEL: Record<StatusKehadiran, string> = {
+  tepat_waktu: "Hadir (Tepat Waktu)",
+  terlambat: "Hadir (Terlambat)",
+  izin: "Izin Tugas Dinas",
+};
+
+// Sesi dibuat dan dibuka/ditutup oleh admin
+export interface SesiPembinaan {
+  id: string;
+  urutan: number;
+  judul: string;
+  tanggal: string; // ISO yyyy-mm-dd, hari pelaksanaan
+  batasPengisian: string; // yyyy-mm-ddTHH:mm (waktu lokal), setelah ini form terkunci
+  akses: "belum_dibuka" | "dibuka" | "ditutup";
+}
+
+export interface Presensi {
+  id: string;
+  opdId: string;
+  sesiId: string;
+  status: StatusKehadiran;
+  waktuIsi: string; // yyyy-mm-ddTHH:mm (waktu lokal), terisi otomatis saat dikirim
+  catatan: string | null; // wajib bila terlambat atau izin
+}

@@ -4,7 +4,9 @@ import type {
   Kegiatan,
   NilaiUjian,
   Opd,
+  Presensi,
   Pengguna,
+  SesiPembinaan,
   StatusDokumen,
 } from "@/lib/types";
 
@@ -25,12 +27,11 @@ export const OPD_LIST: Opd[] = [
 ];
 
 // Dokumen yang harus diunggah OPD, berbeda per kegiatan:
-// kegiatan 1 = 10 dokumen, kegiatan 2 = 3, kegiatan 3 = 2.
+// kegiatan 1 = 9 dokumen, kegiatan 2 = 3, kegiatan 3 = 2.
 // Item 7–10 masih nama sementara.
 export const ITEM_LIST: ItemDokumen[] = [
   { id: "item-01", kegiatanId: "kegiatan-1", nama: "Output per kegiatan" },
   { id: "item-02", kegiatanId: "kegiatan-1", nama: "Monitoring web kelengkapan" },
-  { id: "item-03", kegiatanId: "kegiatan-1", nama: "Daftar hadir" },
   { id: "item-04", kegiatanId: "kegiatan-1", nama: "Dokumentasi" },
   { id: "item-05", kegiatanId: "kegiatan-1", nama: "Undangan" },
   { id: "item-06", kegiatanId: "kegiatan-1", nama: "Tabulasi identifikasi kegiatan statistik" },
@@ -154,3 +155,53 @@ export const NILAI_UJIAN_LIST: NilaiUjian[] = OPD_LIST.flatMap((opd, o) =>
     nilai: PROFIL_OPD[o] >= AMBANG_NILAI[k] ? Math.round(65 + rand() * 33) : null,
   })),
 );
+
+/* ------------------------------------------------------------------ */
+/* Sesi pembinaan dan presensi dummy                                   */
+/* ------------------------------------------------------------------ */
+
+export const SESI_LIST: SesiPembinaan[] = [
+  {
+    id: "sesi-1",
+    urutan: 1,
+    judul: "Prinsip & Pengertian Satu Data Indonesia",
+    tanggal: "2026-10-08",
+    batasPengisian: "2026-10-09T17:00",
+    akses: "ditutup",
+  },
+  {
+    id: "sesi-2",
+    urutan: 2,
+    judul: "Penyelenggara SDI Pusat & Daerah",
+    tanggal: "2026-10-15",
+    batasPengisian: "2026-10-16T17:00",
+    akses: "dibuka", // terkunci karena batas waktu sudah lewat
+  },
+  {
+    id: "sesi-3",
+    urutan: 3,
+    judul: "Tahapan Penyelenggaraan SDI & GSBPM",
+    tanggal: "2026-10-27",
+    batasPengisian: "2026-10-30T17:00",
+    akses: "dibuka",
+  },
+  {
+    id: "sesi-4",
+    urutan: 4,
+    judul: "Penyusunan Data Prioritas & EPSS",
+    tanggal: "2026-11-06",
+    batasPengisian: "2026-11-07T17:00",
+    akses: "belum_dibuka",
+  },
+];
+
+export const PRESENSI_LIST: Presensi[] = [
+  { id: "hadir-opd-01-sesi-1", opdId: "opd-01", sesiId: "sesi-1", status: "tepat_waktu", waktuIsi: "2026-10-08T08:30", catatan: "Mengikuti via Zoom" },
+  { id: "hadir-opd-02-sesi-1", opdId: "opd-02", sesiId: "sesi-1", status: "terlambat", waktuIsi: "2026-10-08T09:15", catatan: "Bergabung terlambat karena rapat internal" },
+  { id: "hadir-opd-02-sesi-2", opdId: "opd-02", sesiId: "sesi-2", status: "izin", waktuIsi: "2026-10-15T07:50", catatan: "Tugas dinas ke luar kota" },
+  { id: "hadir-opd-03-sesi-1", opdId: "opd-03", sesiId: "sesi-1", status: "tepat_waktu", waktuIsi: "2026-10-08T08:41", catatan: null },
+  { id: "hadir-opd-03-sesi-2", opdId: "opd-03", sesiId: "sesi-2", status: "tepat_waktu", waktuIsi: "2026-10-15T08:35", catatan: "Diskusi forum" },
+  { id: "hadir-opd-04-sesi-1", opdId: "opd-04", sesiId: "sesi-1", status: "tepat_waktu", waktuIsi: "2026-10-08T08:28", catatan: null },
+  { id: "hadir-opd-05-sesi-1", opdId: "opd-05", sesiId: "sesi-1", status: "terlambat", waktuIsi: "2026-10-08T09:40", catatan: "Kendala jaringan" },
+  { id: "hadir-opd-06-sesi-3", opdId: "opd-06", sesiId: "sesi-3", status: "tepat_waktu", waktuIsi: "2026-10-27T08:45", catatan: null },
+];

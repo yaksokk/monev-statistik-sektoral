@@ -1,11 +1,12 @@
 import {
   Award,
   Building2,
+  CalendarCheck,
   CalendarRange,
   ClipboardCheck,
-  FileText,
   LayoutDashboard,
-  type LucideIcon, Upload
+  type LucideIcon,
+  Upload,
 } from "lucide-react";
 import type { Peran } from "@/lib/types";
 
@@ -24,8 +25,8 @@ export const MENU: Record<Peran, ItemMenu[]> = {
     { label: "OPD", href: "/admin/opd", ikon: Building2 },
   ],
   operator: [
-  { label: "Dashboard", href: "/opd/dashboard", ikon: LayoutDashboard },
-  { label: "Unggah Dokumen", href: "/opd/unggah", ikon: Upload },
-],
-  
+    { label: "Dashboard", href: "/opd/dashboard", ikon: LayoutDashboard },
+    { label: "Daftar Hadir", href: "/opd/daftar-hadir", ikon: CalendarCheck },
+    { label: "Unggah Dokumen", href: "/opd/unggah", ikon: Upload },
+  ],
 };

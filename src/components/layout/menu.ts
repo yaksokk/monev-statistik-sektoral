@@ -29,6 +29,7 @@ export const MENU: Record<Peran, ItemMenu[]> = {
     { label: "Dashboard", href: "/opd/dashboard", ikon: LayoutDashboard },
     { label: "Daftar Hadir", href: "/opd/daftar-hadir", ikon: CalendarCheck },
     { label: "Pre-Test", href: "/opd/pre-test", ikon: ClipboardList },
+    { label: "Post-Test", href: "/opd/post-test", ikon: ClipboardCheck },
     { label: "Unggah Dokumen", href: "/opd/unggah", ikon: Upload },
   ],
 };

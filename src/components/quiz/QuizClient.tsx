@@ -14,11 +14,16 @@ import {
 } from "@/lib/quiz";
 import type { HasilQuiz, PengaturanQuiz, SoalQuiz } from "@/lib/types";
 
+// Syarat sebelum quiz boleh dimulai, mis. Post-Test menunggu Pre-Test selesai
+type Prasyarat = { terpenuhi: boolean; pesan: string };
+
 type Props = {
   opdId: string;
+  nama: string; // "Pre-Test" atau "Post-Test"
   pengaturan: PengaturanQuiz;
   soalList: SoalQuiz[];
   hasilAwal: HasilQuiz | null;
+  prasyarat?: Prasyarat;
 };
 
 type SesiKerja = {
@@ -30,7 +35,14 @@ type SesiKerja = {
 const KELAS_TOMBOL_SEKUNDER =
   "flex items-center gap-1.5 rounded-lg border border-line px-4 py-2 text-sm font-medium text-ink hover:bg-surface-muted disabled:opacity-50";
 
-export default function PreTestClient({ opdId, pengaturan, soalList, hasilAwal }: Props) {
+export default function QuizClient({
+  opdId,
+  nama,
+  pengaturan,
+  soalList,
+  hasilAwal,
+  prasyarat,
+}: Props) {
   const [hasil, setHasil] = useState(hasilAwal);
   const [sesi, setSesi] = useState<SesiKerja | null>(null);
   const [jawaban, setJawaban] = useState<Record<string, number>>({});
@@ -39,6 +51,8 @@ export default function PreTestClient({ opdId, pengaturan, soalList, hasilAwal }
   const [sekarang, setSekarang] = useState<string | null>(null);
   const [konfirmasi, setKonfirmasi] = useState(false);
   const [galat, setGalat] = useState<string | null>(null);
+
+  const pesanSyarat = prasyarat && !prasyarat.terpenuhi ? prasyarat.pesan : null;
 
   // Waktu dihitung di browser, diperbarui tiap 30 detik agar batas akhir tepat waktu
   useEffect(() => {
@@ -77,12 +91,13 @@ export default function PreTestClient({ opdId, pengaturan, soalList, hasilAwal }
   }, [sesi, selesaikan]);
 
   function mulai() {
+    if (pesanSyarat) return;
     const waktu = waktuSekarang();
     setSekarang(waktu);
 
     // batas akhir bisa saja lewat saat halaman terbuka
     if (statusQuiz(pengaturan, false, waktu) !== "terbuka") {
-      setGalat("Pre-Test sudah tidak bisa dimulai.");
+      setGalat(`${nama} sudah tidak bisa dimulai.`);
       return;
     }
 
@@ -354,7 +369,8 @@ export default function PreTestClient({ opdId, pengaturan, soalList, hasilAwal }
 
         <Dialog buka={konfirmasi} onTutup={() => setKonfirmasi(false)} judul="Kirim jawaban?">
           <p className="text-sm text-ink-muted">
-            Semua {total} soal sudah dijawab. Jawaban tidak bisa diubah setelah dikirim.
+            Semua {total} soal sudah dijawab. Jawaban tidak bisa diubah setelah dikirim, dan {nama}
+            hanya bisa dikerjakan satu kali.
           </p>
           <div className="flex justify-end gap-2">
             <button
@@ -383,7 +399,7 @@ export default function PreTestClient({ opdId, pengaturan, soalList, hasilAwal }
 
   return (
     <section
-      aria-label="Mulai Pre-Test"
+      aria-label={`Mulai ${nama}`}
       className="max-w-2xl rounded-card border border-line bg-surface p-5 shadow-card"
     >
       <h2 className="text-lg font-semibold text-ink">{pengaturan.judul}</h2>
@@ -406,7 +422,7 @@ export default function PreTestClient({ opdId, pengaturan, soalList, hasilAwal }
       </dl>
 
       <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-ink-muted">
-        <li>Pre-Test hanya bisa dikerjakan satu kali.</li>
+        <li>{nama} hanya bisa dikerjakan satu kali.</li>
         <li>Waktu berjalan sejak tombol Mulai ditekan. Soal baru tampil setelah itu.</li>
         <li>Semua soal harus dijawab sebelum jawaban bisa dikirim.</li>
         <li>
@@ -415,14 +431,19 @@ export default function PreTestClient({ opdId, pengaturan, soalList, hasilAwal }
         <li>Nilai, jawaban benar, dan pembahasan tampil setelah jawaban terkirim.</li>
       </ul>
 
-      {status === "belum_dibuka" && (
+      {pesanSyarat && (
         <p className="mt-4 rounded-lg bg-surface-muted px-3 py-2 text-sm text-ink-muted">
-          Pre-Test belum dibuka oleh admin.
+          {pesanSyarat}
         </p>
       )}
-      {status === "terkunci" && (
+      {!pesanSyarat && status === "belum_dibuka" && (
+        <p className="mt-4 rounded-lg bg-surface-muted px-3 py-2 text-sm text-ink-muted">
+          {nama} belum dibuka oleh admin.
+        </p>
+      )}
+      {!pesanSyarat && status === "terkunci" && (
         <p className="mt-4 rounded-lg bg-status-revisi-bg px-3 py-2 text-sm text-status-revisi-fg">
-          Pre-Test sudah ditutup dan tidak bisa dikerjakan lagi.
+          {nama} sudah ditutup dan tidak bisa dikerjakan lagi.
         </p>
       )}
       {galat && (
@@ -434,7 +455,7 @@ export default function PreTestClient({ opdId, pengaturan, soalList, hasilAwal }
       <button
         type="button"
         onClick={mulai}
-        disabled={status !== "terbuka"}
+        disabled={status !== "terbuka" || pesanSyarat !== null}
         className="mt-5 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-60"
       >
         Mulai Mengerjakan

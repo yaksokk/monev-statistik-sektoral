@@ -329,8 +329,8 @@ export const SOAL_PRETEST: SoalQuiz[] = [
   },
 ];
 
-// Hasil contoh: Dinkes selesai tepat waktu, Distan terkirim otomatis dengan jawaban belum lengkap
-export const HASIL_PRETEST_LIST: HasilQuiz[] = [
+// Hasil contoh Pre-Test: Dinkes selesai tepat waktu, Distan terkirim otomatis dengan jawaban belum lengkap
+export const HASIL_QUIZ_LIST: HasilQuiz[] = [
   {
     opdId: "opd-02",
     quizId: "pretest",
@@ -349,4 +349,25 @@ export const HASIL_PRETEST_LIST: HasilQuiz[] = [
     selesai: "2026-10-26T13:15",
     otomatis: true,
   },
+  // Hasil contoh Post-Test: hanya Dinkes yang sudah selesai
+  {
+    opdId: "opd-02",
+    quizId: "posttest",
+    urutanSoal: ["pt-04", "pt-07", "pt-01", "pt-06", "pt-03", "pt-08", "pt-02", "pt-05"],
+    jawaban: { "pt-01": 2, "pt-02": 0, "pt-03": 2, "pt-04": 1, "pt-05": 1, "pt-06": 1, "pt-07": 0, "pt-08": 1 },
+    mulai: "2026-10-27T10:00",
+    selesai: "2026-10-27T10:09",
+    otomatis: false,
+  },
 ];
+
+export const PENGATURAN_POSTTEST: PengaturanQuiz = {
+  id: "posttest",
+  judul: "Post-Test Pembinaan Satu Data Indonesia",
+  durasiMenit: 15,
+  batasAkhir: "2026-11-07T17:00",
+  akses: "dibuka",
+};
+
+// Untuk saat ini soalnya sama dengan Pre-Test; ganti bila soal Post-Test sudah berbeda
+export const SOAL_POSTTEST: SoalQuiz[] = SOAL_PRETEST;

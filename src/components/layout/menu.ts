@@ -4,6 +4,7 @@ import {
   CalendarCheck,
   CalendarRange,
   ClipboardCheck,
+  ClipboardList,
   LayoutDashboard,
   type LucideIcon,
   Upload,
@@ -27,6 +28,7 @@ export const MENU: Record<Peran, ItemMenu[]> = {
   operator: [
     { label: "Dashboard", href: "/opd/dashboard", ikon: LayoutDashboard },
     { label: "Daftar Hadir", href: "/opd/daftar-hadir", ikon: CalendarCheck },
+    { label: "Pre-Test", href: "/opd/pre-test", ikon: ClipboardList },
     { label: "Unggah Dokumen", href: "/opd/unggah", ikon: Upload },
   ],
 };

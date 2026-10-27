@@ -82,3 +82,34 @@ export interface Presensi {
   waktuIsi: string; // yyyy-mm-ddTHH:mm (waktu lokal), terisi otomatis saat dikirim
   catatan: string | null; // wajib bila terlambat atau izin
 }
+
+export type AksesQuiz = "belum_dibuka" | "dibuka" | "ditutup";
+
+// Soal pilihan ganda. kunci = indeks opsi yang benar (mulai dari 0)
+export interface SoalQuiz {
+  id: string;
+  pertanyaan: string;
+  opsi: string[];
+  kunci: number;
+  pembahasan: string;
+}
+
+// Diatur admin. Durasi dihitung sejak OPD menekan Mulai
+export interface PengaturanQuiz {
+  id: string;
+  judul: string;
+  durasiMenit: number;
+  batasAkhir: string; // yyyy-mm-ddTHH:mm (waktu lokal), setelah ini tidak bisa dimulai
+  akses: AksesQuiz;
+}
+
+// Hasil satu OPD, hanya ada setelah jawaban terkirim
+export interface HasilQuiz {
+  opdId: string;
+  quizId: string;
+  urutanSoal: string[]; // id soal sesuai urutan yang dilihat OPD
+  jawaban: Record<string, number>; // id soal -> indeks opsi; soal tanpa jawaban tidak ada
+  mulai: string; // yyyy-mm-ddTHH:mm
+  selesai: string; // yyyy-mm-ddTHH:mm
+  otomatis: boolean; // true bila terkirim karena waktu habis
+}

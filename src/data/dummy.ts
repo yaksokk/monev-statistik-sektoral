@@ -1,12 +1,15 @@
 import type {
   Dokumen,
+  HasilQuiz,
   ItemDokumen,
   Kegiatan,
   NilaiUjian,
   Opd,
+  PengaturanQuiz,
   Presensi,
   Pengguna,
   SesiPembinaan,
+  SoalQuiz,
   StatusDokumen,
 } from "@/lib/types";
 
@@ -204,4 +207,146 @@ export const PRESENSI_LIST: Presensi[] = [
   { id: "hadir-opd-04-sesi-1", opdId: "opd-04", sesiId: "sesi-1", status: "tepat_waktu", waktuIsi: "2026-10-08T08:28", catatan: null },
   { id: "hadir-opd-05-sesi-1", opdId: "opd-05", sesiId: "sesi-1", status: "terlambat", waktuIsi: "2026-10-08T09:40", catatan: "Kendala jaringan" },
   { id: "hadir-opd-06-sesi-3", opdId: "opd-06", sesiId: "sesi-3", status: "tepat_waktu", waktuIsi: "2026-10-27T08:45", catatan: null },
+];
+
+/* ------------------------------------------------------------------ */
+/* Pre-Test dummy                                                      */
+/* ------------------------------------------------------------------ */
+
+export const PENGATURAN_PRETEST: PengaturanQuiz = {
+  id: "pretest",
+  judul: "Pre-Test Pembinaan Satu Data Indonesia",
+  durasiMenit: 15,
+  batasAkhir: "2026-10-31T17:00",
+  akses: "dibuka",
+};
+
+export const SOAL_PRETEST: SoalQuiz[] = [
+  {
+    id: "pt-01",
+    pertanyaan:
+      "Sesuai Perpres No. 39 Tahun 2019, jenis data yang dicakup di dalam Satu Data Indonesia (SDI) meliputi berikut, KECUALI...",
+    opsi: [
+      "Data Statistik & Data Geospasial",
+      "Data Keuangan Negara Tingkat Pusat",
+      "Data Transaksi Rahasia Perbankan Swasta",
+      "Data lain untuk perencanaan pembangunan",
+    ],
+    kunci: 2,
+    pembahasan:
+      "SDI mencakup data yang diselenggarakan instansi pusat dan daerah, yaitu data statistik, data geospasial, dan data lain untuk perencanaan pembangunan. Data transaksi rahasia perbankan swasta berada di luar cakupan itu.",
+  },
+  {
+    id: "pt-02",
+    pertanyaan: "Empat prinsip utama pelaksanaan Kebijakan Satu Data Indonesia adalah...",
+    opsi: [
+      "Standar Data, Metadata, Interoperabilitas Data, Kode Referensi/Data Induk",
+      "Transparansi, Akuntabilitas, Kecepatan, Kerahasiaan",
+      "Pengumpulan, Pemeriksaan, Pengolahan, Diseminasi",
+      "Validitas, Reliabilitas, Akurasi, Kemutakhiran",
+    ],
+    kunci: 0,
+    pembahasan:
+      "Prinsip SDI adalah standar data, metadata, interoperabilitas data, serta kode referensi dan data induk. Opsi lain adalah kumpulan istilah umum yang bukan prinsip SDI.",
+  },
+  {
+    id: "pt-03",
+    pertanyaan:
+      "Lembaga/Instansi yang bertindak sebagai Pembina Data Statistik Tingkat Pusat dalam SDI adalah...",
+    opsi: [
+      "Kementerian Komunikasi dan Informatika",
+      "Badan Informasi Geospasial (BIG)",
+      "Badan Pusat Statistik (BPS)",
+      "Kementerian PPN / Bappenas",
+    ],
+    kunci: 2,
+    pembahasan:
+      "BPS adalah Pembina Data Statistik tingkat pusat, sedangkan BIG adalah Pembina Data Geospasial.",
+  },
+  {
+    id: "pt-04",
+    pertanyaan:
+      "Unit kerja pada instansi pemerintah yang bertugas mengumpulkan, memeriksa kesesuaian data, mengelola, dan menyebarluaskan data dari Produsen Data disebut...",
+    opsi: ["Dewan Pengarah", "Walidata", "Pembina Data", "Sekretariat SDI"],
+    kunci: 1,
+    pembahasan:
+      "Walidata adalah unit kerja yang mengumpulkan, memeriksa, mengelola, dan menyebarluaskan data yang disampaikan Produsen Data. Pembina Data bertugas membina dan menetapkan standar, bukan mengelola data dari produsen.",
+  },
+  {
+    id: "pt-05",
+    pertanyaan: "Manakah urutan tahapan Penyelenggaraan Satu Data Indonesia yang tepat?",
+    opsi: [
+      "Pengumpulan Data -> Perencanaan Data -> Pemeriksaan Data -> Penyebarluasan Data",
+      "Perencanaan Data -> Pengumpulan Data -> Pemeriksaan Data -> Penyebarluasan Data",
+      "Pemeriksaan Data -> Perencanaan Data -> Pengumpulan Data -> Penyebarluasan Data",
+      "Perencanaan Data -> Pemeriksaan Data -> Pengumpulan Data -> Penyebarluasan Data",
+    ],
+    kunci: 1,
+    pembahasan:
+      "Urutannya perencanaan, pengumpulan, pemeriksaan, lalu penyebarluasan data. Data harus direncanakan dan dikumpulkan dulu sebelum bisa diperiksa dan disebarluaskan.",
+  },
+  {
+    id: "pt-06",
+    pertanyaan:
+      "Kerangka kerja internasional yang digunakan BPS untuk memetakan tahapan bisnis kegiatan statistik dengan SDI adalah...",
+    opsi: [
+      "SDMX (Statistical Data and Metadata Exchange)",
+      "GSBPM (Generic Statistical Business Process Model)",
+      "TOGAF (The Open Group Architecture Framework)",
+      "DAMA-DMBOK",
+    ],
+    kunci: 1,
+    pembahasan:
+      "GSBPM memetakan tahapan proses bisnis kegiatan statistik, dari kebutuhan data sampai evaluasi. SDMX adalah standar pertukaran data dan metadata, bukan model proses bisnis.",
+  },
+  {
+    id: "pt-07",
+    pertanyaan:
+      "Menteri yang berwenang menetapkan Daftar Data Prioritas tingkat pusat melalui Keputusan Menteri adalah...",
+    opsi: [
+      "Menteri Dalam Negeri",
+      "Menteri PPN / Kepala Bappenas",
+      "Menteri Komunikasi dan Informatika",
+      "Kepala BPS",
+    ],
+    kunci: 1,
+    pembahasan:
+      "Daftar Data Prioritas tingkat pusat ditetapkan oleh Menteri yang membidangi perencanaan pembangunan nasional, yaitu Menteri PPN/Kepala Bappenas.",
+  },
+  {
+    id: "pt-08",
+    pertanyaan:
+      "Kemampuan data untuk dibagipakaikan antar sistem elektronik yang saling berinteraksi secara konsisten disebut...",
+    opsi: [
+      "Standardisasi Data",
+      "Interoperabilitas Data",
+      "Metadata Statistik",
+      "Bridging Wilkerstat",
+    ],
+    kunci: 1,
+    pembahasan:
+      "Interoperabilitas data adalah kemampuan data dibagipakaikan antar sistem elektronik yang saling berinteraksi.",
+  },
+];
+
+// Hasil contoh: Dinkes selesai tepat waktu, Distan terkirim otomatis dengan jawaban belum lengkap
+export const HASIL_PRETEST_LIST: HasilQuiz[] = [
+  {
+    opdId: "opd-02",
+    quizId: "pretest",
+    urutanSoal: ["pt-05", "pt-02", "pt-08", "pt-01", "pt-07", "pt-03", "pt-06", "pt-04"],
+    jawaban: { "pt-01": 1, "pt-02": 0, "pt-03": 2, "pt-04": 1, "pt-05": 1, "pt-06": 0, "pt-07": 1, "pt-08": 1 },
+    mulai: "2026-10-26T09:00",
+    selesai: "2026-10-26T09:11",
+    otomatis: false,
+  },
+  {
+    opdId: "opd-03",
+    quizId: "pretest",
+    urutanSoal: ["pt-02", "pt-01", "pt-04", "pt-03", "pt-05", "pt-06", "pt-07", "pt-08"],
+    jawaban: { "pt-01": 2, "pt-02": 0, "pt-03": 0, "pt-04": 1, "pt-05": 1 },
+    mulai: "2026-10-26T13:00",
+    selesai: "2026-10-26T13:15",
+    otomatis: true,
+  },
 ];

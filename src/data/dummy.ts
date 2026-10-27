@@ -359,6 +359,53 @@ export const HASIL_QUIZ_LIST: HasilQuiz[] = [
     selesai: "2026-10-27T10:09",
     otomatis: false,
   },
+  // DKP dan Dinsos sudah menyelesaikan Pre-Test dan Post-Test, Evaluasi Pendalaman bisa dicoba
+  {
+    opdId: "opd-04",
+    quizId: "pretest",
+    urutanSoal: ["pt-01", "pt-02", "pt-03", "pt-04", "pt-05", "pt-06", "pt-07", "pt-08"],
+    jawaban: { "pt-01": 0, "pt-02": 0, "pt-03": 2, "pt-04": 1, "pt-05": 1, "pt-06": 1, "pt-07": 1, "pt-08": 1 },
+    mulai: "2026-10-26T14:00",
+    selesai: "2026-10-26T14:12",
+    otomatis: false,
+  },
+  {
+    opdId: "opd-04",
+    quizId: "posttest",
+    urutanSoal: ["pt-01", "pt-02", "pt-03", "pt-04", "pt-05", "pt-06", "pt-07", "pt-08"],
+    jawaban: { "pt-01": 2, "pt-02": 0, "pt-03": 2, "pt-04": 1, "pt-05": 1, "pt-06": 1, "pt-07": 1, "pt-08": 1 },
+    mulai: "2026-10-27T11:00",
+    selesai: "2026-10-27T11:10",
+    otomatis: false,
+  },
+  {
+    opdId: "opd-05",
+    quizId: "pretest",
+    urutanSoal: ["pt-01", "pt-02", "pt-03", "pt-04", "pt-05", "pt-06", "pt-07", "pt-08"],
+    jawaban: { "pt-01": 2, "pt-02": 1, "pt-03": 2, "pt-04": 0, "pt-05": 1, "pt-06": 0, "pt-07": 1, "pt-08": 1 },
+    mulai: "2026-10-26T15:00",
+    selesai: "2026-10-26T15:13",
+    otomatis: false,
+  },
+  {
+    opdId: "opd-05",
+    quizId: "posttest",
+    urutanSoal: ["pt-01", "pt-02", "pt-03", "pt-04", "pt-05", "pt-06", "pt-07", "pt-08"],
+    jawaban: { "pt-01": 2, "pt-02": 0, "pt-03": 2, "pt-04": 1, "pt-05": 1, "pt-06": 0, "pt-07": 0, "pt-08": 1 },
+    mulai: "2026-10-27T12:00",
+    selesai: "2026-10-27T12:11",
+    otomatis: false,
+  },
+  // Hasil contoh Evaluasi Pendalaman: hanya Dinkes yang sudah selesai (DKP dan Dinsos belum)
+  {
+    opdId: "opd-02",
+    quizId: "evaluasi",
+    urutanSoal: ["pt-08", "pt-03", "pt-06", "pt-01", "pt-05", "pt-02", "pt-07", "pt-04"],
+    jawaban: { "pt-01": 2, "pt-02": 0, "pt-03": 2, "pt-04": 1, "pt-05": 0, "pt-06": 0, "pt-07": 1, "pt-08": 1 },
+    mulai: "2026-10-27T11:00",
+    selesai: "2026-10-27T11:08",
+    otomatis: false,
+  },
 ];
 
 export const PENGATURAN_POSTTEST: PengaturanQuiz = {
@@ -371,3 +418,14 @@ export const PENGATURAN_POSTTEST: PengaturanQuiz = {
 
 // Untuk saat ini soalnya sama dengan Pre-Test; ganti bila soal Post-Test sudah berbeda
 export const SOAL_POSTTEST: SoalQuiz[] = SOAL_PRETEST;
+
+export const PENGATURAN_EVALUASI: PengaturanQuiz = {
+  id: "evaluasi",
+  judul: "Evaluasi Pendalaman Pembinaan Satu Data Indonesia",
+  durasiMenit: 15,
+  batasAkhir: "2026-11-14T17:00",
+  akses: "dibuka",
+};
+
+// Untuk saat ini soalnya sama dengan Pre-Test; ganti bila soal Evaluasi sudah berbeda
+export const SOAL_EVALUASI: SoalQuiz[] = SOAL_PRETEST;

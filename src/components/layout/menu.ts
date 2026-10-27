@@ -5,6 +5,7 @@ import {
   CalendarRange,
   ClipboardCheck,
   ClipboardList,
+  GraduationCap,
   LayoutDashboard,
   type LucideIcon,
   Upload,
@@ -30,6 +31,7 @@ export const MENU: Record<Peran, ItemMenu[]> = {
     { label: "Daftar Hadir", href: "/opd/daftar-hadir", ikon: CalendarCheck },
     { label: "Pre-Test", href: "/opd/pre-test", ikon: ClipboardList },
     { label: "Post-Test", href: "/opd/post-test", ikon: ClipboardCheck },
+    { label: "Evaluasi Pendalaman", href: "/opd/evaluasi-pendalaman", ikon: GraduationCap },
     { label: "Unggah Dokumen", href: "/opd/unggah", ikon: Upload },
   ],
 };

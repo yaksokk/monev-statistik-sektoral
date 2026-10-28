@@ -61,7 +61,13 @@ export default async function DashboardOpdPage() {
   const babList = modul
     ? BAB_LIST.filter((b) => b.modulId === modul.id)
         .sort((a, b) => a.urutan - b.urutan)
-        .map((b) => ({ id: b.id, urutan: b.urutan, judul: b.judul, selesai: babSelesai.has(b.id) }))
+        .map((b) => ({
+          id: b.id,
+          urutan: b.urutan,
+          judul: b.judul,
+          pembinaan: b.pembinaan,
+          selesai: babSelesai.has(b.id),
+        }))
     : [];
 
   // dokumen kegiatan aktif

@@ -34,10 +34,10 @@ export default function ModulClient({ modul, babList, babSelesaiAwal, indeksAwal
     <section className="rounded-card bg-surface p-5 shadow-card sm:p-8">
       <header className="flex flex-col gap-4 border-b border-line pb-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="flex items-center gap-3 text-2xl font-bold text-navy-800 sm:text-3xl">
+          <h2 className="flex items-center gap-3 text-2xl font-bold text-navy-800 sm:text-3xl">
             <BookOpen className="size-7 shrink-0 text-navy-600" aria-hidden />
             Modul {modul.urutan}: {modul.judul}
-          </h1>
+          </h2>
           <p className="mt-1 text-sm text-ink-muted">{modul.subjudul}</p>
         </div>
 

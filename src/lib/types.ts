@@ -135,6 +135,7 @@ export interface BabModul {
   urutan: number;
   judul: string;
   linkMateri: string;
+  pembinaan: 1 | 2; // bab ini masuk Pembinaan 1 atau 2
 }
  
 // Catatan OPD menandai bab selesai; dipakai admin nanti untuk melihat siapa yang sudah belajar

@@ -15,6 +15,7 @@ export interface BabRingkas {
   id: string;
   urutan: number;
   judul: string;
+  pembinaan: 1 | 2;
   selesai: boolean;
 }
 
@@ -61,7 +62,7 @@ export default function PanelModul({ babList }: { babList: BabRingkas[] }) {
                   </span>
                 ) : (
                   <Link
-                    href={`/opd/modul-pembelajaran?bab=${bab.id}`}
+                    href={`/opd/pembinaan-${bab.pembinaan}?bab=${bab.id}`}
                     className="shrink-0 font-semibold text-primary hover:underline"
                   >
                     Pelajari

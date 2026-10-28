@@ -15,12 +15,12 @@ export const MODUL_LIST: ModulPembelajaran[] = [
 ];
 
 export const BAB_LIST: BabModul[] = [
-  { id: "m1-b1", modulId: "modul-1", urutan: 1, judul: "Pendahuluan", linkMateri: LINK_SEMENTARA },
-  { id: "m1-b2", modulId: "modul-1", urutan: 2, judul: "Satu Data Indonesia (SDI)", linkMateri: LINK_SEMENTARA },
-  { id: "m1-b3", modulId: "modul-1", urutan: 3, judul: "Penyelenggara Satu Data Indonesia", linkMateri: LINK_SEMENTARA },
-  { id: "m1-b4", modulId: "modul-1", urutan: 4, judul: "Penyelenggaraan SDI & GSBPM", linkMateri: LINK_SEMENTARA },
-  { id: "m1-b5", modulId: "modul-1", urutan: 5, judul: "Daftar Data & Data Prioritas", linkMateri: LINK_SEMENTARA },
-  { id: "m1-b6", modulId: "modul-1", urutan: 6, judul: "Indikator Kematangan EPSS", linkMateri: LINK_SEMENTARA },
+  { id: "m1-b1", modulId: "modul-1", urutan: 1, judul: "Pendahuluan", linkMateri: LINK_SEMENTARA, pembinaan: 1 },
+  { id: "m1-b2", modulId: "modul-1", urutan: 2, judul: "Satu Data Indonesia (SDI)", linkMateri: LINK_SEMENTARA, pembinaan: 1 },
+  { id: "m1-b3", modulId: "modul-1", urutan: 3, judul: "Penyelenggara Satu Data Indonesia", linkMateri: LINK_SEMENTARA, pembinaan: 1 },
+  { id: "m1-b4", modulId: "modul-1", urutan: 4, judul: "Penyelenggaraan SDI & GSBPM", linkMateri: LINK_SEMENTARA, pembinaan: 2 },
+  { id: "m1-b5", modulId: "modul-1", urutan: 5, judul: "Daftar Data & Data Prioritas", linkMateri: LINK_SEMENTARA, pembinaan: 2 },
+  { id: "m1-b6", modulId: "modul-1", urutan: 6, judul: "Indikator Kematangan EPSS", linkMateri: LINK_SEMENTARA, pembinaan: 2 },
 ];
 
 // Catatan bab yang sudah ditandai selesai oleh OPD (dasar tampilan admin nanti)

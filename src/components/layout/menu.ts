@@ -1,15 +1,15 @@
 import {
   Award,
+  BookOpen,
+  BookOpenCheck,
   Building2,
   CalendarCheck,
   CalendarRange,
   ClipboardCheck,
-  ClipboardList,
+  FileText,
   GraduationCap,
   LayoutDashboard,
-  BookOpen,
   type LucideIcon,
-  FileText,
 } from "lucide-react";
 import type { Peran } from "@/lib/types";
 
@@ -30,10 +30,9 @@ export const MENU: Record<Peran, ItemMenu[]> = {
   operator: [
     { label: "Dashboard", href: "/opd/dashboard", ikon: LayoutDashboard },
     { label: "Daftar Hadir", href: "/opd/daftar-hadir", ikon: CalendarCheck },
-    { label: "Modul Pembelajaran", href: "/opd/modul-pembelajaran", ikon: BookOpen },
-    { label: "Pre-Test", href: "/opd/pre-test", ikon: ClipboardList },
-    { label: "Post-Test", href: "/opd/post-test", ikon: ClipboardCheck },
+    { label: "Pembinaan 1", href: "/opd/pembinaan-1", ikon: BookOpen },
+    { label: "Pembinaan 2", href: "/opd/pembinaan-2", ikon: BookOpenCheck },
     { label: "Evaluasi Pendalaman", href: "/opd/evaluasi-pendalaman", ikon: GraduationCap },
-    { label: "Daftar Dokumen", href: "/opd/daftar-dokumen", ikon: FileText }
+    { label: "Daftar Dokumen", href: "/opd/daftar-dokumen", ikon: FileText },
   ],
 };

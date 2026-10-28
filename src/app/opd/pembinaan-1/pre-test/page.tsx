@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import QuizClient from "@/components/quiz/QuizClient";
 import { HASIL_QUIZ_LIST, PENGATURAN_PRETEST, SOAL_PRETEST } from "@/data/dummy";
 import { ambilOperator } from "@/lib/operator";
@@ -11,7 +13,14 @@ export default async function PreTestPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold text-ink">Pre-Test</h1>
+        <Link
+          href="/opd/pembinaan-1"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+        >
+          <ArrowLeft className="size-4" aria-hidden />
+          Kembali ke Pembinaan 1
+        </Link>
+        <h1 className="mt-3 text-2xl font-semibold text-ink">Pre-Test</h1>
         <p className="mt-1 text-sm text-ink-muted">
           Uji pemahaman dasar sebelum mempelajari Modul Pembinaan Statistik Sektoral · {opd.nama}
         </p>

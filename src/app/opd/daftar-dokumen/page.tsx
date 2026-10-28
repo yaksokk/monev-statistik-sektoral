@@ -23,5 +23,8 @@ export default async function DaftarDokumenPage() {
     (d) => d.opdId === opd.id && d.kegiatanId === kegiatan.id,
   );
 
-  return <DaftarDokumenClient opd={opd} kegiatan={kegiatan} item={item} dokumen={dokumen} />;
+    // link sertifikat tidak perlu sampai ke client di halaman ini
+  const opdAman = { id: opd.id, nama: opd.nama, singkatan: opd.singkatan };
+
+  return <DaftarDokumenClient opd={opdAman} kegiatan={kegiatan} item={item} dokumen={dokumen} />;
 }

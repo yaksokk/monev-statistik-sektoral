@@ -1,180 +1,140 @@
-import Link from "next/link";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { DOKUMEN_LIST, ITEM_LIST, KEGIATAN_LIST } from "@/data/dummy";
+import { CalendarCheck, ClipboardList, GraduationCap, LayoutDashboard, TrendingUp } from "lucide-react";
+import { BAB_LIST, BAB_SELESAI_LIST, MODUL_LIST } from "@/data/modul";
+import {
+  DOKUMEN_LIST,
+  HASIL_QUIZ_LIST,
+  ITEM_LIST,
+  KEGIATAN_LIST,
+  PENGATURAN_EVALUASI,
+  PENGATURAN_POSTTEST,
+  PENGATURAN_PRETEST,
+  PRESENSI_LIST,
+  SESI_LIST,
+  SOAL_POSTTEST,
+  SOAL_PRETEST,
+} from "@/data/dummy";
+import {
+  AMBANG_KEHADIRAN,
+  AMBANG_POSTTEST,
+  ambilNilaiQuiz,
+  formatNGain,
+  hitungKehadiran,
+  hitungNGain,
+  linkHttps,
+} from "@/lib/dashboard";
 import { ambilOperator } from "@/lib/operator";
-import { hitungStatus, rekapOpd } from "@/lib/rekap";
-import { STATUS_LABEL, type StatusDokumen } from "@/lib/types";
-
-const URUTAN_STATUS: StatusDokumen[] = ["belum", "menunggu", "disetujui", "revisi"];
-
-function formatTanggal(iso: string) {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function formatNilai(n: number) {
-  return n.toLocaleString("id-ID", { maximumFractionDigits: 1 });
-}
+import { formatNilai } from "@/lib/quiz";
+import KartuMetrik from "./KartuMetrik";
+import PanelDokumen, { type BarisDokumen } from "./PanelDokumen";
+import PanelKelulusan from "./PanelKelulusan";
+import PanelModul from "./PanelModul";
 
 export default async function DashboardOpdPage() {
   const { opd } = await ambilOperator();
-  const rekap = rekapOpd(opd.id);
 
-  // jumlah dokumen per status, dijumlahkan dari semua kegiatan
-  const jumlahStatus: Record<StatusDokumen, number> = {
-    belum: 0,
-    menunggu: 0,
-    disetujui: 0,
-    revisi: 0,
+  // kehadiran dan quiz
+  const presensi = PRESENSI_LIST.filter((p) => p.opdId === opd.id);
+  const hasilOpd = HASIL_QUIZ_LIST.filter((h) => h.opdId === opd.id);
+
+  const kehadiran = hitungKehadiran(SESI_LIST, presensi);
+  const nilaiPre = ambilNilaiQuiz(hasilOpd, PENGATURAN_PRETEST.id, SOAL_PRETEST);
+  const nilaiPost = ambilNilaiQuiz(hasilOpd, PENGATURAN_POSTTEST.id, SOAL_POSTTEST);
+  const nGain = hitungNGain(nilaiPre, nilaiPost);
+  const evaluasiSelesai = hasilOpd.some((h) => h.quizId === PENGATURAN_EVALUASI.id);
+
+  // syarat kelulusan (kelengkapan dokumen bukan syarat)
+  const syarat = {
+    presensi: kehadiran.persen >= AMBANG_KEHADIRAN,
+    postTest: nilaiPost !== null && nilaiPost >= AMBANG_POSTTEST,
+    evaluasi: evaluasiSelesai,
   };
-  for (const k of KEGIATAN_LIST) {
-    const per = hitungStatus(opd.id, k.id);
-    for (const s of URUTAN_STATUS) jumlahStatus[s] += per[s];
-  }
+  const lulus = syarat.presensi && syarat.postTest && syarat.evaluasi;
+  // link baru dikirim ke komponen bila semua syarat terpenuhi
+  const linkSertifikat = lulus ? linkHttps(opd.linkSertifikat) : null;
 
-  const perluRevisi = DOKUMEN_LIST.filter(
-    (d) => d.opdId === opd.id && d.status === "revisi",
+  // progress bab
+  const modul = MODUL_LIST[0];
+  const babSelesai = new Set(
+    BAB_SELESAI_LIST.filter((s) => s.opdId === opd.id).map((s) => s.babId),
   );
+  const babList = modul
+    ? BAB_LIST.filter((b) => b.modulId === modul.id)
+        .sort((a, b) => a.urutan - b.urutan)
+        .map((b) => ({ id: b.id, urutan: b.urutan, judul: b.judul, selesai: babSelesai.has(b.id) }))
+    : [];
+
+  // dokumen kegiatan aktif
+  const kegiatan = KEGIATAN_LIST.find((k) => k.aktif);
+  const barisDokumen: BarisDokumen[] = kegiatan
+    ? ITEM_LIST.filter((i) => i.kegiatanId === kegiatan.id).map((item) => ({
+        id: item.id,
+        nama: item.nama,
+        status:
+          DOKUMEN_LIST.find(
+            (d) => d.opdId === opd.id && d.kegiatanId === kegiatan.id && d.itemId === item.id,
+          )?.status ?? "belum",
+      }))
+    : [];
 
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold text-ink">Dashboard OPD</h1>
-        <p className="mt-1 text-sm text-ink-muted">{opd.nama}</p>
+        <h1 className="flex items-center gap-3 text-2xl font-bold text-navy-800 sm:text-3xl">
+          <LayoutDashboard className="size-7 shrink-0 text-navy-600" aria-hidden />
+          Ukuran &amp; Metrik Peserta Pembinaan
+        </h1>
+        <p className="mt-1 text-sm text-ink-muted">
+          Rekapitulasi capaian, kehadiran, peningkatan pemahaman (Gain Score), dan status
+          sertifikasi peserta · {opd.nama}
+        </p>
       </header>
 
       <section
-        aria-label="Ringkasan status dokumen"
-        className="grid grid-cols-2 gap-4 lg:grid-cols-4"
+        aria-label="Ringkasan capaian"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
       >
-        {URUTAN_STATUS.map((status) => (
-          <div
-            key={status}
-            className="rounded-card border border-line bg-surface p-4 shadow-card"
-          >
-            <StatusBadge status={status} />
-            <p className="tabular mt-3 text-3xl font-semibold text-ink">
-              {jumlahStatus[status]}
-            </p>
-            <p className="text-xs text-ink-muted">dokumen, semua kegiatan</p>
-          </div>
-        ))}
+        <KartuMetrik
+          ikon={CalendarCheck}
+          warna="navy"
+          label="Tingkat Kehadiran"
+          nilai={`${Math.round(kehadiran.persen)}%`}
+          keterangan={`${kehadiran.hadir} dari ${kehadiran.total} Sesi`}
+        />
+        <KartuMetrik
+          ikon={ClipboardList}
+          warna="amber"
+          label="Nilai Pre-Test"
+          nilai={nilaiPre === null ? "Belum" : formatNilai(nilaiPre)}
+          keterangan="Kemampuan Awal"
+        />
+        <KartuMetrik
+          ikon={GraduationCap}
+          warna="hijau"
+          label="Nilai Post-Test"
+          nilai={nilaiPost === null ? "Belum" : formatNilai(nilaiPost)}
+          keterangan="Kemampuan Akhir"
+        />
+        <KartuMetrik
+          ikon={TrendingUp}
+          warna="netral"
+          label="N-Gain Score"
+          nilai={nGain === null ? "0,00" : formatNGain(nGain)}
+          keterangan={nGain === null ? "Belum Diukur" : "Peningkatan Pemahaman"}
+        />
       </section>
 
-      <section aria-label="Progres per kegiatan" className="space-y-3">
-        <div className="flex items-end justify-between">
-          <h2 className="text-lg font-semibold text-ink">Progres per kegiatan</h2>
-          <p className="text-sm text-ink-muted">
-            Nilai akhir sementara:{" "}
-            <span className="tabular font-semibold text-ink">
-              {formatNilai(rekap.nilaiAkhir)}
-            </span>
-          </p>
-        </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <PanelModul babList={babList} />
+        <PanelKelulusan
+          persenKehadiran={kehadiran.persen}
+          teksNilaiPost={nilaiPost === null ? "Belum" : formatNilai(nilaiPost)}
+          syarat={syarat}
+          lulus={lulus}
+          linkSertifikat={linkSertifikat}
+        />
+      </div>
 
-        <div className="grid gap-4 lg:grid-cols-3">
-          {KEGIATAN_LIST.map((kegiatan) => {
-            const data = rekap.perKegiatan.find((k) => k.kegiatanId === kegiatan.id);
-            const kelengkapan = data?.kelengkapan ?? 0;
-            const ujian = data?.ujian ?? null;
-            const jumlahItem = ITEM_LIST.filter((i) => i.kegiatanId === kegiatan.id).length;
-
-            return (
-              <article
-                key={kegiatan.id}
-                className="flex flex-col rounded-card border border-line bg-surface p-5 shadow-card"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-ink">{kegiatan.nama}</h3>
-                  <span className="tabular rounded-md bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">
-                    Bobot {kegiatan.bobot}%
-                  </span>
-                </div>
-
-                <p className="mt-1 text-xs text-ink-muted">
-                  Tenggat {formatTanggal(kegiatan.tenggat)} · {jumlahItem} item
-                </p>
-
-                <div className="mt-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-ink-muted">Kelengkapan</span>
-                    <span className="tabular font-medium text-ink">
-                      {formatNilai(kelengkapan)}%
-                    </span>
-                  </div>
-                  <div
-                    className="mt-1.5 h-2 overflow-hidden rounded-full bg-surface-muted"
-                    role="progressbar"
-                    aria-valuenow={Math.round(kelengkapan)}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label={`Kelengkapan ${kegiatan.nama}`}
-                  >
-                    <div
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${kelengkapan}%` }}
-                    />
-                  </div>
-                </div>
-
-                <p className="mt-4 text-sm text-ink-muted">
-                  Nilai ujian:{" "}
-                  <span className="tabular font-medium text-ink">
-                    {ujian == null ? "Belum ada" : formatNilai(ujian)}
-                  </span>
-                </p>
-
-                <Link
-                  href={`/opd/daftar-dokumen?kegiatanId=${kegiatan.id}`}
-                  className="mt-5 rounded-lg bg-primary px-4 py-2 text-center text-sm font-medium text-white hover:bg-primary-hover"
-                >
-                  Lihat &amp; unggah
-                </Link>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      {perluRevisi.length > 0 && (
-        <section
-          aria-label="Dokumen perlu revisi"
-          className="rounded-card border border-line bg-surface p-5 shadow-card"
-        >
-          <h2 className="text-lg font-semibold text-ink">
-            {STATUS_LABEL.revisi} ({perluRevisi.length})
-          </h2>
-          <ul className="mt-3 divide-y divide-line">
-            {perluRevisi.map((d) => {
-              const item = ITEM_LIST.find((i) => i.id === d.itemId);
-              const kegiatan = KEGIATAN_LIST.find((k) => k.id === d.kegiatanId);
-              return (
-                <li
-                  key={d.id}
-                  className="flex flex-col gap-1 py-3 sm:flex-row sm:items-start sm:justify-between"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-ink">{item?.nama}</p>
-                    <p className="text-xs text-ink-muted">{kegiatan?.nama}</p>
-                    <p className="text-sm text-ink-muted">
-                      {d.catatanRevisi ?? "Tanpa catatan dari admin."}
-                    </p>
-                  </div>
-                  <Link
-                    href={`/opd/unggah?kegiatan=${d.kegiatanId}`}
-                    className="text-sm font-medium text-primary hover:underline"
-                  >
-                    Perbaiki
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
+      <PanelDokumen namaKegiatan={kegiatan?.nama ?? null} baris={barisDokumen} />
     </div>
   );
 }

@@ -8,10 +8,11 @@ interface Props {
   modul: ModulPembelajaran;
   babList: BabModul[];
   babSelesaiAwal: string[];
+  indeksAwal?: number;
 }
 
-export default function ModulClient({ modul, babList, babSelesaiAwal }: Props) {
-  const [indeks, setIndeks] = useState(0);
+export default function ModulClient({ modul, babList, babSelesaiAwal, indeksAwal = 0 }: Props) {
+  const [indeks, setIndeks] = useState(indeksAwal);
   // Simulasi: hanya di state browser. Nanti disimpan ke server per OPD dan bab
   const [selesai, setSelesai] = useState<Set<string>>(() => new Set(babSelesaiAwal));
 

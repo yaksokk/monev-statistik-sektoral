@@ -13,6 +13,7 @@ export interface Opd {
   id: string;
   nama: string;
   singkatan: string;
+  linkSertifikat?: string; // diisi admin, satu link per OPD
 }
 
 export interface Pengguna {

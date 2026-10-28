@@ -17,7 +17,10 @@ import type {
 /* Master data                                                         */
 /* Semua data di file ini DUMMY. Ganti dengan data asli dari backend. */
 /* ------------------------------------------------------------------ */
-
+// Dummy: satu link contoh untuk semua OPD. Nanti admin mengisi link per OPD
+const LINK_SERTIFIKAT_CONTOH =
+  "https://drive.google.com/drive/folders/1vMYIiLaKdp15EMe6HEJ6YAXpd-PzGTo0";
+  
 export const OPD_LIST: Opd[] = [
   { id: "opd-01", nama: "Dinas Pendidikan dan Kebudayaan", singkatan: "Disdikbud" },
   { id: "opd-02", nama: "Dinas Kesehatan", singkatan: "Dinkes" },
@@ -27,7 +30,7 @@ export const OPD_LIST: Opd[] = [
   { id: "opd-06", nama: "Dinas Pariwisata", singkatan: "Dispar" },
   { id: "opd-07", nama: "Dinas Komunikasi dan Informatika", singkatan: "Diskominfo" },
   { id: "opd-08", nama: "Dinas Kependudukan dan Pencatatan Sipil", singkatan: "Disdukcapil" },
-];
+].map((opd) => ({ ...opd, linkSertifikat: LINK_SERTIFIKAT_CONTOH }));
 
 // Dokumen yang harus diunggah OPD, berbeda per kegiatan:
 // kegiatan 1 = 9 dokumen, kegiatan 2 = 3, kegiatan 3 = 2.

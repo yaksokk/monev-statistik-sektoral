@@ -35,22 +35,23 @@ export const OPD_LIST: Opd[] = [
 export const ITEM_LIST: ItemDokumen[] = [
   { id: "item-01", kegiatanId: "kegiatan-1", nama: "Output per kegiatan" },
   { id: "item-02", kegiatanId: "kegiatan-1", nama: "Monitoring web kelengkapan" },
-  { id: "item-04", kegiatanId: "kegiatan-1", nama: "Dokumentasi" },
-  { id: "item-05", kegiatanId: "kegiatan-1", nama: "Undangan" },
-  { id: "item-06", kegiatanId: "kegiatan-1", nama: "Tabulasi identifikasi kegiatan statistik" },
-  { id: "item-07", kegiatanId: "kegiatan-1", nama: "Dokumen – item 7" },
-  { id: "item-08", kegiatanId: "kegiatan-1", nama: "Dokumen – item 8" },
-  { id: "item-09", kegiatanId: "kegiatan-1", nama: "Dokumen – item 9" },
-  { id: "item-10", kegiatanId: "kegiatan-1", nama: "Dokumen – item 10" },
-  { id: "item-11", kegiatanId: "kegiatan-2", nama: "Daftar hadir dan sertifikat" },
-  { id: "item-12", kegiatanId: "kegiatan-2", nama: "Screenshot hasil MOOC" },
-  { id: "item-13", kegiatanId: "kegiatan-2", nama: "Screenshot hasil pretest" },
+  { id: "item-03", kegiatanId: "kegiatan-1", nama: "Dokumentasi" },
+  { id: "item-04", kegiatanId: "kegiatan-1", nama: "Undangan" },
+  { id: "item-05", kegiatanId: "kegiatan-1", nama: "Tabulasi identifikasi kegiatan statistik" },
+  { id: "item-06", kegiatanId: "kegiatan-1", nama: "Dokumen – item 7" },
+  { id: "item-07", kegiatanId: "kegiatan-1", nama: "Dokumen – item 8" },
+  { id: "item-08", kegiatanId: "kegiatan-1", nama: "Dokumen – item 9" },
+  { id: "item-09", kegiatanId: "kegiatan-1", nama: "Dokumen – item 10" },
+  { id: "item-10", kegiatanId: "kegiatan-2", nama: "Daftar hadir dan sertifikat" },
+  { id: "item-11", kegiatanId: "kegiatan-2", nama: "Screenshot hasil MOOC" },
+  { id: "item-12", kegiatanId: "kegiatan-2", nama: "Screenshot hasil pretest" },
   { id: "item-14", kegiatanId: "kegiatan-3", nama: "Dokumen statistik sektoral" },
   { id: "item-15", kegiatanId: "kegiatan-3", nama: "Hasil ujian dan pembinaan" },
 ];
 
 export const KEGIATAN_LIST: Kegiatan[] = [
   {
+    aktif: true,
     id: "kegiatan-1",
     nama: "Kegiatan Statistik Sektoral 1",
     tanggalMulai: "2026-10-01",

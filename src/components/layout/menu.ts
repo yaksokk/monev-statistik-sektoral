@@ -9,7 +9,7 @@ import {
   LayoutDashboard,
   BookOpen,
   type LucideIcon,
-  Upload,
+  FileText,
 } from "lucide-react";
 import type { Peran } from "@/lib/types";
 
@@ -34,6 +34,6 @@ export const MENU: Record<Peran, ItemMenu[]> = {
     { label: "Pre-Test", href: "/opd/pre-test", ikon: ClipboardList },
     { label: "Post-Test", href: "/opd/post-test", ikon: ClipboardCheck },
     { label: "Evaluasi Pendalaman", href: "/opd/evaluasi-pendalaman", ikon: GraduationCap },
-    { label: "Unggah Dokumen", href: "/opd/unggah", ikon: Upload },
+    { label: "Daftar Dokumen", href: "/opd/daftar-dokumen", ikon: FileText }
   ],
 };

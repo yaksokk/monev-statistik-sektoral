@@ -37,6 +37,7 @@ export interface Kegiatan {
   tanggalSelesai: string;
   tenggat: string; // ISO yyyy-mm-dd, batas akhir unggah dokumen
   bobot: number; // persen, bobot kegiatan terhadap nilai keseluruhan
+  aktif?: boolean;
 }
 
 export interface Dokumen {

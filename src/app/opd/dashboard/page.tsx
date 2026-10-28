@@ -128,7 +128,7 @@ export default async function DashboardOpdPage() {
                 </p>
 
                 <Link
-                  href={`/opd/unggah?kegiatan=${kegiatan.id}`}
+                  href={`/opd/daftar-dokumen?kegiatanId=${kegiatan.id}`}
                   className="mt-5 rounded-lg bg-primary px-4 py-2 text-center text-sm font-medium text-white hover:bg-primary-hover"
                 >
                   Lihat &amp; unggah

@@ -28,6 +28,7 @@ import KartuMetrik from "./KartuMetrik";
 import PanelDokumen, { type BarisDokumen } from "./PanelDokumen";
 import PanelKelulusan from "./PanelKelulusan";
 import PanelModul from "./PanelModul";
+import KartuUndangan from "./KartuUndangan";
 
 export default async function DashboardOpdPage() {
   const { opd } = await ambilOperator();
@@ -65,6 +66,8 @@ export default async function DashboardOpdPage() {
 
   // dokumen kegiatan aktif
   const kegiatan = KEGIATAN_LIST.find((k) => k.aktif);
+  // undangan hanya ditampilkan bila link ada dan berawalan https
+  const linkUndangan = linkHttps(kegiatan?.linkUndangan);
   const barisDokumen: BarisDokumen[] = kegiatan
     ? ITEM_LIST.filter((i) => i.kegiatanId === kegiatan.id).map((item) => ({
         id: item.id,
@@ -88,7 +91,13 @@ export default async function DashboardOpdPage() {
           sertifikasi peserta · {opd.nama}
         </p>
       </header>
-
+                {kegiatan && (
+        <KartuUndangan
+          judul={kegiatan.judulUndangan ?? "Surat Undangan"}
+          tanggal={kegiatan.tanggalUndangan ?? null}
+          link={linkUndangan}
+        />
+      )}
       <section
         aria-label="Ringkasan capaian"
         className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"

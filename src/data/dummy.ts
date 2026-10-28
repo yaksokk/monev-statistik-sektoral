@@ -61,6 +61,9 @@ export const KEGIATAN_LIST: Kegiatan[] = [
     tanggalSelesai: "2026-10-31",
     tenggat: "2026-10-30",
     bobot: 40,
+    judulUndangan: "Undangan Pembinaan Statistik Sektoral",
+    tanggalUndangan: "2026-10-01",
+    linkUndangan: LINK_SERTIFIKAT_CONTOH, // hanya data dummy
   },
   {
     id: "kegiatan-2",

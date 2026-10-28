@@ -2,10 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut } from "lucide-react";
 import { MENU } from "./menu";
 import type { Peran } from "@/lib/types";
-import { keluar } from "@/app/(auth)/login/actions";
 import Image from "next/image";
 
 const TAUTAN =
@@ -48,15 +46,6 @@ export function Sidebar({ peran, onNavigate }: { peran: Peran; onNavigate?: () =
           );
         })}
       </nav>
-
-      <div className="border-t border-navy-700 p-3">
-        <form action={keluar}>
-          <button type="submit" className="...className tautan Keluar yang lama...">
-            <LogOut className="size-4" />
-            Keluar
-          </button>
-        </form>
-      </div>
     </div>
   );
 }

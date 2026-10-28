@@ -52,6 +52,7 @@ export function AppShell({ peran, namaPengguna, children }: AppShellProps) {
         nama={namaPengguna}
         peranLabel={LABEL_PERAN[peran]}
         onBukaMenu={() => setMenuTerbuka(true)}
+        hrefGantiSandi={peran === "operator" ? "/opd/ganti-kata-sandi" : undefined}
       />
 
       <main id="konten" className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">

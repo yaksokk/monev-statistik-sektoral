@@ -39,10 +39,12 @@ export interface Kegiatan {
   tenggat: string; // ISO yyyy-mm-dd, batas akhir unggah dokumen
   bobot: number; // persen, bobot kegiatan terhadap nilai keseluruhan
   aktif?: boolean;
+  arsip?: boolean; // diarsipkan admin, tidak bisa aktif bersamaan
   // Surat undangan, diisi admin, sama untuk semua OPD
   judulUndangan?: string;
   tanggalUndangan?: string; // ISO yyyy-mm-dd, tanggal surat
   linkUndangan?: string; // link Google Drive
+  
 }
 
 export interface Dokumen {
@@ -143,4 +145,13 @@ export interface BabSelesai {
   opdId: string;
   babId: string;
   selesaiPada: string; // yyyy-mm-ddTHH:mm
+}
+
+// Surat undangan, dibuat admin dan dikirim ke OPD terpilih
+export interface Undangan {
+  id: string;
+  judul: string;
+  link: string; // link Google Drive, wajib https
+  dikirimPada: string; // yyyy-mm-ddTHH:mm (waktu lokal), terisi otomatis saat dikirim
+  opdIds: string[]; // OPD penerima; kosong = belum ada penerima
 }

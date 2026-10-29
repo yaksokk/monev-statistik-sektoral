@@ -1,16 +1,45 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CalendarClock, Pencil, Plus } from "lucide-react";
+import { useState } from "react";
+import {
+  Archive,
+  ArchiveRestore,
+  CalendarClock,
+  Pencil,
+  Plus,
+  Power,
+  PowerOff,
+  Trash2,
+} from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
 import type { Kegiatan } from "@/lib/types";
 
-const tombolUtama =
-  "inline-flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
-const tombolSekunder =
-  "inline-flex items-center gap-2 rounded-lg border border-line bg-surface px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
+const dasarTombol =
+  "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50";
+const tombolUtama = `${dasarTombol} bg-primary text-white hover:bg-primary-hover`;
+const tombolSekunder = `${dasarTombol} border border-line bg-surface text-ink hover:bg-surface-muted`;
+const tombolBahaya = `${dasarTombol} bg-status-revisi-fg text-white hover:opacity-90`;
 const kolomInput =
   "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-primary";
+
+type StatusKegiatan = "aktif" | "nonaktif" | "arsip";
+
+const LABEL_STATUS: Record<StatusKegiatan, string> = {
+  aktif: "Aktif",
+  nonaktif: "Nonaktif",
+  arsip: "Arsip",
+};
+
+const GAYA_STATUS: Record<StatusKegiatan, string> = {
+  aktif: "bg-primary-soft text-primary",
+  nonaktif: "bg-surface-muted text-ink-muted",
+  arsip: "bg-surface-muted text-ink-muted",
+};
+
+function statusDari(k: Kegiatan): StatusKegiatan {
+  if (k.arsip) return "arsip";
+  return k.aktif ? "aktif" : "nonaktif";
+}
 
 function tanggal(iso: string) {
   return new Date(iso).toLocaleDateString("id-ID", {
@@ -21,13 +50,9 @@ function tanggal(iso: string) {
   });
 }
 
-function status(k: Kegiatan, hariIni: string) {
-  if (hariIni < k.tanggalMulai) return { label: "Belum mulai", aktif: false };
-  if (hariIni > k.tanggalSelesai) return { label: "Selesai", aktif: false };
-  return { label: "Berlangsung", aktif: true };
-}
-
 type Isian = { nama: string; mulai: string; selesai: string; tenggat: string; bobot: string };
+
+const ISIAN_KOSONG: Isian = { nama: "", mulai: "", selesai: "", tenggat: "", bobot: "" };
 
 function FormKegiatan({
   awal,
@@ -131,19 +156,152 @@ function FormKegiatan({
   );
 }
 
-export default function KegiatanClient({ awal }: { awal: Kegiatan[] }) {
+type AksiKartu = {
+  adaAktifLain: boolean;
+  berdata: boolean;
+  onUbah: () => void;
+  onAktifkan: () => void;
+  onNonaktifkan: () => void;
+  onArsipkan: () => void;
+  onHapus: () => void;
+};
+
+function KartuKegiatan({ k, ...aksi }: { k: Kegiatan } & AksiKartu) {
+  const s = statusDari(k);
+  const dikunci = s === "aktif";
+  const tidakBisaHapus = dikunci || aksi.berdata;
+
+  const petunjuk: string[] = [];
+  if (dikunci) petunjuk.push("Nonaktifkan dulu untuk mengarsipkan atau menghapus.");
+  else if (aksi.berdata) petunjuk.push("Sudah punya data, tidak bisa dihapus.");
+  if (!dikunci && aksi.adaAktifLain) {
+    petunjuk.push("Nonaktifkan kegiatan aktif lebih dulu untuk mengaktifkan kegiatan ini.");
+  }
+
+  return (
+    <section className="rounded-card border border-line bg-surface shadow-card">
+      <div className="flex items-start justify-between gap-3 border-b border-line p-4 sm:p-5">
+        <div className="min-w-0 space-y-1">
+          <h2 className="font-semibold text-ink">{k.nama}</h2>
+          <p className="text-sm text-ink-muted">
+            {tanggal(k.tanggalMulai)} sampai {tanggal(k.tanggalSelesai)}
+          </p>
+        </div>
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${GAYA_STATUS[s]}`}>
+          {LABEL_STATUS[s]}
+        </span>
+      </div>
+
+      <ul className="divide-y divide-line">
+        <li className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5">
+          <span className="text-ink">Tenggat unggah dokumen</span>
+          <span className="tabular flex items-center gap-1.5 text-ink-muted">
+            <CalendarClock className="size-4" aria-hidden />
+            {k.tenggat ? tanggal(k.tenggat) : "Belum diatur"}
+          </span>
+        </li>
+        <li className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5">
+          <span className="text-ink">Bobot nilai</span>
+          <span className="tabular font-semibold text-ink">{k.bobot}%</span>
+        </li>
+      </ul>
+
+      <div className="space-y-2 border-t border-line p-3 sm:px-5">
+        {petunjuk.map((t) => (
+          <p key={t} className="text-xs text-ink-muted">
+            {t}
+          </p>
+        ))}
+        <div className="flex flex-wrap justify-end gap-2">
+          {s === "aktif" ? (
+            <button onClick={aksi.onNonaktifkan} className={tombolSekunder}>
+              <PowerOff className="size-4" aria-hidden />
+              Nonaktifkan
+            </button>
+          ) : (
+            <button onClick={aksi.onAktifkan} disabled={aksi.adaAktifLain} className={tombolSekunder}>
+              {s === "arsip" ? (
+                <ArchiveRestore className="size-4" aria-hidden />
+              ) : (
+                <Power className="size-4" aria-hidden />
+              )}
+              {s === "arsip" ? "Aktifkan kembali" : "Jadikan aktif"}
+            </button>
+          )}
+          {s !== "arsip" && (
+            <button onClick={aksi.onArsipkan} disabled={dikunci} className={tombolSekunder}>
+              <Archive className="size-4" aria-hidden />
+              Arsipkan
+            </button>
+          )}
+          <button onClick={aksi.onHapus} disabled={tidakBisaHapus} className={tombolSekunder}>
+            <Trash2 className="size-4" aria-hidden />
+            Hapus
+          </button>
+          <button onClick={aksi.onUbah} className={tombolSekunder}>
+            <Pencil className="size-4" aria-hidden />
+            Ubah
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default function KegiatanClient({
+  awal,
+  idBerdata,
+}: {
+  awal: Kegiatan[];
+  idBerdata: string[];
+}) {
   const [daftar, setDaftar] = useState(awal);
   const [form, setForm] = useState<{ id: string | null } | null>(null);
+  const [hapusId, setHapusId] = useState<string | null>(null);
   const [pesan, setPesan] = useState("");
-  // Tanggal hari ini dibaca setelah hidrasi agar tidak dibekukan saat prerender.
-  const [hariIni, setHariIni] = useState<string | null>(null);
 
-  useEffect(() => {
-    setHariIni(new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Makassar" }));
-  }, []);
-
+  const berdata = new Set(idBerdata);
   const diedit = form?.id ? daftar.find((k) => k.id === form.id) : undefined;
+  const dihapus = hapusId ? daftar.find((k) => k.id === hapusId) : undefined;
   const totalBobot = daftar.reduce((s, k) => s + k.bobot, 0);
+  const berjalan = daftar.filter((k) => !k.arsip);
+  const diarsipkan = daftar.filter((k) => k.arsip);
+
+  function aksiUntuk(k: Kegiatan): AksiKartu {
+    return {
+      adaAktifLain: daftar.some((x) => x.aktif && x.id !== k.id),
+      berdata: berdata.has(k.id),
+      onUbah: () => setForm({ id: k.id }),
+      onAktifkan: () => aktifkan(k),
+      onNonaktifkan: () => nonaktifkan(k),
+      onArsipkan: () => arsipkan(k),
+      onHapus: () => setHapusId(k.id),
+    };
+  }
+
+  function aktifkan(k: Kegiatan) {
+    if (daftar.some((x) => x.aktif && x.id !== k.id)) return;
+    setDaftar((prev) => prev.map((x) => (x.id === k.id ? { ...x, aktif: true, arsip: false } : x)));
+    setPesan(`${k.nama} diaktifkan.`);
+  }
+
+  function nonaktifkan(k: Kegiatan) {
+    setDaftar((prev) => prev.map((x) => (x.id === k.id ? { ...x, aktif: false } : x)));
+    setPesan(`${k.nama} dinonaktifkan.`);
+  }
+
+  function arsipkan(k: Kegiatan) {
+    if (k.aktif) return;
+    setDaftar((prev) => prev.map((x) => (x.id === k.id ? { ...x, arsip: true } : x)));
+    setPesan(`${k.nama} diarsipkan.`);
+  }
+
+  function hapus() {
+    if (!dihapus || dihapus.aktif || berdata.has(dihapus.id)) return setHapusId(null);
+    setDaftar((prev) => prev.filter((x) => x.id !== dihapus.id));
+    setPesan(`${dihapus.nama} dihapus.`);
+    setHapusId(null);
+  }
 
   function simpan(v: Isian) {
     const bobot = Number(v.bobot);
@@ -179,7 +337,9 @@ export default function KegiatanClient({ awal }: { awal: Kegiatan[] }) {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold text-ink">Kegiatan dan tenggat</h1>
-          <p className="tabular text-sm text-ink-muted">{daftar.length} kegiatan</p>
+          <p className="tabular text-sm text-ink-muted">
+            {daftar.length} kegiatan, {diarsipkan.length} diarsipkan
+          </p>
         </div>
         <button onClick={() => setForm({ id: null })} className={tombolUtama}>
           <Plus className="size-4" aria-hidden />
@@ -192,52 +352,21 @@ export default function KegiatanClient({ awal }: { awal: Kegiatan[] }) {
       </p>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {daftar.map((k) => {
-          const s = hariIni ? status(k, hariIni) : null;
-          return (
-            <section key={k.id} className="rounded-card border border-line bg-surface shadow-card">
-              <div className="flex items-start justify-between gap-3 border-b border-line p-4 sm:p-5">
-                <div className="min-w-0 space-y-1">
-                  <h2 className="font-semibold text-ink">{k.nama}</h2>
-                  <p className="text-sm text-ink-muted">
-                    {tanggal(k.tanggalMulai)} sampai {tanggal(k.tanggalSelesai)}
-                  </p>
-                </div>
-                {s && (
-                  <span
-                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
-                      s.aktif ? "bg-primary-soft text-primary" : "bg-surface-muted text-ink-muted"
-                    }`}
-                  >
-                    {s.label}
-                  </span>
-                )}
-              </div>
-
-              <ul className="divide-y divide-line">
-                <li className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5">
-                  <span className="text-ink">Tenggat unggah dokumen</span>
-                  <span className="tabular flex items-center gap-1.5 text-ink-muted">
-                    <CalendarClock className="size-4" aria-hidden />
-                    {k.tenggat ? tanggal(k.tenggat) : "Belum diatur"}
-                  </span>
-                </li>
-                <li className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5">
-                  <span className="text-ink">Bobot nilai</span>
-                  <span className="tabular font-semibold text-ink">{k.bobot}%</span>
-                </li>
-              </ul>
-
-              <div className="flex justify-end border-t border-line p-3 sm:px-5">
-                <button onClick={() => setForm({ id: k.id })} className={tombolSekunder}>
-                  <Pencil className="size-4" aria-hidden />
-                  Ubah
-                </button>
-              </div>
-            </section>
-          );
-        })}
+        {berjalan.map((k) => (
+          <KartuKegiatan key={k.id} k={k} {...aksiUntuk(k)} />
+        ))}
       </div>
+
+      {diarsipkan.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold text-ink">Diarsipkan</h2>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {diarsipkan.map((k) => (
+              <KartuKegiatan key={k.id} k={k} {...aksiUntuk(k)} />
+            ))}
+          </div>
+        </div>
+      )}
 
       <section className="rounded-card border border-line bg-surface p-4 shadow-card sm:p-5">
         <h2 className="font-semibold text-ink">Total bobot</h2>
@@ -263,11 +392,26 @@ export default function KegiatanClient({ awal }: { awal: Kegiatan[] }) {
                   tenggat: diedit.tenggat,
                   bobot: String(diedit.bobot),
                 }
-              : { nama: "", mulai: "", selesai: "", tenggat: "", bobot: "" }
+              : ISIAN_KOSONG
           }
           onSimpan={simpan}
           onBatal={() => setForm(null)}
         />
+      </Dialog>
+
+      <Dialog buka={!!dihapus} onTutup={() => setHapusId(null)} judul="Hapus kegiatan">
+        <p className="text-sm text-ink-muted">
+          Hapus kegiatan <span className="font-medium text-ink">{dihapus?.nama}</span>? Tindakan ini tidak bisa
+          dibatalkan.
+        </p>
+        <div className="flex justify-end gap-2 pt-2">
+          <button onClick={() => setHapusId(null)} className={tombolSekunder}>
+            Batal
+          </button>
+          <button onClick={hapus} className={tombolBahaya}>
+            Hapus
+          </button>
+        </div>
       </Dialog>
     </div>
   );

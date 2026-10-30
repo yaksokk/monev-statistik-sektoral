@@ -13,7 +13,8 @@ import {
 } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
 import { AMBANG_KEHADIRAN_AWAL } from "@/lib/presensi";
-import type { Kegiatan } from "@/lib/types";
+import { JENIS_QUIZ, LABEL_QUIZ, aturSaklarQuiz, quizAktif } from "@/lib/quiz";
+import type { JenisQuiz, Kegiatan } from "@/lib/types";
 
 const dasarTombol =
   "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50";
@@ -157,9 +158,50 @@ function FormKegiatan({
   );
 }
 
+function SaklarQuiz({
+  label,
+  aktif,
+  terkunci,
+  jumlahHasil,
+  onUbah,
+}: {
+  label: string;
+  aktif: boolean;
+  terkunci: boolean;
+  jumlahHasil: number;
+  onUbah: (nilai: boolean) => void;
+}) {
+  return (
+    <li className="flex items-center justify-between gap-3 text-sm">
+      <div className="min-w-0">
+        <span className="text-ink">{label}</span>
+        {jumlahHasil > 0 && (
+          <span className="tabular ml-2 text-xs text-ink-muted">{jumlahHasil} OPD sudah mengerjakan</span>
+        )}
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={aktif}
+        aria-label={`${label} dipakai`}
+        disabled={terkunci}
+        onClick={() => onUbah(!aktif)}
+        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50 ${aktif ? "bg-primary" : "bg-line"}`}
+      >
+        <span
+          aria-hidden
+          className={`absolute left-0.5 top-0.5 size-5 rounded-full bg-surface shadow-card transition-transform ${aktif ? "translate-x-5" : ""}`}
+        />
+      </button>
+    </li>
+  );
+}
+
 type AksiKartu = {
   adaAktifLain: boolean;
   berdata: boolean;
+  jumlahHasil: Record<JenisQuiz, number>;
+  onSaklar: (jenis: JenisQuiz, nilai: boolean) => void;
   onUbah: () => void;
   onAktifkan: () => void;
   onNonaktifkan: () => void;
@@ -207,6 +249,27 @@ function KartuKegiatan({ k, ...aksi }: { k: Kegiatan } & AksiKartu) {
         </li>
       </ul>
 
+      <div className="space-y-3 border-t border-line px-4 py-3 sm:px-5">
+        <div className="space-y-0.5">
+          <h3 className="text-sm font-medium text-ink">Quiz yang dipakai</h3>
+          {s === "arsip" && (
+            <p className="text-xs text-ink-muted">Kegiatan diarsipkan, pengaturan quiz terkunci.</p>
+          )}
+        </div>
+        <ul className="space-y-2.5">
+          {JENIS_QUIZ.map((jenis) => (
+            <SaklarQuiz
+              key={jenis}
+              label={LABEL_QUIZ[jenis]}
+              aktif={quizAktif(k, jenis)}
+              terkunci={s === "arsip"}
+              jumlahHasil={aksi.jumlahHasil[jenis]}
+              onUbah={(nilai) => aksi.onSaklar(jenis, nilai)}
+            />
+          ))}
+        </ul>
+      </div>
+
       <div className="space-y-2 border-t border-line p-3 sm:px-5">
         {petunjuk.map((t) => (
           <p key={t} className="text-xs text-ink-muted">
@@ -252,18 +315,23 @@ function KartuKegiatan({ k, ...aksi }: { k: Kegiatan } & AksiKartu) {
 export default function KegiatanClient({
   awal,
   idBerdata,
+  hasilQuiz,
 }: {
   awal: Kegiatan[];
   idBerdata: string[];
+  hasilQuiz: Record<string, number>;
 }) {
   const [daftar, setDaftar] = useState(awal);
   const [form, setForm] = useState<{ id: string | null } | null>(null);
   const [hapusId, setHapusId] = useState<string | null>(null);
+  const [matikan, setMatikan] = useState<{ id: string; jenis: JenisQuiz } | null>(null);
   const [pesan, setPesan] = useState("");
 
   const berdata = new Set(idBerdata);
   const diedit = form?.id ? daftar.find((k) => k.id === form.id) : undefined;
   const dihapus = hapusId ? daftar.find((k) => k.id === hapusId) : undefined;
+  const kegiatanMatikan = matikan ? daftar.find((k) => k.id === matikan.id) : undefined;
+  const jumlahMatikan = matikan ? (hasilQuiz[`${matikan.id}:${matikan.jenis}`] ?? 0) : 0;
   const totalBobot = daftar.reduce((s, k) => s + k.bobot, 0);
   const berjalan = daftar.filter((k) => !k.arsip);
   const diarsipkan = daftar.filter((k) => k.arsip);
@@ -272,6 +340,12 @@ export default function KegiatanClient({
     return {
       adaAktifLain: daftar.some((x) => x.aktif && x.id !== k.id),
       berdata: berdata.has(k.id),
+      jumlahHasil: {
+        pretest: hasilQuiz[`${k.id}:pretest`] ?? 0,
+        posttest: hasilQuiz[`${k.id}:posttest`] ?? 0,
+        evaluasi: hasilQuiz[`${k.id}:evaluasi`] ?? 0,
+      },
+      onSaklar: (jenis, nilai) => ubahSaklar(k, jenis, nilai),
       onUbah: () => setForm({ id: k.id }),
       onAktifkan: () => aktifkan(k),
       onNonaktifkan: () => nonaktifkan(k),
@@ -295,6 +369,25 @@ export default function KegiatanClient({
     if (k.aktif) return;
     setDaftar((prev) => prev.map((x) => (x.id === k.id ? { ...x, arsip: true } : x)));
     setPesan(`${k.nama} diarsipkan.`);
+  }
+
+  // Mematikan quiz yang sudah punya hasil perlu konfirmasi dulu
+  function ubahSaklar(k: Kegiatan, jenis: JenisQuiz, nilai: boolean) {
+    if (k.arsip) return;
+    if (!nilai && (hasilQuiz[`${k.id}:${jenis}`] ?? 0) > 0) return setMatikan({ id: k.id, jenis });
+    terapkanSaklar(k, jenis, nilai);
+  }
+
+  function terapkanSaklar(k: Kegiatan, jenis: JenisQuiz, nilai: boolean) {
+    setDaftar((prev) => prev.map((x) => (x.id === k.id ? aturSaklarQuiz(x, jenis, nilai) : x)));
+    setPesan(`${LABEL_QUIZ[jenis]} ${nilai ? "diaktifkan" : "dimatikan"} di ${k.nama}.`);
+  }
+
+  function konfirmasiMatikan() {
+    if (matikan && kegiatanMatikan && !kegiatanMatikan.arsip) {
+      terapkanSaklar(kegiatanMatikan, matikan.jenis, false);
+    }
+    setMatikan(null);
   }
 
   function hapus() {
@@ -399,6 +492,28 @@ export default function KegiatanClient({
           onSimpan={simpan}
           onBatal={() => setForm(null)}
         />
+      </Dialog>
+
+      <Dialog
+        buka={!!matikan}
+        onTutup={() => setMatikan(null)}
+        judul={`Matikan ${matikan ? LABEL_QUIZ[matikan.jenis] : ""}`}
+      >
+        <p className="text-sm text-ink-muted">
+          <span className="tabular font-medium text-ink">{jumlahMatikan} OPD</span> sudah mengerjakan{" "}
+          {matikan ? LABEL_QUIZ[matikan.jenis] : ""} di{" "}
+          <span className="font-medium text-ink">{kegiatanMatikan?.nama}</span>. Quiz akan disembunyikan dari OPD
+          dan tidak dihitung dalam kelulusan maupun N-Gain. Soal dan hasil tidak dihapus, dan muncul lagi bila
+          quiz diaktifkan kembali.
+        </p>
+        <div className="flex justify-end gap-2 pt-2">
+          <button onClick={() => setMatikan(null)} className={tombolSekunder}>
+            Batal
+          </button>
+          <button onClick={konfirmasiMatikan} className={tombolBahaya}>
+            Matikan
+          </button>
+        </div>
       </Dialog>
 
       <Dialog buka={!!dihapus} onTutup={() => setHapusId(null)} judul="Hapus kegiatan">

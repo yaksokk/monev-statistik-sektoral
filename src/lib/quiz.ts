@@ -31,6 +31,11 @@ export function quizAktif(kegiatan: Kegiatan, jenis: JenisQuiz) {
   return kegiatan[KUNCI_SAKLAR[jenis]] !== false;
 }
 
+// Salinan kegiatan dengan saklar satu quiz diubah
+export function aturSaklarQuiz(kegiatan: Kegiatan, jenis: JenisQuiz, aktif: boolean): Kegiatan {
+  return { ...kegiatan, [KUNCI_SAKLAR[jenis]]: aktif };
+}
+
 // Pengacak dengan seed tetap, supaya urutan soal satu OPD selalu sama
 function buatAcak(seed: string) {
   let h = 2166136261;

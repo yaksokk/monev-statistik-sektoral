@@ -1,28 +1,17 @@
 import { CalendarCheck, ClipboardList, GraduationCap, LayoutDashboard, TrendingUp } from "lucide-react";
 import { BAB_LIST, BAB_SELESAI_LIST, MODUL_LIST } from "@/data/modul";
-import {
-  DOKUMEN_LIST,
-  HASIL_QUIZ_LIST,
-  ITEM_LIST,
-  KEGIATAN_LIST,
-  PENGATURAN_EVALUASI,
-  PENGATURAN_POSTTEST,
-  PENGATURAN_PRETEST,
-  PRESENSI_LIST,
-  SESI_LIST,
-  SOAL_POSTTEST,
-  SOAL_PRETEST,
-} from "@/data/dummy";
+import { DOKUMEN_LIST, ITEM_LIST, KEGIATAN_LIST, PRESENSI_LIST, SESI_LIST } from "@/data/dummy";
 import {
   AMBANG_POSTTEST,
-  ambilNilaiQuiz,
   formatNGain,
   hitungNGain,
   linkHttps,
+  nGainTersedia,
 } from "@/lib/dashboard";
 import { ambilOperator } from "@/lib/operator";
 import { apakahLulusKehadiran, hitungKehadiran, sesiKegiatan } from "@/lib/presensi";
-import { formatNilai } from "@/lib/quiz";
+import { formatNilai, hitungHasil } from "@/lib/quiz";
+import { ambilQuizOpd } from "@/lib/quiz-opd";
 import KartuMetrik from "./KartuMetrik";
 import PanelDokumen, { type BarisDokumen } from "./PanelDokumen";
 import PanelKelulusan from "./PanelKelulusan";
@@ -37,21 +26,23 @@ export default async function DashboardOpdPage() {
 
   // kehadiran dan quiz
   const sesiAktif = kegiatan ? sesiKegiatan(SESI_LIST, kegiatan.id) : [];
-  const hasilOpd = HASIL_QUIZ_LIST.filter((h) => h.opdId === opd.id);
-
   const kehadiran = hitungKehadiran(opd.id, sesiAktif, PRESENSI_LIST);
-  const nilaiPre = ambilNilaiQuiz(hasilOpd, PENGATURAN_PRETEST.id, SOAL_PRETEST);
-  const nilaiPost = ambilNilaiQuiz(hasilOpd, PENGATURAN_POSTTEST.id, SOAL_POSTTEST);
-  const nGain = hitungNGain(nilaiPre, nilaiPost);
-  const evaluasiSelesai = hasilOpd.some((h) => h.quizId === PENGATURAN_EVALUASI.id);
 
-  // syarat kelulusan (kelengkapan dokumen bukan syarat)
+  const pre = ambilQuizOpd(kegiatan, "pretest", opd.id);
+  const post = ambilQuizOpd(kegiatan, "posttest", opd.id);
+  const evaluasi = ambilQuizOpd(kegiatan, "evaluasi", opd.id);
+  const nilaiPre = pre.hasil ? hitungHasil(pre.soal, pre.hasil.jawaban).nilai : null;
+  const nilaiPost = post.hasil ? hitungHasil(post.soal, post.hasil.jawaban).nilai : null;
+  const nGainBerlaku = kegiatan ? nGainTersedia(kegiatan) : true;
+  const nGain = nGainBerlaku ? hitungNGain(nilaiPre, nilaiPost) : null;
+
+  // syarat kelulusan (kelengkapan dokumen bukan syarat); syarat quiz yang dimatikan gugur (null)
   const syarat = {
     presensi: kegiatan ? apakahLulusKehadiran(kehadiran.persen, kegiatan) : false,
-    postTest: nilaiPost !== null && nilaiPost >= AMBANG_POSTTEST,
-    evaluasi: evaluasiSelesai,
+    postTest: post.aktif ? nilaiPost !== null && nilaiPost >= AMBANG_POSTTEST : null,
+    evaluasi: evaluasi.aktif ? evaluasi.hasil !== null : null,
   };
-  const lulus = syarat.presensi && syarat.postTest && syarat.evaluasi;
+  const lulus = syarat.presensi && syarat.postTest !== false && syarat.evaluasi !== false;
   // link baru dikirim ke komponen bila semua syarat terpenuhi
   const linkSertifikat = lulus ? linkHttps(opd.linkSertifikat) : null;
 
@@ -125,22 +116,24 @@ export default async function DashboardOpdPage() {
           ikon={ClipboardList}
           warna="amber"
           label="Nilai Pre-Test"
-          nilai={nilaiPre === null ? "Belum" : formatNilai(nilaiPre)}
-          keterangan="Kemampuan Awal"
+          nilai={!pre.aktif ? "–" : nilaiPre === null ? "Belum" : formatNilai(nilaiPre)}
+          keterangan={pre.aktif ? "Kemampuan Awal" : "Tidak dipakai"}
         />
         <KartuMetrik
           ikon={GraduationCap}
           warna="hijau"
           label="Nilai Post-Test"
-          nilai={nilaiPost === null ? "Belum" : formatNilai(nilaiPost)}
-          keterangan="Kemampuan Akhir"
+          nilai={!post.aktif ? "–" : nilaiPost === null ? "Belum" : formatNilai(nilaiPost)}
+          keterangan={post.aktif ? "Kemampuan Akhir" : "Tidak dipakai"}
         />
         <KartuMetrik
           ikon={TrendingUp}
           warna="netral"
           label="N-Gain Score"
-          nilai={nGain === null ? "0,00" : formatNGain(nGain)}
-          keterangan={nGain === null ? "Belum Diukur" : "Peningkatan Pemahaman"}
+          nilai={!nGainBerlaku ? "–" : nGain === null ? "0,00" : formatNGain(nGain)}
+          keterangan={
+            !nGainBerlaku ? "Tidak dihitung" : nGain === null ? "Belum Diukur" : "Peningkatan Pemahaman"
+          }
         />
       </section>
 
@@ -150,6 +143,7 @@ export default async function DashboardOpdPage() {
           persenKehadiran={kehadiran.persen}
           ambangKehadiran={kegiatan?.ambangKehadiran ?? null}
           teksNilaiPost={nilaiPost === null ? "Belum" : formatNilai(nilaiPost)}
+          preTestAktif={pre.aktif}
           syarat={syarat}
           lulus={lulus}
           linkSertifikat={linkSertifikat}

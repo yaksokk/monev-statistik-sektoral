@@ -1,20 +1,17 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import QuizClient from "@/components/quiz/QuizClient";
-import {
-  HASIL_QUIZ_LIST,
-  PENGATURAN_POSTTEST,
-  PENGATURAN_PRETEST,
-  SOAL_POSTTEST,
-} from "@/data/dummy";
 import { ambilOperator } from "@/lib/operator";
+import { ambilQuizOpd, kegiatanBerjalan } from "@/lib/quiz-opd";
+
+const KELAS_PESAN = "rounded-lg bg-surface-muted px-4 py-3 text-sm text-ink-muted";
 
 export default async function PostTestPage() {
   const { opd } = await ambilOperator();
 
-  const hasilOpd = HASIL_QUIZ_LIST.filter((h) => h.opdId === opd.id);
-  const hasil = hasilOpd.find((h) => h.quizId === PENGATURAN_POSTTEST.id) ?? null;
-  const sudahPreTest = hasilOpd.some((h) => h.quizId === PENGATURAN_PRETEST.id);
+  const kegiatan = kegiatanBerjalan();
+  const pre = ambilQuizOpd(kegiatan, "pretest", opd.id);
+  const post = ambilQuizOpd(kegiatan, "posttest", opd.id);
 
   return (
     <div className="space-y-6">
@@ -32,18 +29,30 @@ export default async function PostTestPage() {
         </p>
       </header>
 
-      {/* Dummy: kunci ikut dikirim ke browser. Setelah ada server, penilaian dilakukan di server */}
-      <QuizClient
-        opdId={opd.id}
-        nama="Post-Test"
-        pengaturan={PENGATURAN_POSTTEST}
-        soalList={SOAL_POSTTEST}
-        hasilAwal={hasil}
-        prasyarat={{
-          terpenuhi: sudahPreTest,
-          pesan: "Post-Test baru terbuka setelah Pre-Test selesai dikerjakan.",
-        }}
-      />
+      {!post.aktif ? (
+        <p className={KELAS_PESAN}>Post-Test tidak dipakai di kegiatan ini.</p>
+      ) : !kegiatan || !post.pengaturan ? (
+        <p className={KELAS_PESAN}>Post-Test belum dibuka oleh admin.</p>
+      ) : (
+        /* Dummy: kunci ikut dikirim ke browser. Setelah ada server, penilaian dilakukan di server */
+        <QuizClient
+          opdId={opd.id}
+          kegiatanId={kegiatan.id}
+          nama="Post-Test"
+          pengaturan={post.pengaturan}
+          soalList={post.soal}
+          hasilAwal={post.hasil}
+          diizinkan={post.diizinkan}
+          prasyarat={
+            pre.aktif
+              ? {
+                  terpenuhi: pre.hasil !== null,
+                  pesan: "Post-Test baru terbuka setelah Pre-Test selesai dikerjakan.",
+                }
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 }

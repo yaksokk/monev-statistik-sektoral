@@ -1,5 +1,5 @@
-import { hitungHasil } from "@/lib/quiz";
-import type { HasilQuiz, SoalQuiz } from "@/lib/types";
+import { hitungHasil, quizAktif } from "@/lib/quiz";
+import type { HasilQuiz, Kegiatan, SoalQuiz } from "@/lib/types";
 
 export const AMBANG_POSTTEST = 75; // nilai
 
@@ -14,6 +14,11 @@ export function ambilNilaiQuiz(hasil: HasilQuiz[], quizId: string, soal: SoalQui
 export function hitungNGain(pre: number | null, post: number | null) {
   if (pre === null || post === null || pre >= 100) return null;
   return (post - pre) / (100 - pre);
+}
+
+// N-Gain hanya dihitung bila Pre-Test dan Post-Test sama-sama aktif di kegiatan
+export function nGainTersedia(kegiatan: Kegiatan) {
+  return quizAktif(kegiatan, "pretest") && quizAktif(kegiatan, "posttest");
 }
 
 export function formatNGain(n: number) {

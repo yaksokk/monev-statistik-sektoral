@@ -1,9 +1,9 @@
 import ModulClient from "@/components/modul/ModulClient";
 import KartuQuiz from "@/components/quiz/KartuQuiz";
-import { HASIL_QUIZ_LIST, PENGATURAN_PRETEST, SOAL_PRETEST } from "@/data/dummy";
 import { BAB_LIST, BAB_SELESAI_LIST, MODUL_LIST } from "@/data/modul";
 import { ambilOperator } from "@/lib/operator";
 import { waktuSekarang } from "@/lib/presensi";
+import { ambilQuizOpd, kegiatanBerjalan } from "@/lib/quiz-opd";
 
 const PEMBINAAN = 1;
 
@@ -28,8 +28,8 @@ export default async function Pembinaan1Page({ searchParams }: Props) {
     babList.findIndex((b) => b.id === bab),
   );
 
-  const hasil =
-    HASIL_QUIZ_LIST.find((h) => h.opdId === opd.id && h.quizId === PENGATURAN_PRETEST.id) ?? null;
+  // quiz mengikuti kegiatan berjalan; Pre-Test yang dimatikan admin disembunyikan
+  const pre = ambilQuizOpd(kegiatanBerjalan(), "pretest", opd.id);
 
   const rentang =
     babList.length > 0
@@ -41,19 +41,22 @@ export default async function Pembinaan1Page({ searchParams }: Props) {
       <header>
         <h1 className="text-2xl font-semibold text-ink">Pembinaan {PEMBINAAN}</h1>
         <p className="mt-1 text-sm text-ink-muted">
-          Pre-Test dan Modul Pembelajaran {rentang} · {opd.nama}
+          {pre.aktif ? "Pre-Test dan " : ""}Modul Pembelajaran {rentang} · {opd.nama}
         </p>
       </header>
 
-      <KartuQuiz
-        nama="Pre-Test"
-        deskripsi="Uji pemahaman dasar sebelum mempelajari modul."
-        href="/opd/pembinaan-1/pre-test"
-        pengaturan={PENGATURAN_PRETEST}
-        soalList={SOAL_PRETEST}
-        hasil={hasil}
-        sekarang={sekarang}
-      />
+      {pre.aktif && (
+        <KartuQuiz
+          nama="Pre-Test"
+          deskripsi="Uji pemahaman dasar sebelum mempelajari modul."
+          href="/opd/pembinaan-1/pre-test"
+          pengaturan={pre.pengaturan}
+          soalList={pre.soal}
+          hasil={pre.hasil}
+          sekarang={sekarang}
+          diizinkan={pre.diizinkan}
+        />
+      )}
 
       {babList.length > 0 ? (
         <ModulClient

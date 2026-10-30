@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { ArrowDown, ArrowUp, Eye, EyeOff, KeyRound, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
+import { AMBANG_POSTTEST } from "@/lib/dashboard";
 import {
   LABEL_QUIZ,
   dampakPerubahan,
@@ -388,6 +389,8 @@ export default function TabQuiz({
   const siap = !arsip && sekarang !== null;
   const bisaUbah = siap && soalBisaDiubah(pengaturan, hasil.length, sekarang);
   const modeKoreksi = siap && !bisaUbah;
+  // hanya Post-Test yang punya status lulus (nilai minimal)
+  const lulus = jenis === "posttest" ? (nilai: number) => nilai >= AMBANG_POSTTEST : undefined;
 
   const diedit = form?.id ? soal.find((s) => s.id === form.id) : undefined;
   const dihapus = hapusId ? soal.find((s) => s.id === hapusId) : undefined;
@@ -400,6 +403,7 @@ export default function TabQuiz({
           soal,
           soal.map((s) => (s.id === dikoreksi.id ? { ...s, kunci: koreksi.kunci } : s)),
           hasil,
+          lulus,
         )
       : null;
   const dampakToggle = ditoggle
@@ -407,6 +411,7 @@ export default function TabQuiz({
         soal,
         soal.map((s) => (s.id === ditoggle.id ? { ...s, aktif: !s.aktif } : s)),
         hasil,
+        lulus,
       )
     : null;
 

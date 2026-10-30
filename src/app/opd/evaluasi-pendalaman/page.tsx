@@ -1,23 +1,22 @@
 import QuizClient from "@/components/quiz/QuizClient";
-import {
-  HASIL_QUIZ_LIST,
-  PENGATURAN_EVALUASI,
-  PENGATURAN_POSTTEST,
-  PENGATURAN_PRETEST,
-  SOAL_EVALUASI,
-} from "@/data/dummy";
 import { ambilOperator } from "@/lib/operator";
+import { ambilQuizOpd, kegiatanBerjalan } from "@/lib/quiz-opd";
+
+const KELAS_PESAN = "rounded-lg bg-surface-muted px-4 py-3 text-sm text-ink-muted";
 
 export default async function EvaluasiPendalamanPage() {
   const { opd } = await ambilOperator();
 
-  const hasilOpd = HASIL_QUIZ_LIST.filter((h) => h.opdId === opd.id);
-  const hasil = hasilOpd.find((h) => h.quizId === PENGATURAN_EVALUASI.id) ?? null;
+  const kegiatan = kegiatanBerjalan();
+  const pre = ambilQuizOpd(kegiatan, "pretest", opd.id);
+  const post = ambilQuizOpd(kegiatan, "posttest", opd.id);
+  const evaluasi = ambilQuizOpd(kegiatan, "evaluasi", opd.id);
 
-  // Terkunci sampai Pre-Test dan Post-Test sama-sama selesai
-  const belumSelesai = [PENGATURAN_PRETEST, PENGATURAN_POSTTEST]
-    .filter((q) => !hasilOpd.some((h) => h.quizId === q.id))
-    .map((q) => (q.id === PENGATURAN_PRETEST.id ? "Pre-Test" : "Post-Test"));
+  // Terkunci sampai Pre-Test dan Post-Test yang aktif sama-sama selesai
+  const belumSelesai = [
+    pre.aktif && !pre.hasil ? "Pre-Test" : null,
+    post.aktif && !post.hasil ? "Post-Test" : null,
+  ].filter((nama): nama is string => nama !== null);
 
   return (
     <div className="space-y-6">
@@ -28,18 +27,26 @@ export default async function EvaluasiPendalamanPage() {
         </p>
       </header>
 
-      {/* Dummy: kunci ikut dikirim ke browser. Setelah ada server, penilaian dilakukan di server */}
-      <QuizClient
-        opdId={opd.id}
-        nama="Evaluasi Pendalaman"
-        pengaturan={PENGATURAN_EVALUASI}
-        soalList={SOAL_EVALUASI}
-        hasilAwal={hasil}
-        prasyarat={{
-          terpenuhi: belumSelesai.length === 0,
-          pesan: `Evaluasi Pendalaman baru terbuka setelah ${belumSelesai.join(" dan ")} selesai dikerjakan.`,
-        }}
-      />
+      {!evaluasi.aktif ? (
+        <p className={KELAS_PESAN}>Evaluasi Pendalaman tidak dipakai di kegiatan ini.</p>
+      ) : !kegiatan || !evaluasi.pengaturan ? (
+        <p className={KELAS_PESAN}>Evaluasi Pendalaman belum dibuka oleh admin.</p>
+      ) : (
+        /* Dummy: kunci ikut dikirim ke browser. Setelah ada server, penilaian dilakukan di server */
+        <QuizClient
+          opdId={opd.id}
+          kegiatanId={kegiatan.id}
+          nama="Evaluasi Pendalaman"
+          pengaturan={evaluasi.pengaturan}
+          soalList={evaluasi.soal}
+          hasilAwal={evaluasi.hasil}
+          diizinkan={evaluasi.diizinkan}
+          prasyarat={{
+            terpenuhi: belumSelesai.length === 0,
+            pesan: `Evaluasi Pendalaman baru terbuka setelah ${belumSelesai.join(" dan ")} selesai dikerjakan.`,
+          }}
+        />
+      )}
     </div>
   );
 }

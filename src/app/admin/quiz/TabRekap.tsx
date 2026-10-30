@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { RotateCcw, Search } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
+import { formatNGain, hitungNGain, nGainTersedia } from "@/lib/dashboard";
 import {
   JENIS_QUIZ,
   LABEL_QUIZ,
@@ -125,6 +126,19 @@ export default function TabRekap({
         .map((t) => namaOpd(t.opdId))
     : [];
 
+  const nGainBerlaku = nGainTersedia(kegiatan);
+
+  // N-Gain kosong ("–") bila salah satu quiz belum dikerjakan atau dimatikan
+  function teksNGain(opdId: string) {
+    if (!nGainBerlaku) return "–";
+    const nilai = (jenis: JenisQuiz) => {
+      const h = hasilDari(opdId, jenis);
+      return h ? hitungHasil(dataDari(jenis).soal, h.jawaban).nilai : null;
+    };
+    const n = hitungNGain(nilai("pretest"), nilai("posttest"));
+    return n === null ? "–" : formatNGain(n);
+  }
+
   function sel(opdId: string, jenis: JenisQuiz) {
     const d = dataDari(jenis);
     if (!d.aktif) return <span className="text-ink-muted">–</span>;
@@ -210,22 +224,24 @@ export default function TabRekap({
         <p className="py-8 text-center text-sm text-ink-muted">Tidak ada OPD yang cocok.</p>
       ) : (
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-184 text-left text-sm">
+          <table className="w-full min-w-208 text-left text-sm">
             <thead>
               <tr className="bg-surface-muted text-xs uppercase text-ink-muted">
                 <th scope="col" className="rounded-l-lg px-3 py-2.5 font-semibold">OPD</th>
-                {JENIS_QUIZ.map((j, i) => (
-                  <th
-                    key={j}
-                    scope="col"
-                    className={`px-3 py-2.5 font-semibold ${i === JENIS_QUIZ.length - 1 ? "rounded-r-lg" : ""}`}
-                  >
+                {JENIS_QUIZ.map((j) => (
+                  <th key={j} scope="col" className="px-3 py-2.5 font-semibold">
                     {LABEL_QUIZ[j]}
                     {!dataDari(j).aktif && (
                       <span className="block text-xs font-normal normal-case">Tidak dipakai</span>
                     )}
                   </th>
                 ))}
+                <th scope="col" className="rounded-r-lg px-3 py-2.5 font-semibold">
+                  N-Gain
+                  {!nGainBerlaku && (
+                    <span className="block text-xs font-normal normal-case">Tidak dihitung</span>
+                  )}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -237,6 +253,7 @@ export default function TabRekap({
                       {sel(opd.id, j)}
                     </td>
                   ))}
+                  <td className="tabular px-3 py-3 text-ink">{teksNGain(opd.id)}</td>
                 </tr>
               ))}
             </tbody>

@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { ClipboardList } from "lucide-react";
-import { formatNilai, hitungHasil, statusQuiz } from "@/lib/quiz";
+import { formatNilai, hitungHasil, soalAktif, statusQuiz } from "@/lib/quiz";
 import type { HasilQuiz, PengaturanQuiz, SoalQuiz } from "@/lib/types";
 
 interface Props {
   nama: string; // "Pre-Test" atau "Post-Test"
   deskripsi: string;
   href: string; // halaman pengerjaan dan hasil quiz
-  pengaturan: PengaturanQuiz;
+  pengaturan: PengaturanQuiz | undefined; // undefined = admin belum mengatur quiz ini
   soalList: SoalQuiz[];
   hasil: HasilQuiz | null;
   sekarang: string; // yyyy-mm-ddTHH:mm
+  diizinkan?: boolean; // OPD punya izin kerjakan ulang dari admin
   prasyarat?: { terpenuhi: boolean; pesan: string };
 }
 
@@ -25,11 +26,14 @@ export default function KartuQuiz({
   soalList,
   hasil,
   sekarang,
+  diizinkan = true,
   prasyarat,
 }: Props) {
-  const status = statusQuiz(pengaturan, hasil !== null, sekarang);
+  const status = pengaturan
+    ? statusQuiz(pengaturan, hasil !== null, sekarang, diizinkan)
+    : "belum_dibuka";
   const pesanSyarat = prasyarat && !prasyarat.terpenuhi ? prasyarat.pesan : null;
-  const idJudul = `judul-${pengaturan.id}`;
+  const idJudul = `judul-${nama.toLowerCase().replace(/\s+/g, "-")}`;
 
   let pesan: string | null = pesanSyarat;
   if (!pesan && status === "belum_dibuka") pesan = `${nama} belum dibuka oleh admin.`;
@@ -71,9 +75,12 @@ export default function KartuQuiz({
         </>
       ) : (
         <>
-          <p className="tabular mt-4 text-sm text-ink">
-            {soalList.length} soal · {pengaturan.durasiMenit} menit · hanya bisa dikerjakan satu kali
-          </p>
+          {pengaturan && (
+            <p className="tabular mt-4 text-sm text-ink">
+              {soalAktif(soalList).length} soal · {pengaturan.durasiMenit} menit · hanya bisa dikerjakan satu
+              kali
+            </p>
+          )}
           {pesan ? (
             <p className="mt-3 rounded-lg bg-surface-muted px-3 py-2 text-sm text-ink-muted">
               {pesan}

@@ -1,14 +1,9 @@
 import ModulClient from "@/components/modul/ModulClient";
 import KartuQuiz from "@/components/quiz/KartuQuiz";
-import {
-  HASIL_QUIZ_LIST,
-  PENGATURAN_POSTTEST,
-  PENGATURAN_PRETEST,
-  SOAL_POSTTEST,
-} from "@/data/dummy";
 import { BAB_LIST, BAB_SELESAI_LIST, MODUL_LIST } from "@/data/modul";
 import { ambilOperator } from "@/lib/operator";
 import { waktuSekarang } from "@/lib/presensi";
+import { ambilQuizOpd, kegiatanBerjalan } from "@/lib/quiz-opd";
 
 const PEMBINAAN = 2;
 
@@ -33,9 +28,10 @@ export default async function Pembinaan2Page({ searchParams }: Props) {
     babList.findIndex((b) => b.id === bab),
   );
 
-  const hasilOpd = HASIL_QUIZ_LIST.filter((h) => h.opdId === opd.id);
-  const hasil = hasilOpd.find((h) => h.quizId === PENGATURAN_POSTTEST.id) ?? null;
-  const sudahPreTest = hasilOpd.some((h) => h.quizId === PENGATURAN_PRETEST.id);
+  // quiz mengikuti kegiatan berjalan; Post-Test yang dimatikan admin disembunyikan
+  const kegiatan = kegiatanBerjalan();
+  const pre = ambilQuizOpd(kegiatan, "pretest", opd.id);
+  const post = ambilQuizOpd(kegiatan, "posttest", opd.id);
 
   const rentang =
     babList.length > 0
@@ -47,7 +43,8 @@ export default async function Pembinaan2Page({ searchParams }: Props) {
       <header>
         <h1 className="text-2xl font-semibold text-ink">Pembinaan {PEMBINAAN}</h1>
         <p className="mt-1 text-sm text-ink-muted">
-          Modul Pembelajaran {rentang} dan Post-Test · {opd.nama}
+          Modul Pembelajaran {rentang}
+          {post.aktif ? " dan Post-Test" : ""} · {opd.nama}
         </p>
       </header>
 
@@ -62,19 +59,26 @@ export default async function Pembinaan2Page({ searchParams }: Props) {
         <p className="text-sm text-ink-muted">Belum ada bab modul untuk pembinaan ini.</p>
       )}
 
-      <KartuQuiz
-        nama="Post-Test"
-        deskripsi="Uji kompetensi akhir untuk mengukur peningkatan pemahaman."
-        href="/opd/pembinaan-2/post-test"
-        pengaturan={PENGATURAN_POSTTEST}
-        soalList={SOAL_POSTTEST}
-        hasil={hasil}
-        sekarang={sekarang}
-        prasyarat={{
-          terpenuhi: sudahPreTest,
-          pesan: "Post-Test baru terbuka setelah Pre-Test selesai dikerjakan.",
-        }}
-      />
+      {post.aktif && (
+        <KartuQuiz
+          nama="Post-Test"
+          deskripsi="Uji kompetensi akhir untuk mengukur peningkatan pemahaman."
+          href="/opd/pembinaan-2/post-test"
+          pengaturan={post.pengaturan}
+          soalList={post.soal}
+          hasil={post.hasil}
+          sekarang={sekarang}
+          diizinkan={post.diizinkan}
+          prasyarat={
+            pre.aktif
+              ? {
+                  terpenuhi: pre.hasil !== null,
+                  pesan: "Post-Test baru terbuka setelah Pre-Test selesai dikerjakan.",
+                }
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 }

@@ -10,6 +10,8 @@ import {
   formatSisa,
   hitungHasil,
   hurufOpsi,
+  sisaDetik as hitungSisa,
+  soalAktif,
   statusQuiz,
 } from "@/lib/quiz";
 import type { HasilQuiz, PengaturanQuiz, SoalQuiz } from "@/lib/types";
@@ -19,11 +21,13 @@ type Prasyarat = { terpenuhi: boolean; pesan: string };
 
 type Props = {
   opdId: string;
+  kegiatanId: string;
   nama: string; // "Pre-Test" atau "Post-Test"
   pengaturan: PengaturanQuiz;
   soalList: SoalQuiz[];
   hasilAwal: HasilQuiz | null;
   prasyarat?: Prasyarat;
+  diizinkan?: boolean; // OPD punya izin kerjakan ulang dari admin
 };
 
 type SesiKerja = {
@@ -37,11 +41,13 @@ const KELAS_TOMBOL_SEKUNDER =
 
 export default function QuizClient({
   opdId,
+  kegiatanId,
   nama,
   pengaturan,
   soalList,
   hasilAwal,
   prasyarat,
+  diizinkan = true,
 }: Props) {
   const [hasil, setHasil] = useState(hasilAwal);
   const [sesi, setSesi] = useState<SesiKerja | null>(null);
@@ -66,6 +72,7 @@ export default function QuizClient({
       if (!sesi) return;
       setHasil({
         opdId,
+        kegiatanId,
         quizId: pengaturan.id,
         urutanSoal: sesi.soal.map((s) => s.id),
         jawaban,
@@ -76,7 +83,7 @@ export default function QuizClient({
       setSesi(null);
       setKonfirmasi(false);
     },
-    [sesi, jawaban, opdId, pengaturan.id],
+    [sesi, jawaban, opdId, kegiatanId, pengaturan.id],
   );
 
   // Hitung mundur; saat habis, jawaban terkirim otomatis
@@ -96,19 +103,29 @@ export default function QuizClient({
     setSekarang(waktu);
 
     // batas akhir bisa saja lewat saat halaman terbuka
-    if (statusQuiz(pengaturan, false, waktu) !== "terbuka") {
+    if (statusQuiz(pengaturan, false, waktu, diizinkan) !== "terbuka") {
       setGalat(`${nama} sudah tidak bisa dimulai.`);
       return;
     }
 
+    const soalMain = soalAktif(soalList);
+    if (soalMain.length === 0) {
+      setGalat(`${nama} belum punya soal.`);
+      return;
+    }
+
+    // durasi penuh, tapi dipotong batas akhir bila waktu mulai mepet
+    const mulaiMs = Date.now();
+    const sisa = hitungSisa(pengaturan, mulaiMs, mulaiMs);
+
     setGalat(null);
     setJawaban({});
     setIndeks(0);
-    setSisaDetik(pengaturan.durasiMenit * 60);
+    setSisaDetik(sisa);
     setSesi({
-      soal: acakSoal(soalList, `${opdId}:${pengaturan.id}`),
+      soal: acakSoal(soalMain, `${opdId}:${pengaturan.id}`),
       mulai: waktu,
-      berakhirPada: Date.now() + pengaturan.durasiMenit * 60_000,
+      berakhirPada: mulaiMs + sisa * 1000,
     });
   }
 
@@ -118,7 +135,7 @@ export default function QuizClient({
     const waktuSelesai = formatWaktu(hasil.selesai);
     const urut = hasil.urutanSoal
       .map((id) => soalList.find((s) => s.id === id))
-      .filter((s): s is SoalQuiz => s !== undefined);
+      .filter((s): s is SoalQuiz => s !== undefined && s.aktif);
 
     return (
       <div className="space-y-6">
@@ -218,10 +235,12 @@ export default function QuizClient({
                     })}
                   </ul>
 
-                  <div className="mt-3 rounded-lg bg-surface-muted p-3 text-sm text-ink">
-                    <p className="font-semibold">Pembahasan</p>
-                    <p className="mt-1 text-ink-muted">{soal.pembahasan}</p>
-                  </div>
+                  {soal.pembahasan && (
+                    <div className="mt-3 rounded-lg bg-surface-muted p-3 text-sm text-ink">
+                      <p className="font-semibold">Pembahasan</p>
+                      <p className="mt-1 text-ink-muted">{soal.pembahasan}</p>
+                    </div>
+                  )}
                 </li>
               );
             })}
@@ -394,8 +413,8 @@ export default function QuizClient({
   }
 
   /* ---------------------------- Mulai ---------------------------- */
-  const status = sekarang ? statusQuiz(pengaturan, false, sekarang) : null;
-  const batas = formatWaktu(pengaturan.batasAkhir);
+  const status = sekarang ? statusQuiz(pengaturan, false, sekarang, diizinkan) : null;
+  const batas = pengaturan.batasAkhir ? formatWaktu(pengaturan.batasAkhir) : null;
 
   return (
     <section
@@ -407,16 +426,16 @@ export default function QuizClient({
       <dl className="mt-4 grid gap-3 sm:grid-cols-3">
         <div className="rounded-lg bg-surface-muted p-3">
           <dt className="text-sm text-ink-muted">Jumlah soal</dt>
-          <dd className="tabular font-semibold text-ink">{soalList.length} soal</dd>
+          <dd className="tabular font-semibold text-ink">{soalAktif(soalList).length} soal</dd>
         </div>
         <div className="rounded-lg bg-surface-muted p-3">
           <dt className="text-sm text-ink-muted">Durasi</dt>
           <dd className="tabular font-semibold text-ink">{pengaturan.durasiMenit} menit</dd>
         </div>
         <div className="rounded-lg bg-surface-muted p-3">
-          <dt className="text-sm text-ink-muted">Batas akhir mulai</dt>
+          <dt className="text-sm text-ink-muted">Batas akhir</dt>
           <dd className="tabular font-semibold text-ink">
-            {batas.tanggal}, {batas.jam}
+            {batas ? `${batas.tanggal}, ${batas.jam}` : "Tanpa batas"}
           </dd>
         </div>
       </dl>
@@ -424,6 +443,12 @@ export default function QuizClient({
       <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-ink-muted">
         <li>{nama} hanya bisa dikerjakan satu kali.</li>
         <li>Waktu berjalan sejak tombol Mulai ditekan. Soal baru tampil setelah itu.</li>
+        {batas && (
+          <li>
+            Waktu pengerjaan berakhir paling lambat pada batas akhir, jadi bila Anda mulai mendekati batas
+            akhir, waktunya lebih singkat dari durasi.
+          </li>
+        )}
         <li>Semua soal harus dijawab sebelum jawaban bisa dikirim.</li>
         <li>
           Bila waktu habis, jawaban terkirim otomatis. Soal yang belum dijawab dihitung salah.

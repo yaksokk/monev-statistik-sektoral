@@ -5,7 +5,9 @@ interface Props {
   persenKehadiran: number;
   ambangKehadiran: number | null; // null bila tidak ada kegiatan aktif
   teksNilaiPost: string; // nilai atau "Belum"
-  syarat: { presensi: boolean; postTest: boolean; evaluasi: boolean };
+  preTestAktif: boolean;
+  // null = quiz dimatikan di kegiatan ini, syarat gugur
+  syarat: { presensi: boolean; postTest: boolean | null; evaluasi: boolean | null };
   lulus: boolean;
   linkSertifikat: string | null; // null bila syarat belum terpenuhi atau link belum ada
 }
@@ -45,12 +47,26 @@ export default function PanelKelulusan({
   persenKehadiran,
   ambangKehadiran,
   teksNilaiPost,
+  preTestAktif,
   syarat,
   lulus,
   linkSertifikat,
 }: Props) {
   // ambang mengikuti kegiatan aktif
   const teksAmbang = ambangKehadiran === null ? "sesuai ketentuan kegiatan" : `${ambangKehadiran}%`;
+
+  // syarat quiz yang dimatikan tidak disebut
+  const daftarSyarat = [`Kehadiran minimal ${teksAmbang}`];
+  if (syarat.postTest !== null) {
+    daftarSyarat.push(
+      `${preTestAktif ? "Menyelesaikan Pre-Test & Post-Test" : "Menyelesaikan Post-Test"} dengan Nilai Post-Test ≥ ${AMBANG_POSTTEST}`,
+    );
+  }
+  if (syarat.evaluasi !== null) daftarSyarat.push("menyelesaikan Evaluasi Pendalaman");
+  const teksSyarat =
+    daftarSyarat.length > 1
+      ? `${daftarSyarat.slice(0, -1).join(", ")}, serta ${daftarSyarat[daftarSyarat.length - 1]}`
+      : daftarSyarat[0];
 
   return (
     <section
@@ -63,9 +79,7 @@ export default function PanelKelulusan({
       </h2>
 
       <p className="mt-3 text-sm text-ink-muted">
-        Syarat kelulusan pembinaan: Kehadiran minimal {teksAmbang}, Menyelesaikan Pre-Test
-        &amp; Post-Test dengan Nilai Post-Test ≥ {AMBANG_POSTTEST}, serta menyelesaikan Evaluasi
-        Pendalaman.
+        Syarat kelulusan pembinaan: {teksSyarat}.
       </p>
 
       <ul className="mt-4 space-y-2.5">
@@ -74,16 +88,20 @@ export default function PanelKelulusan({
           nilai={`${Math.round(persenKehadiran)}%`}
           terpenuhi={syarat.presensi}
         />
-        <BarisSyarat
-          label={`Post-Test (≥ ${AMBANG_POSTTEST})`}
-          nilai={teksNilaiPost}
-          terpenuhi={syarat.postTest}
-        />
-        <BarisSyarat
-          label="Evaluasi Pendalaman Selesai"
-          nilai={syarat.evaluasi ? "Selesai" : "Belum"}
-          terpenuhi={syarat.evaluasi}
-        />
+        {syarat.postTest !== null && (
+          <BarisSyarat
+            label={`Post-Test (≥ ${AMBANG_POSTTEST})`}
+            nilai={teksNilaiPost}
+            terpenuhi={syarat.postTest}
+          />
+        )}
+        {syarat.evaluasi !== null && (
+          <BarisSyarat
+            label="Evaluasi Pendalaman Selesai"
+            nilai={syarat.evaluasi ? "Selesai" : "Belum"}
+            terpenuhi={syarat.evaluasi}
+          />
+        )}
       </ul>
 
       <div className="mt-auto pt-6">

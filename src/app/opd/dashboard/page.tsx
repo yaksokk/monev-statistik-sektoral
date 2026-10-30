@@ -14,15 +14,14 @@ import {
   SOAL_PRETEST,
 } from "@/data/dummy";
 import {
-  AMBANG_KEHADIRAN,
   AMBANG_POSTTEST,
   ambilNilaiQuiz,
   formatNGain,
-  hitungKehadiran,
   hitungNGain,
   linkHttps,
 } from "@/lib/dashboard";
 import { ambilOperator } from "@/lib/operator";
+import { apakahLulusKehadiran, hitungKehadiran, sesiKegiatan } from "@/lib/presensi";
 import { formatNilai } from "@/lib/quiz";
 import KartuMetrik from "./KartuMetrik";
 import PanelDokumen, { type BarisDokumen } from "./PanelDokumen";
@@ -33,11 +32,14 @@ import KartuUndangan from "./KartuUndangan";
 export default async function DashboardOpdPage() {
   const { opd } = await ambilOperator();
 
+  // presensi, ambang, dan dokumen mengikuti kegiatan aktif
+  const kegiatan = KEGIATAN_LIST.find((k) => k.aktif);
+
   // kehadiran dan quiz
-  const presensi = PRESENSI_LIST.filter((p) => p.opdId === opd.id);
+  const sesiAktif = kegiatan ? sesiKegiatan(SESI_LIST, kegiatan.id) : [];
   const hasilOpd = HASIL_QUIZ_LIST.filter((h) => h.opdId === opd.id);
 
-  const kehadiran = hitungKehadiran(SESI_LIST, presensi);
+  const kehadiran = hitungKehadiran(opd.id, sesiAktif, PRESENSI_LIST);
   const nilaiPre = ambilNilaiQuiz(hasilOpd, PENGATURAN_PRETEST.id, SOAL_PRETEST);
   const nilaiPost = ambilNilaiQuiz(hasilOpd, PENGATURAN_POSTTEST.id, SOAL_POSTTEST);
   const nGain = hitungNGain(nilaiPre, nilaiPost);
@@ -45,7 +47,7 @@ export default async function DashboardOpdPage() {
 
   // syarat kelulusan (kelengkapan dokumen bukan syarat)
   const syarat = {
-    presensi: kehadiran.persen >= AMBANG_KEHADIRAN,
+    presensi: kegiatan ? apakahLulusKehadiran(kehadiran.persen, kegiatan) : false,
     postTest: nilaiPost !== null && nilaiPost >= AMBANG_POSTTEST,
     evaluasi: evaluasiSelesai,
   };
@@ -70,10 +72,10 @@ export default async function DashboardOpdPage() {
         }))
     : [];
 
-  // dokumen kegiatan aktif
-  const kegiatan = KEGIATAN_LIST.find((k) => k.aktif);
   // undangan hanya ditampilkan bila link ada dan berawalan https
   const linkUndangan = linkHttps(kegiatan?.linkUndangan);
+
+  // dokumen kegiatan aktif
   const barisDokumen: BarisDokumen[] = kegiatan
     ? ITEM_LIST.filter((i) => i.kegiatanId === kegiatan.id).map((item) => ({
         id: item.id,
@@ -97,13 +99,15 @@ export default async function DashboardOpdPage() {
           sertifikasi peserta · {opd.nama}
         </p>
       </header>
-                {kegiatan && (
+
+      {kegiatan && (
         <KartuUndangan
           judul={kegiatan.judulUndangan ?? "Surat Undangan"}
           tanggal={kegiatan.tanggalUndangan ?? null}
           link={linkUndangan}
         />
       )}
+
       <section
         aria-label="Ringkasan capaian"
         className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
@@ -112,8 +116,10 @@ export default async function DashboardOpdPage() {
           ikon={CalendarCheck}
           warna="navy"
           label="Tingkat Kehadiran"
-          nilai={`${Math.round(kehadiran.persen)}%`}
-          keterangan={`${kehadiran.hadir} dari ${kehadiran.total} Sesi`}
+          nilai={kegiatan ? `${Math.round(kehadiran.persen)}%` : "–"}
+          keterangan={
+            kegiatan ? `${kehadiran.hadir} dari ${kehadiran.total} Sesi` : "Belum ada kegiatan aktif"
+          }
         />
         <KartuMetrik
           ikon={ClipboardList}
@@ -142,6 +148,7 @@ export default async function DashboardOpdPage() {
         <PanelModul babList={babList} />
         <PanelKelulusan
           persenKehadiran={kehadiran.persen}
+          ambangKehadiran={kegiatan?.ambangKehadiran ?? null}
           teksNilaiPost={nilaiPost === null ? "Belum" : formatNilai(nilaiPost)}
           syarat={syarat}
           lulus={lulus}

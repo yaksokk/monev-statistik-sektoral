@@ -1,19 +1,8 @@
 import { hitungHasil } from "@/lib/quiz";
-import type { HasilQuiz, Presensi, SesiPembinaan, SoalQuiz } from "@/lib/types";
+import type { HasilQuiz, SoalQuiz } from "@/lib/types";
 
-export const AMBANG_KEHADIRAN = 75; // persen
 export const AMBANG_POSTTEST = 75; // nilai
 
-// Penyebut = semua sesi. Sesi tidak diisi atau izin tidak dihitung hadir
-export function hitungKehadiran(sesiList: SesiPembinaan[], presensi: Presensi[]) {
-  const hadir = sesiList.filter((s) =>
-    presensi.some(
-      (p) => p.sesiId === s.id && (p.status === "tepat_waktu" || p.status === "terlambat"),
-    ),
-  ).length;
-  const total = sesiList.length;
-  return { hadir, total, persen: total === 0 ? 0 : (hadir / total) * 100 };
-}
 
 // hasil sudah difilter per OPD; null bila quiz belum dikerjakan
 export function ambilNilaiQuiz(hasil: HasilQuiz[], quizId: string, soal: SoalQuiz[]) {

@@ -7,10 +7,10 @@ import {
   catatanWajib,
   formatWaktu,
   labelSesi,
-  statusSesi,
+  statusSesiOpd,
   susunRiwayat,
   waktuSekarang,
-  type StatusSesi,
+  type StatusSesiOpd,
 } from "@/lib/presensi";
 import {
   STATUS_KEHADIRAN_LABEL,
@@ -27,7 +27,7 @@ type Props = {
 
 const URUTAN_STATUS: StatusKehadiran[] = ["tepat_waktu", "terlambat", "izin"];
 
-const KETERANGAN_SESI: Partial<Record<StatusSesi, string>> = {
+const KETERANGAN_SESI: Partial<Record<StatusSesiOpd, string>> = {
   sudah_diisi: "sudah diisi",
   belum_dibuka: "belum dibuka",
   terkunci: "ditutup",
@@ -72,7 +72,7 @@ export default function DaftarHadirClient({ opdId, sesiList, presensiAwal }: Pro
   const sesiTerpilih = sesiList.find((s) => s.id === sesiId);
   const riwayat = susunRiwayat(sesiList, presensi, sekarang);
   const adaTerbuka =
-    sekarang !== null && sesiList.some((s) => statusSesi(s, presensi, sekarang) === "terbuka");
+    sekarang !== null && sesiList.some((s) => statusSesiOpd(s, presensi, sekarang) === "terbuka");
 
   function periksa(e: FormEvent) {
     e.preventDefault();
@@ -95,7 +95,7 @@ export default function DaftarHadirClient({ opdId, sesiList, presensiAwal }: Pro
     setKonfirmasi(false);
 
     // batas waktu bisa saja lewat saat dialog terbuka
-    if (statusSesi(sesiTerpilih, presensi, waktu) !== "terbuka") {
+    if (statusSesiOpd(sesiTerpilih, presensi, waktu) !== "terbuka") {
       setGalat("Sesi ini sudah tidak bisa diisi.");
       setSesiId("");
       return;
@@ -140,7 +140,7 @@ export default function DaftarHadirClient({ opdId, sesiList, presensiAwal }: Pro
             >
               <option value="">Pilih sesi…</option>
               {sesiList.map((sesi) => {
-                const st = sekarang ? statusSesi(sesi, presensi, sekarang) : null;
+                const st = sekarang ? statusSesiOpd(sesi, presensi, sekarang) : null;
                 const keterangan = st ? KETERANGAN_SESI[st] : undefined;
                 return (
                   <option key={sesi.id} value={sesi.id} disabled={st !== "terbuka"}>

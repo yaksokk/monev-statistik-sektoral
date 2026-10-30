@@ -1,8 +1,9 @@
 import { Award, Check, Download, X } from "lucide-react";
-import { AMBANG_KEHADIRAN, AMBANG_POSTTEST } from "@/lib/dashboard";
+import { AMBANG_POSTTEST } from "@/lib/dashboard";
 
 interface Props {
   persenKehadiran: number;
+  ambangKehadiran: number | null; // null bila tidak ada kegiatan aktif
   teksNilaiPost: string; // nilai atau "Belum"
   syarat: { presensi: boolean; postTest: boolean; evaluasi: boolean };
   lulus: boolean;
@@ -42,11 +43,15 @@ function BarisSyarat({
 
 export default function PanelKelulusan({
   persenKehadiran,
+  ambangKehadiran,
   teksNilaiPost,
   syarat,
   lulus,
   linkSertifikat,
 }: Props) {
+  // ambang mengikuti kegiatan aktif
+  const teksAmbang = ambangKehadiran === null ? "sesuai ketentuan kegiatan" : `${ambangKehadiran}%`;
+
   return (
     <section
       aria-labelledby="judul-kelulusan"
@@ -58,14 +63,14 @@ export default function PanelKelulusan({
       </h2>
 
       <p className="mt-3 text-sm text-ink-muted">
-        Syarat kelulusan pembinaan: Kehadiran minimal {AMBANG_KEHADIRAN}%, Menyelesaikan Pre-Test
+        Syarat kelulusan pembinaan: Kehadiran minimal {teksAmbang}, Menyelesaikan Pre-Test
         &amp; Post-Test dengan Nilai Post-Test ≥ {AMBANG_POSTTEST}, serta menyelesaikan Evaluasi
         Pendalaman.
       </p>
 
       <ul className="mt-4 space-y-2.5">
         <BarisSyarat
-          label={`Presensi Min. ${AMBANG_KEHADIRAN}%`}
+          label={ambangKehadiran === null ? "Presensi" : `Presensi Min. ${ambangKehadiran}%`}
           nilai={`${Math.round(persenKehadiran)}%`}
           terpenuhi={syarat.presensi}
         />

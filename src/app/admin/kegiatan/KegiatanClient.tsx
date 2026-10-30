@@ -12,6 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
+import { AMBANG_KEHADIRAN_AWAL } from "@/lib/presensi";
 import type { Kegiatan } from "@/lib/types";
 
 const dasarTombol =
@@ -325,6 +326,7 @@ export default function KegiatanClient({
           tanggalSelesai: v.selesai,
           tenggat: v.tenggat,
           bobot,
+          ambangKehadiran: AMBANG_KEHADIRAN_AWAL,
         },
       ]);
       setPesan(`${v.nama} ditambahkan.`);

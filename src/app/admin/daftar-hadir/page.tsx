@@ -1,47 +1,33 @@
-import { Suspense } from "react";
-import { KEGIATAN_LIST, OPD_LIST, PRESENSI_LIST, SESI_LIST } from "@/data/dummy";
-import DaftarHadirAdminClient from "./DaftarHadirAdminClient";
+import { KEGIATAN_LIST, PRESENSI_LIST, SESI_LIST } from "@/data/dummy";
+import { ambilOperator } from "@/lib/operator";
+import { sesiKegiatan } from "@/lib/presensi";
+import DaftarHadirClient from "./DaftarHadirClient";
 
-type SearchParams = Promise<{ kegiatan?: string }>;
+export default async function DaftarHadirPage() {
+  const { opd } = await ambilOperator();
 
-export default function KelolaDaftarHadirPage({ searchParams }: { searchParams: SearchParams }) {
+  // OPD hanya melihat sesi kegiatan aktif
+  const kegiatan = KEGIATAN_LIST.find((k) => k.aktif);
+  const sesiList = kegiatan ? sesiKegiatan(SESI_LIST, kegiatan.id) : [];
+  const idSesi = new Set(sesiList.map((s) => s.id));
+  const presensi = PRESENSI_LIST.filter((p) => p.opdId === opd.id && idSesi.has(p.sesiId));
+
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold text-ink">Kelola Daftar Hadir</h1>
+        <h1 className="text-2xl font-semibold text-ink">Daftar Hadir Pembinaan</h1>
         <p className="mt-1 text-sm text-ink-muted">
-          Atur sesi pembinaan, ambang kehadiran, dan pantau kehadiran OPD per kegiatan.
+          Isi presensi sesuai jadwal sesi pembinaan Statistik Sektoral · {opd.nama}
         </p>
       </header>
 
-      {/* isi bergantung pada ?kegiatan=, jadi dialirkan di balik Suspense */}
-      <Suspense fallback={<p className="text-sm text-ink-muted">Memuat daftar hadir…</p>}>
-        <Isi searchParams={searchParams} />
-      </Suspense>
+      {kegiatan ? (
+        <DaftarHadirClient opdId={opd.id} sesiList={sesiList} presensiAwal={presensi} />
+      ) : (
+        <p className="rounded-card border border-line bg-surface p-6 text-center text-sm text-ink-muted shadow-card">
+          Belum ada kegiatan aktif.
+        </p>
+      )}
     </div>
-  );
-}
-
-async function Isi({ searchParams }: { searchParams: SearchParams }) {
-  const { kegiatan: param } = await searchParams;
-
-  // default: kegiatan aktif, kalau tidak ada pakai yang pertama
-  const kegiatan =
-    KEGIATAN_LIST.find((k) => k.id === param) ??
-    KEGIATAN_LIST.find((k) => k.aktif) ??
-    KEGIATAN_LIST[0];
-
-  if (!kegiatan) {
-    return <p className="text-sm text-ink-muted">Belum ada kegiatan. Tambahkan lewat menu Kegiatan.</p>;
-  }
-
-  return (
-    <DaftarHadirAdminClient
-      kegiatanId={kegiatan.id}
-      kegiatanAwal={KEGIATAN_LIST}
-      opdList={OPD_LIST}
-      sesiAwal={SESI_LIST}
-      presensiAwal={PRESENSI_LIST}
-    />
   );
 }

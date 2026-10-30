@@ -25,6 +25,7 @@ export const MENU: Record<Peran, ItemMenu[]> = {
     { label: "Dashboard", href: "/admin/dashboard", ikon: LayoutDashboard },
     { label: "Pemeriksaan", href: "/admin/pemeriksaan", ikon: ClipboardCheck },
     { label: "Kegiatan", href: "/admin/kegiatan", ikon: CalendarRange },
+    { label: "Daftar Hadir", href: "/admin/daftar-hadir", ikon: CalendarCheck },
     { label: "Undangan", href: "/admin/undangan", ikon: Mail },
     { label: "Nilai", href: "/admin/nilai", ikon: Award },
     { label: "OPD", href: "/admin/opd", ikon: Building2 },

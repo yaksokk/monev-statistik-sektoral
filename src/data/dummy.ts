@@ -1,8 +1,11 @@
 import type {
   Dokumen,
   HasilQuiz,
+  IzinKerjaUlang,
   ItemDokumen,
+  JenisQuiz,
   Kegiatan,
+  LogPerubahanQuiz,
   NilaiUjian,
   Opd,
   PengaturanQuiz,
@@ -257,15 +260,8 @@ export const PRESENSI_LIST: Presensi[] = [
 /* Pre-Test dummy                                                      */
 /* ------------------------------------------------------------------ */
 
-export const PENGATURAN_PRETEST: PengaturanQuiz = {
-  id: "pretest",
-  judul: "Pre-Test Pembinaan Satu Data Indonesia",
-  durasiMenit: 15,
-  batasAkhir: "2026-10-31T17:00",
-  akses: "dibuka",
-};
-
-export const SOAL_PRETEST: SoalQuiz[] = [
+// Soal dasar yang dipakai ketiga quiz kegiatan-1 (dummy); id diberi awalan per quiz di bawah
+const SOAL_DASAR: Pick<SoalQuiz, "id" | "pertanyaan" | "opsi" | "kunci" | "pembahasan">[] = [
   {
     id: "pt-01",
     pertanyaan:
@@ -373,8 +369,58 @@ export const SOAL_PRETEST: SoalQuiz[] = [
   },
 ];
 
+const AWALAN_SOAL: Record<JenisQuiz, string> = {
+  pretest: "pt-",
+  posttest: "po-",
+  evaluasi: "ev-",
+};
+
+function buatSoal(quizId: JenisQuiz): SoalQuiz[] {
+  return SOAL_DASAR.map((s, i) => ({
+    ...s,
+    id: s.id.replace("pt-", AWALAN_SOAL[quizId]),
+    kegiatanId: "kegiatan-1",
+    quizId,
+    urutan: i + 1,
+    aktif: true,
+  }));
+}
+
+export const SOAL_QUIZ_LIST: SoalQuiz[] = [
+  ...buatSoal("pretest"),
+  ...buatSoal("posttest"),
+  ...buatSoal("evaluasi"),
+];
+
+export const PENGATURAN_QUIZ_LIST: PengaturanQuiz[] = [
+  {
+    id: "pretest",
+    kegiatanId: "kegiatan-1",
+    judul: "Pre-Test Pembinaan Satu Data Indonesia",
+    durasiMenit: 15,
+    waktuBuka: "2026-10-26T08:00",
+    batasAkhir: "2026-10-31T17:00",
+  },
+  {
+    id: "posttest",
+    kegiatanId: "kegiatan-1",
+    judul: "Post-Test Pembinaan Satu Data Indonesia",
+    durasiMenit: 15,
+    waktuBuka: "2026-10-27T08:00",
+    batasAkhir: "2026-11-07T17:00",
+  },
+  {
+    id: "evaluasi",
+    kegiatanId: "kegiatan-1",
+    judul: "Evaluasi Pendalaman Pembinaan Satu Data Indonesia",
+    durasiMenit: 15,
+    waktuBuka: "2026-10-27T08:00",
+    batasAkhir: "2026-11-14T17:00",
+  },
+];
+
 // Hasil contoh Pre-Test: Dinkes selesai tepat waktu, Distan terkirim otomatis dengan jawaban belum lengkap
-export const HASIL_QUIZ_LIST: HasilQuiz[] = [
+const HASIL_DASAR: Omit<HasilQuiz, "kegiatanId">[] = [
   {
     opdId: "opd-02",
     quizId: "pretest",
@@ -452,27 +498,20 @@ export const HASIL_QUIZ_LIST: HasilQuiz[] = [
   },
 ];
 
-export const PENGATURAN_POSTTEST: PengaturanQuiz = {
-  id: "posttest",
-  judul: "Post-Test Pembinaan Satu Data Indonesia",
-  durasiMenit: 15,
-  batasAkhir: "2026-11-07T17:00",
-  akses: "dibuka",
-};
+// Id soal di hasil dasar memakai awalan pt-; disesuaikan ke awalan quiz masing-masing
+export const HASIL_QUIZ_LIST: HasilQuiz[] = HASIL_DASAR.map((h) => {
+  const ganti = (id: string) => id.replace("pt-", AWALAN_SOAL[h.quizId]);
+  return {
+    ...h,
+    kegiatanId: "kegiatan-1",
+    urutanSoal: h.urutanSoal.map(ganti),
+    jawaban: Object.fromEntries(Object.entries(h.jawaban).map(([id, v]) => [ganti(id), v])),
+  };
+});
 
-// Untuk saat ini soalnya sama dengan Pre-Test; ganti bila soal Post-Test sudah berbeda
-export const SOAL_POSTTEST: SoalQuiz[] = SOAL_PRETEST;
+export const IZIN_KERJA_ULANG_LIST: IzinKerjaUlang[] = [];
 
-export const PENGATURAN_EVALUASI: PengaturanQuiz = {
-  id: "evaluasi",
-  judul: "Evaluasi Pendalaman Pembinaan Satu Data Indonesia",
-  durasiMenit: 15,
-  batasAkhir: "2026-11-14T17:00",
-  akses: "dibuka",
-};
-
-// Untuk saat ini soalnya sama dengan Pre-Test; ganti bila soal Evaluasi sudah berbeda
-export const SOAL_EVALUASI: SoalQuiz[] = SOAL_PRETEST;
+export const LOG_PERUBAHAN_QUIZ_LIST: LogPerubahanQuiz[] = [];
 
 export const UNDANGAN_LIST: Undangan[] = [
   {

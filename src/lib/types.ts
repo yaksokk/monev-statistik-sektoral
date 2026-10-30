@@ -40,7 +40,11 @@ export interface Kegiatan {
   aktif?: boolean;
   arsip?: boolean; // diarsipkan admin, tidak bisa aktif bersamaan
   bobot: number; // persen, bobot kegiatan terhadap nilai keseluruhan
-  ambangKehadiran: number; 
+  ambangKehadiran: number;
+  // Saklar quiz per kegiatan. Kosong dianggap aktif; terkunci bila kegiatan diarsipkan
+  preTestAktif?: boolean;
+  postTestAktif?: boolean;
+  evaluasiAktif?: boolean;
   // Surat undangan, diisi admin, sama untuk semua OPD
   judulUndangan?: string;
   tanggalUndangan?: string; // ISO yyyy-mm-dd, tanggal surat
@@ -92,35 +96,66 @@ export interface Presensi {
   catatan: string | null; // wajib bila terlambat atau izin
 }
 
-export type AksesQuiz = "belum_dibuka" | "dibuka" | "ditutup";
+export type JenisQuiz = "pretest" | "posttest" | "evaluasi";
 
-// Soal pilihan ganda. kunci = indeks opsi yang benar (mulai dari 0)
+// Soal pilihan ganda milik satu quiz pada satu kegiatan. kunci = indeks opsi yang benar (mulai dari 0)
 export interface SoalQuiz {
   id: string;
+  kegiatanId: string;
+  quizId: JenisQuiz;
+  urutan: number; // urutan tampil di admin; OPD melihat urutan acak
   pertanyaan: string;
   opsi: string[];
   kunci: number;
-  pembahasan: string;
+  pembahasan: string; // kosong = bagian pembahasan tidak tampil
+  aktif: boolean; // false = tidak dihitung dalam nilai, tapi tetap tercatat
 }
 
-// Diatur admin. Durasi dihitung sejak OPD menekan Mulai
+// Diatur admin per kegiatan. Status quiz diturunkan dari dua waktu di bawah
 export interface PengaturanQuiz {
-  id: string;
+  id: JenisQuiz;
+  kegiatanId: string;
   judul: string;
   durasiMenit: number;
-  batasAkhir: string; // yyyy-mm-ddTHH:mm (waktu lokal), setelah ini tidak bisa dimulai
-  akses: AksesQuiz;
+  waktuBuka: string | null; // yyyy-mm-ddTHH:mm (waktu lokal), null = belum dibuka
+  batasAkhir: string | null; // yyyy-mm-ddTHH:mm (waktu lokal), null = tanpa batas; memotong waktu pengerjaan
+  hanyaBerizin?: boolean; // true setelah batas akhir pertama lewat: hanya OPD berizin yang boleh mulai
 }
 
-// Hasil satu OPD, hanya ada setelah jawaban terkirim
+// Hasil satu OPD, hanya ada setelah jawaban terkirim. Nilai tidak disimpan, dihitung dari jawaban dan kunci
 export interface HasilQuiz {
   opdId: string;
-  quizId: string;
+  kegiatanId: string;
+  quizId: JenisQuiz;
   urutanSoal: string[]; // id soal sesuai urutan yang dilihat OPD
   jawaban: Record<string, number>; // id soal -> indeks opsi; soal tanpa jawaban tidak ada
   mulai: string; // yyyy-mm-ddTHH:mm
   selesai: string; // yyyy-mm-ddTHH:mm
   otomatis: boolean; // true bila terkirim karena waktu habis
+}
+
+// Izin admin agar OPD mengerjakan ulang; hasil lama OPD itu dihapus saat izin diberikan
+export interface IzinKerjaUlang {
+  kegiatanId: string;
+  quizId: JenisQuiz;
+  opdId: string;
+  diberikanPada: string; // yyyy-mm-ddTHH:mm
+  admin: string;
+}
+
+export type JenisLogQuiz = "kunci" | "nonaktif" | "aktifkan" | "izin_ulang";
+
+export interface LogPerubahanQuiz {
+  id: string;
+  kegiatanId: string;
+  quizId: JenisQuiz;
+  jenis: JenisLogQuiz;
+  soalId?: string; // untuk kunci, nonaktif, aktifkan
+  kunciLama?: number; // hanya untuk jenis "kunci"
+  kunciBaru?: number;
+  opdId?: string; // hanya untuk jenis "izin_ulang"
+  admin: string;
+  waktu: string; // yyyy-mm-ddTHH:mm
 }
 
 

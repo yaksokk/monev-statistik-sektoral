@@ -62,6 +62,7 @@ export const KEGIATAN_LIST: Kegiatan[] = [
     tanggalSelesai: "2026-10-31",
     tenggat: "2026-10-30",
     bobot: 40,
+    ambangKehadiran: 75,
     judulUndangan: "Undangan Pembinaan Statistik Sektoral",
     tanggalUndangan: "2026-10-01",
     linkUndangan: LINK_SERTIFIKAT_CONTOH, // hanya data dummy
@@ -73,6 +74,7 @@ export const KEGIATAN_LIST: Kegiatan[] = [
     tanggalSelesai: "2026-11-30",
     tenggat: "2026-11-30",
     bobot: 30,
+    ambangKehadiran: 70,
   },
   {
     id: "kegiatan-3",
@@ -81,6 +83,8 @@ export const KEGIATAN_LIST: Kegiatan[] = [
     tanggalSelesai: "2026-12-19",
     tenggat: "2026-12-19",
     bobot: 30,
+    ambangKehadiran: 75,
+    arsip: true,
   },
 ];
 
@@ -172,37 +176,72 @@ export const NILAI_UJIAN_LIST: NilaiUjian[] = OPD_LIST.flatMap((opd, o) =>
 /* ------------------------------------------------------------------ */
 
 export const SESI_LIST: SesiPembinaan[] = [
+  // kegiatan-1 (aktif): dua ditutup, satu terbuka, satu belum dibuka
   {
     id: "sesi-1",
+    kegiatanId: "kegiatan-1",
     urutan: 1,
     judul: "Prinsip & Pengertian Satu Data Indonesia",
-    tanggal: "2026-10-08",
+    waktuBuka: "2026-10-08T08:00",
     batasPengisian: "2026-10-09T17:00",
-    akses: "ditutup",
   },
   {
     id: "sesi-2",
+    kegiatanId: "kegiatan-1",
     urutan: 2,
     judul: "Penyelenggara SDI Pusat & Daerah",
-    tanggal: "2026-10-15",
+    waktuBuka: "2026-10-15T08:00",
     batasPengisian: "2026-10-16T17:00",
-    akses: "dibuka", // terkunci karena batas waktu sudah lewat
   },
   {
     id: "sesi-3",
+    kegiatanId: "kegiatan-1",
     urutan: 3,
     judul: "Tahapan Penyelenggaraan SDI & GSBPM",
-    tanggal: "2026-10-27",
-    batasPengisian: "2026-10-30T17:00",
-    akses: "dibuka",
+    waktuBuka: "2026-10-27T08:00",
+    batasPengisian: "2026-11-04T17:00",
   },
   {
     id: "sesi-4",
+    kegiatanId: "kegiatan-1",
     urutan: 4,
     judul: "Penyusunan Data Prioritas & EPSS",
-    tanggal: "2026-11-06",
+    waktuBuka: "2026-11-06T08:00",
     batasPengisian: "2026-11-07T17:00",
-    akses: "belum_dibuka",
+  },
+  // kegiatan-2: sesi-5 tanpa waktu sama sekali (langsung terbuka, tanpa batas)
+  {
+    id: "sesi-5",
+    kegiatanId: "kegiatan-2",
+    urutan: 1,
+    judul: "Pengantar Metadata Statistik Sektoral",
+    waktuBuka: null,
+    batasPengisian: null,
+  },
+  {
+    id: "sesi-6",
+    kegiatanId: "kegiatan-2",
+    urutan: 2,
+    judul: "Penyusunan Metadata",
+    waktuBuka: "2026-11-10T08:00",
+    batasPengisian: "2026-11-11T17:00",
+  },
+  // kegiatan-3 (arsip)
+  {
+    id: "sesi-7",
+    kegiatanId: "kegiatan-3",
+    urutan: 1,
+    judul: "Evaluasi Data Sektoral",
+    waktuBuka: "2026-12-03T08:00",
+    batasPengisian: "2026-12-04T17:00",
+  },
+  {
+    id: "sesi-8",
+    kegiatanId: "kegiatan-3",
+    urutan: 2,
+    judul: "Penyajian dan Diseminasi Data",
+    waktuBuka: "2026-12-10T08:00",
+    batasPengisian: "2026-12-11T17:00",
   },
 ];
 
@@ -215,7 +254,14 @@ export const PRESENSI_LIST: Presensi[] = [
   { id: "hadir-opd-04-sesi-1", opdId: "opd-04", sesiId: "sesi-1", status: "tepat_waktu", waktuIsi: "2026-10-08T08:28", catatan: null },
   { id: "hadir-opd-05-sesi-1", opdId: "opd-05", sesiId: "sesi-1", status: "terlambat", waktuIsi: "2026-10-08T09:40", catatan: "Kendala jaringan" },
   { id: "hadir-opd-06-sesi-3", opdId: "opd-06", sesiId: "sesi-3", status: "tepat_waktu", waktuIsi: "2026-10-27T08:45", catatan: null },
+  // kegiatan-2
+  { id: "hadir-opd-01-sesi-5", opdId: "opd-01", sesiId: "sesi-5", status: "tepat_waktu", waktuIsi: "2026-11-02T08:20", catatan: null },
+  // kegiatan-3 (arsip)
+  { id: "hadir-opd-01-sesi-7", opdId: "opd-01", sesiId: "sesi-7", status: "tepat_waktu", waktuIsi: "2026-12-03T08:25", catatan: null },
+  { id: "hadir-opd-02-sesi-7", opdId: "opd-02", sesiId: "sesi-7", status: "izin", waktuIsi: "2026-12-03T07:55", catatan: "Tugas dinas" },
+  { id: "hadir-opd-01-sesi-8", opdId: "opd-01", sesiId: "sesi-8", status: "terlambat", waktuIsi: "2026-12-10T09:30", catatan: "Kendala jaringan" },
 ];
+
 
 /* ------------------------------------------------------------------ */
 /* Pre-Test dummy                                                      */

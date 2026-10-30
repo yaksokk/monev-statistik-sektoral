@@ -37,9 +37,10 @@ export interface Kegiatan {
   tanggalMulai: string; // ISO yyyy-mm-dd
   tanggalSelesai: string;
   tenggat: string; // ISO yyyy-mm-dd, batas akhir unggah dokumen
-  bobot: number; // persen, bobot kegiatan terhadap nilai keseluruhan
   aktif?: boolean;
   arsip?: boolean; // diarsipkan admin, tidak bisa aktif bersamaan
+  bobot: number; // persen, bobot kegiatan terhadap nilai keseluruhan
+  ambangKehadiran: number; 
   // Surat undangan, diisi admin, sama untuk semua OPD
   judulUndangan?: string;
   tanggalUndangan?: string; // ISO yyyy-mm-dd, tanggal surat
@@ -72,14 +73,14 @@ export const STATUS_KEHADIRAN_LABEL: Record<StatusKehadiran, string> = {
   izin: "Izin Tugas Dinas",
 };
 
-// Sesi dibuat dan dibuka/ditutup oleh admin
+
 export interface SesiPembinaan {
   id: string;
-  urutan: number;
+  kegiatanId: string;
+  urutan: number; // label urutan pembuatan, bergeser bila ada sesi dihapus
   judul: string;
-  tanggal: string; // ISO yyyy-mm-dd, hari pelaksanaan
-  batasPengisian: string; // yyyy-mm-ddTHH:mm (waktu lokal), setelah ini form terkunci
-  akses: "belum_dibuka" | "dibuka" | "ditutup";
+  waktuBuka: string | null; // yyyy-mm-ddTHH:mm (waktu lokal), null = langsung terbuka
+  batasPengisian: string | null; // yyyy-mm-ddTHH:mm (waktu lokal), null = terbuka sampai batas diisi
 }
 
 export interface Presensi {
@@ -151,7 +152,7 @@ export interface BabSelesai {
 export interface Undangan {
   id: string;
   judul: string;
-  link: string; // link Google Drive, wajib https
+  link: string; 
   dikirimPada: string; // yyyy-mm-ddTHH:mm (waktu lokal), terisi otomatis saat dikirim
   opdIds: string[]; // OPD penerima; kosong = belum ada penerima
 }

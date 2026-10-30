@@ -9,6 +9,7 @@ import {
   FileText,
   GraduationCap,
   LayoutDashboard,
+  ListChecks,
   Mail,
   type LucideIcon,
 } from "lucide-react";
@@ -26,6 +27,7 @@ export const MENU: Record<Peran, ItemMenu[]> = {
     { label: "Pemeriksaan", href: "/admin/pemeriksaan", ikon: ClipboardCheck },
     { label: "Kegiatan", href: "/admin/kegiatan", ikon: CalendarRange },
     { label: "Daftar Hadir", href: "/admin/daftar-hadir", ikon: CalendarCheck },
+    { label: "Kelola Quiz", href: "/admin/quiz", ikon: ListChecks },
     { label: "Undangan", href: "/admin/undangan", ikon: Mail },
     { label: "Nilai", href: "/admin/nilai", ikon: Award },
     { label: "OPD", href: "/admin/opd", ikon: Building2 },

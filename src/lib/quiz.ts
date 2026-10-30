@@ -1,4 +1,5 @@
 import type {
+  HasilQuiz,
   IzinKerjaUlang,
   JenisQuiz,
   Kegiatan,
@@ -147,6 +148,24 @@ export function hitungHasil(soal: SoalQuiz[], jawaban: Record<string, number>) {
     total,
     nilai: total === 0 ? 0 : (benar / total) * 100,
   };
+}
+
+// Berapa OPD yang nilainya (dan statusnya, bila lulus diberikan) berubah bila daftar soal diganti
+export function dampakPerubahan(
+  sebelum: SoalQuiz[],
+  sesudah: SoalQuiz[],
+  hasil: HasilQuiz[],
+  lulus?: (nilai: number) => boolean,
+) {
+  let nilaiBerubah = 0;
+  let statusBerubah = 0;
+  for (const h of hasil) {
+    const a = hitungHasil(sebelum, h.jawaban).nilai;
+    const b = hitungHasil(sesudah, h.jawaban).nilai;
+    if (Math.abs(a - b) > 1e-9) nilaiBerubah++;
+    if (lulus && lulus(a) !== lulus(b)) statusBerubah++;
+  }
+  return { nilaiBerubah, statusBerubah: lulus ? statusBerubah : null };
 }
 
 export interface MasukanPengaturan {

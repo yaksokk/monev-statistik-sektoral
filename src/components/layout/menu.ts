@@ -5,7 +5,6 @@ import {
   Building2,
   CalendarCheck,
   CalendarRange,
-  ClipboardCheck,
   FileText,
   GraduationCap,
   LayoutDashboard,
@@ -24,7 +23,6 @@ export interface ItemMenu {
 export const MENU: Record<Peran, ItemMenu[]> = {
   admin: [
     { label: "Dashboard", href: "/admin/dashboard", ikon: LayoutDashboard },
-    // { label: "Pemeriksaan", href: "/admin/pemeriksaan", ikon: ClipboardCheck },
     { label: "Kegiatan", href: "/admin/kegiatan", ikon: CalendarRange },
     { label: "Daftar Hadir", href: "/admin/daftar-hadir", ikon: CalendarCheck },
     { label: "Kelola Quiz", href: "/admin/quiz", ikon: ListChecks },

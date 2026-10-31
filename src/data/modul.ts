@@ -1,6 +1,6 @@
 import type { BabModul, BabSelesai, ModulPembelajaran } from "@/lib/types";
 
-// Dummy: nanti diisi admin lewat halaman khusus dan dibaca dari database.
+// Dummy: nanti diisi admin lewat halaman Kelola Modul dan dibaca dari database.
 // Link per bab: ganti "GANTI_ID_..." dengan ID file Drive masing-masing bab.
 const driveFile = (id: string) => `https://drive.google.com/file/d/${id}/view`;
 
@@ -22,7 +22,7 @@ export const BAB_LIST: BabModul[] = [
   { id: "m1-b6", modulId: "modul-1", urutan: 6, judul: "Statistik Nasional", linkMateri: driveFile("1mz1UTSRgAvdTU_1LB2TGkD0lWPaaqC60"), pembinaan: 2 },
 ];
 
-// Catatan bab yang sudah ditandai selesai oleh OPD (dasar tampilan admin nanti)
+// Catatan bab yang sudah ditandai selesai oleh OPD (dasar tampilan admin)
 export const BAB_SELESAI_LIST: BabSelesai[] = [
   { opdId: "opd-02", babId: "m1-b1", selesaiPada: "2026-10-26T09:15" },
   { opdId: "opd-02", babId: "m1-b2", selesaiPada: "2026-10-26T10:02" },

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
 import {
@@ -254,7 +253,6 @@ export default function DaftarHadirAdminClient({
   sesiAwal,
   presensiAwal,
 }: Props) {
-  const router = useRouter();
   const [kegiatanList, setKegiatanList] = useState(kegiatanAwal);
   const [sesiList, setSesiList] = useState(sesiAwal);
   const [presensi, setPresensi] = useState(presensiAwal);
@@ -378,26 +376,6 @@ export default function DaftarHadirAdminClient({
 
   return (
     <div className="space-y-6">
-      {/* pilih kegiatan */}
-      {/* pilih kegiatan */}
-      <div className="max-w-sm space-y-1.5">
-        <label htmlFor="pilih-kegiatan" className="text-sm font-medium text-ink">
-          Kegiatan
-        </label>
-        <select
-          id="pilih-kegiatan"
-          value={kegiatan.id}
-          onChange={(e) => router.push(`/admin/daftar-hadir?kegiatan=${e.target.value}`)}
-          className={kolomInput}
-        >
-          {kegiatanList.map((k) => (
-            <option key={k.id} value={k.id}>
-              {k.nama}
-              {k.arsip ? " (arsip)" : k.aktif ? " (aktif)" : ""}
-            </option>
-          ))}
-        </select>
-      </div>
 
       {arsip && (
         <p role="note" className="rounded-lg border border-line bg-surface-muted px-4 py-3 text-sm text-ink-muted">

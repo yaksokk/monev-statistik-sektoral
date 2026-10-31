@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { waktuSekarang } from "@/lib/presensi";
 import {
   JENIS_QUIZ,
@@ -26,7 +25,6 @@ import type {
 } from "@/lib/types";
 import TabQuiz, { type AksiTabQuiz, type DataSoal } from "./TabQuiz";
 import TabRekap, { type TargetIzin } from "./TabRekap";
-import { kolomInput } from "./ui";
 
 // Dummy, belum ada login. Ganti dengan nama admin dari sesi nanti
 const NAMA_ADMIN = "Admin BPS";
@@ -56,7 +54,6 @@ export default function QuizAdminClient({
   izinAwal,
   logAwal,
 }: Props) {
-  const router = useRouter();
   const [soalList, setSoalList] = useState(soalAwal);
   const [pengaturanList, setPengaturanList] = useState(pengaturanAwal);
   const [hasilList, setHasilList] = useState(hasilAwal);
@@ -245,24 +242,6 @@ export default function QuizAdminClient({
 
   return (
     <div className="space-y-6">
-      <div className="max-w-sm space-y-1.5">
-        <label htmlFor="pilih-kegiatan" className="text-sm font-medium text-ink">
-          Kegiatan
-        </label>
-        <select
-          id="pilih-kegiatan"
-          value={kg.id}
-          onChange={(e) => router.push(`/admin/quiz?kegiatan=${e.target.value}`)}
-          className={kolomInput}
-        >
-          {kegiatanAwal.map((k) => (
-            <option key={k.id} value={k.id}>
-              {k.nama}
-              {k.arsip ? " (arsip)" : k.aktif ? " (aktif)" : ""}
-            </option>
-          ))}
-        </select>
-      </div>
 
       <p role="status" className="min-h-5 text-sm text-ink-muted">
         {pesan}

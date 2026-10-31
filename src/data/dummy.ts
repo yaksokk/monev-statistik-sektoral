@@ -17,14 +17,11 @@ import type {
   Undangan,
 } from "@/lib/types";
 
-/* ------------------------------------------------------------------ */
-/* Master data                                                         */
-/* Semua data di file ini DUMMY. Ganti dengan data asli dari backend. */
-/* ------------------------------------------------------------------ */
+
 // Dummy: satu link contoh untuk semua OPD. Nanti admin mengisi link per OPD
 const LINK_SERTIFIKAT_CONTOH =
   "https://drive.google.com/drive/folders/1vMYIiLaKdp15EMe6HEJ6YAXpd-PzGTo0";
-  
+
 export const OPD_LIST: Opd[] = [
   { id: "opd-01", nama: "Dinas Pendidikan dan Kebudayaan", singkatan: "Disdikbud" },
   { id: "opd-02", nama: "Dinas Kesehatan", singkatan: "Dinkes" },
@@ -36,9 +33,7 @@ export const OPD_LIST: Opd[] = [
   { id: "opd-08", nama: "Dinas Kependudukan dan Pencatatan Sipil", singkatan: "Disdukcapil" },
 ].map((opd) => ({ ...opd, linkSertifikat: LINK_SERTIFIKAT_CONTOH }));
 
-// Dokumen yang harus diunggah OPD, berbeda per kegiatan:
-// kegiatan 1 = 9 dokumen, kegiatan 2 = 3, kegiatan 3 = 2.
-// Item 7–10 masih nama sementara.
+// Dokumen yang harus diunggah OPD pada kegiatan aktif.
 export const ITEM_LIST: ItemDokumen[] = [
   { id: "item-01", kegiatanId: "kegiatan-1", nama: "Metadata" },
   { id: "item-02", kegiatanId: "kegiatan-1", nama: "Romantik" },
@@ -59,25 +54,6 @@ export const KEGIATAN_LIST: Kegiatan[] = [
     judulUndangan: "Undangan Pembinaan Statistik Sektoral",
     tanggalUndangan: "2026-10-01",
     linkUndangan: LINK_SERTIFIKAT_CONTOH, // hanya data dummy
-  },
-  {
-    id: "kegiatan-2",
-    nama: "Kegiatan Statistik Sektoral 2",
-    tanggalMulai: "2026-11-01",
-    tanggalSelesai: "2026-11-30",
-    tenggat: "2026-11-30",
-    bobot: 30,
-    ambangKehadiran: 70,
-  },
-  {
-    id: "kegiatan-3",
-    nama: "Kegiatan Statistik Sektoral 3",
-    tanggalMulai: "2026-12-01",
-    tanggalSelesai: "2026-12-19",
-    tenggat: "2026-12-19",
-    bobot: 30,
-    ambangKehadiran: 75,
-    arsip: true,
   },
 ];
 
@@ -108,8 +84,7 @@ function mulberry32(seed: number) {
 
 // Seberapa rajin tiap OPD (urut sesuai OPD_LIST) -> variasi tampilan
 const PROFIL_OPD = [0.95, 0.85, 0.75, 0.65, 0.55, 0.4, 0.25, 0.1];
-// Kegiatan yang lebih jauh = lebih sedikit yang sudah terisi
-const FAKTOR_KEGIATAN = [1, 0.6, 0.25];
+const FAKTOR_KEGIATAN = [1];
 
 const rand = mulberry32(2026);
 
@@ -142,7 +117,7 @@ export const DOKUMEN_LIST: Dokumen[] = OPD_LIST.flatMap((opd, o) =>
 /* ------------------------------------------------------------------ */
 
 // OPD yang cukup rajin sudah punya nilai ujian; sisanya null (belum diinput)
-const AMBANG_NILAI = [0.25, 0.55, 0.75];
+const AMBANG_NILAI = [0.25];
 
 export const NILAI_UJIAN_LIST: NilaiUjian[] = OPD_LIST.flatMap((opd, o) =>
   KEGIATAN_LIST.map<NilaiUjian>((kegiatan, k) => ({
@@ -157,7 +132,7 @@ export const NILAI_UJIAN_LIST: NilaiUjian[] = OPD_LIST.flatMap((opd, o) =>
 /* ------------------------------------------------------------------ */
 
 export const SESI_LIST: SesiPembinaan[] = [
-  // kegiatan-1 (aktif): dua ditutup, satu terbuka, satu belum dibuka
+  // kegiatan-1: dua ditutup, satu terbuka, satu belum dibuka
   {
     id: "sesi-1",
     kegiatanId: "kegiatan-1",
@@ -190,40 +165,6 @@ export const SESI_LIST: SesiPembinaan[] = [
     waktuBuka: "2026-11-06T08:00",
     batasPengisian: "2026-11-07T17:00",
   },
-  // kegiatan-2: sesi-5 tanpa waktu sama sekali (langsung terbuka, tanpa batas)
-  {
-    id: "sesi-5",
-    kegiatanId: "kegiatan-2",
-    urutan: 1,
-    judul: "Pengantar Metadata Statistik Sektoral",
-    waktuBuka: null,
-    batasPengisian: null,
-  },
-  {
-    id: "sesi-6",
-    kegiatanId: "kegiatan-2",
-    urutan: 2,
-    judul: "Penyusunan Metadata",
-    waktuBuka: "2026-11-10T08:00",
-    batasPengisian: "2026-11-11T17:00",
-  },
-  // kegiatan-3 (arsip)
-  {
-    id: "sesi-7",
-    kegiatanId: "kegiatan-3",
-    urutan: 1,
-    judul: "Evaluasi Data Sektoral",
-    waktuBuka: "2026-12-03T08:00",
-    batasPengisian: "2026-12-04T17:00",
-  },
-  {
-    id: "sesi-8",
-    kegiatanId: "kegiatan-3",
-    urutan: 2,
-    judul: "Penyajian dan Diseminasi Data",
-    waktuBuka: "2026-12-10T08:00",
-    batasPengisian: "2026-12-11T17:00",
-  },
 ];
 
 export const PRESENSI_LIST: Presensi[] = [
@@ -235,12 +176,6 @@ export const PRESENSI_LIST: Presensi[] = [
   { id: "hadir-opd-04-sesi-1", opdId: "opd-04", sesiId: "sesi-1", status: "tepat_waktu", waktuIsi: "2026-10-08T08:28", catatan: null },
   { id: "hadir-opd-05-sesi-1", opdId: "opd-05", sesiId: "sesi-1", status: "terlambat", waktuIsi: "2026-10-08T09:40", catatan: "Kendala jaringan" },
   { id: "hadir-opd-06-sesi-3", opdId: "opd-06", sesiId: "sesi-3", status: "tepat_waktu", waktuIsi: "2026-10-27T08:45", catatan: null },
-  // kegiatan-2
-  { id: "hadir-opd-01-sesi-5", opdId: "opd-01", sesiId: "sesi-5", status: "tepat_waktu", waktuIsi: "2026-11-02T08:20", catatan: null },
-  // kegiatan-3 (arsip)
-  { id: "hadir-opd-01-sesi-7", opdId: "opd-01", sesiId: "sesi-7", status: "tepat_waktu", waktuIsi: "2026-12-03T08:25", catatan: null },
-  { id: "hadir-opd-02-sesi-7", opdId: "opd-02", sesiId: "sesi-7", status: "izin", waktuIsi: "2026-12-03T07:55", catatan: "Tugas dinas" },
-  { id: "hadir-opd-01-sesi-8", opdId: "opd-01", sesiId: "sesi-8", status: "terlambat", waktuIsi: "2026-12-10T09:30", catatan: "Kendala jaringan" },
 ];
 
 
@@ -427,7 +362,7 @@ const HASIL_DASAR: Omit<HasilQuiz, "kegiatanId">[] = [
     selesai: "2026-10-27T10:09",
     otomatis: false,
   },
-    // DKP dan Dinsos sudah menyelesaikan Pre-Test dan Post-Test
+  // DKP dan Dinsos sudah menyelesaikan Pre-Test dan Post-Test
   {
     opdId: "opd-04",
     quizId: "pretest",

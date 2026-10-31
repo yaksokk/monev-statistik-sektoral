@@ -1,5 +1,4 @@
 import {
-  Award,
   BookOpen,
   BookOpenCheck,
   Building2,
@@ -26,7 +25,6 @@ export const MENU: Record<Peran, ItemMenu[]> = {
     { label: "Daftar Hadir", href: "/admin/daftar-hadir", ikon: CalendarCheck },
     { label: "Kelola Quiz", href: "/admin/quiz", ikon: ListChecks },
     { label: "Undangan", href: "/admin/undangan", ikon: Mail },
-    // { label: "Nilai", href: "/admin/nilai", ikon: Award },
     { label: "OPD", href: "/admin/opd", ikon: Building2 },
   ],
     operator: [

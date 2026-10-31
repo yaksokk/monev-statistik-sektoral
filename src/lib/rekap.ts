@@ -1,7 +1,12 @@
-import { DOKUMEN_LIST, ITEM_LIST, KEGIATAN_LIST, NILAI_UJIAN_LIST, OPD_LIST } from "@/data/dummy";
-import type { StatusDokumen } from "@/lib/types";
+import { DOKUMEN_LIST, ITEM_LIST, KEGIATAN_LIST, OPD_LIST } from "@/data/dummy";
+import { hitungHasil } from "@/lib/quiz";
+import { ambilQuizOpd } from "@/lib/quiz-opd";
+import type { JenisQuiz, StatusDokumen } from "@/lib/types";
 
 const bulatkan1 = (n: number) => Math.round(n * 10) / 10;
+
+/** Porsi nilai akhir (jumlah 100). */
+export const PORSI_NILAI = { dokumen: 50, pretest: 25, posttest: 25 } as const;
 
 /** Jumlah dokumen per status untuk satu OPD pada satu kegiatan. */
 export function hitungStatus(opdId: string, kegiatanId: string) {
@@ -19,32 +24,48 @@ export function hitungKelengkapan(opdId: string, kegiatanId: string) {
   return Math.round((hitungStatus(opdId, kegiatanId).disetujui / total) * 100);
 }
 
-export function ambilNilaiUjian(opdId: string, kegiatanId: string) {
-  return (
-    NILAI_UJIAN_LIST.find((n) => n.opdId === opdId && n.kegiatanId === kegiatanId)?.nilai ?? null
-  );
+/** Nilai satu quiz (0–100) untuk satu OPD; null bila belum dikerjakan. aktif=false bila saklar quiz dimatikan. */
+function nilaiQuiz(kegiatanId: string, jenis: JenisQuiz, opdId: string) {
+  const kegiatan = KEGIATAN_LIST.find((k) => k.id === kegiatanId);
+  const q = ambilQuizOpd(kegiatan, jenis, opdId);
+  const nilai = q.hasil ? hitungHasil(q.soal, q.hasil.jawaban).nilai : null;
+  return { aktif: q.aktif, nilai };
 }
 
 /**
- * Rekap nilai satu OPD di semua kegiatan.
- * RUMUS SEMENTARA: nilai kegiatan = rata-rata(kelengkapan, ujian), ujian kosong dihitung 0.
- * Nilai akhir = jumlah (nilai kegiatan × bobot kegiatan / 100).
- * Ganti setelah rumus resmi disepakati.
+ * Rekap nilai satu OPD pada satu kegiatan.
+ * Nilai akhir = 50% dokumen + 25% Pre-Test + 25% Post-Test.
+ * Quiz yang belum dikerjakan dihitung 0. Quiz yang saklarnya dimatikan admin
+ * dikeluarkan, dan porsi yang tersisa dihitung ulang secara proporsional.
  */
-export function rekapOpd(opdId: string) {
-  const perKegiatan = KEGIATAN_LIST.map((kegiatan) => {
-    const kelengkapan = hitungKelengkapan(opdId, kegiatan.id);
-    const ujian = ambilNilaiUjian(opdId, kegiatan.id);
-    const nilai = (kelengkapan + (ujian ?? 0)) / 2;
-    return { kegiatanId: kegiatan.id, bobot: kegiatan.bobot, kelengkapan, ujian, nilai };
-  });
-  const nilaiAkhir = perKegiatan.reduce((sum, k) => sum + (k.nilai * k.bobot) / 100, 0);
-  return { opdId, perKegiatan, nilaiAkhir: bulatkan1(nilaiAkhir) };
+export function rekapOpd(opdId: string, kegiatanId: string) {
+  const kelengkapan = hitungKelengkapan(opdId, kegiatanId);
+  const pre = nilaiQuiz(kegiatanId, "pretest", opdId);
+  const post = nilaiQuiz(kegiatanId, "posttest", opdId);
+
+  const komponen = [
+    { porsi: PORSI_NILAI.dokumen, nilai: kelengkapan, aktif: true },
+    { porsi: PORSI_NILAI.pretest, nilai: pre.nilai ?? 0, aktif: pre.aktif },
+    { porsi: PORSI_NILAI.posttest, nilai: post.nilai ?? 0, aktif: post.aktif },
+  ].filter((k) => k.aktif);
+
+  const totalPorsi = komponen.reduce((s, k) => s + k.porsi, 0);
+  const nilaiAkhir =
+    totalPorsi === 0 ? 0 : komponen.reduce((s, k) => s + k.nilai * k.porsi, 0) / totalPorsi;
+
+  return {
+    opdId,
+    kegiatanId,
+    kelengkapan,
+    preTest: pre.nilai,
+    postTest: post.nilai,
+    nilaiAkhir: bulatkan1(nilaiAkhir),
+  };
 }
 
-/** Rekap semua OPD + rata-rata keseluruhan, untuk dashboard admin. */
-export function rekapSemuaOpd() {
-  const baris = OPD_LIST.map((opd) => ({ opd, ...rekapOpd(opd.id) }));
+/** Rekap semua OPD + rata-rata, untuk dashboard admin. */
+export function rekapSemuaOpd(kegiatanId: string) {
+  const baris = OPD_LIST.map((opd) => ({ opd, ...rekapOpd(opd.id, kegiatanId) }));
   const rataRata =
     baris.length === 0 ? 0 : bulatkan1(baris.reduce((s, b) => s + b.nilaiAkhir, 0) / baris.length);
   return { baris, rataRata };

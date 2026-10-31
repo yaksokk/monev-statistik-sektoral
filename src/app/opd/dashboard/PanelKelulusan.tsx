@@ -7,7 +7,7 @@ interface Props {
   teksNilaiPost: string; // nilai atau "Belum"
   preTestAktif: boolean;
   // null = quiz dimatikan di kegiatan ini, syarat gugur
-  syarat: { presensi: boolean; postTest: boolean | null; evaluasi: boolean | null };
+  syarat: { presensi: boolean; postTest: boolean | null };
   lulus: boolean;
   linkSertifikat: string | null; // null bila syarat belum terpenuhi atau link belum ada
 }
@@ -62,7 +62,7 @@ export default function PanelKelulusan({
       `${preTestAktif ? "Menyelesaikan Pre-Test & Post-Test" : "Menyelesaikan Post-Test"} dengan Nilai Post-Test ≥ ${AMBANG_POSTTEST}`,
     );
   }
-  if (syarat.evaluasi !== null) daftarSyarat.push("menyelesaikan Evaluasi Pendalaman");
+  
   const teksSyarat =
     daftarSyarat.length > 1
       ? `${daftarSyarat.slice(0, -1).join(", ")}, serta ${daftarSyarat[daftarSyarat.length - 1]}`
@@ -95,13 +95,7 @@ export default function PanelKelulusan({
             terpenuhi={syarat.postTest}
           />
         )}
-        {syarat.evaluasi !== null && (
-          <BarisSyarat
-            label="Evaluasi Pendalaman Selesai"
-            nilai={syarat.evaluasi ? "Selesai" : "Belum"}
-            terpenuhi={syarat.evaluasi}
-          />
-        )}
+        
       </ul>
 
       <div className="mt-auto pt-6">

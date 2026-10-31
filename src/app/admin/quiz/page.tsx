@@ -18,8 +18,7 @@ export default function KelolaQuizPage({ searchParams }: { searchParams: SearchP
       <header>
         <h1 className="text-2xl font-semibold text-ink">Kelola Quiz</h1>
         <p className="mt-1 text-sm text-ink-muted">
-          Atur soal, waktu, dan durasi Pre-Test, Post-Test, serta Evaluasi Pendalaman, lalu pantau hasil OPD per
-          kegiatan.
+          Atur soal, waktu, dan durasi Pre-Test dan Post-Test, lalu pantau hasil OPD per kegiatan.
         </p>
       </header>
 

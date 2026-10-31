@@ -360,7 +360,6 @@ const SOAL_DASAR: Pick<SoalQuiz, "id" | "pertanyaan" | "opsi" | "kunci" | "pemba
 const AWALAN_SOAL: Record<JenisQuiz, string> = {
   pretest: "pt-",
   posttest: "po-",
-  evaluasi: "ev-",
 };
 
 function buatSoal(quizId: JenisQuiz): SoalQuiz[] {
@@ -377,7 +376,6 @@ function buatSoal(quizId: JenisQuiz): SoalQuiz[] {
 export const SOAL_QUIZ_LIST: SoalQuiz[] = [
   ...buatSoal("pretest"),
   ...buatSoal("posttest"),
-  ...buatSoal("evaluasi"),
 ];
 
 export const PENGATURAN_QUIZ_LIST: PengaturanQuiz[] = [
@@ -396,14 +394,6 @@ export const PENGATURAN_QUIZ_LIST: PengaturanQuiz[] = [
     durasiMenit: 15,
     waktuBuka: "2026-10-27T08:00",
     batasAkhir: "2026-11-07T17:00",
-  },
-  {
-    id: "evaluasi",
-    kegiatanId: "kegiatan-1",
-    judul: "Evaluasi Pendalaman Pembinaan Satu Data Indonesia",
-    durasiMenit: 15,
-    waktuBuka: "2026-10-27T08:00",
-    batasAkhir: "2026-11-14T17:00",
   },
 ];
 
@@ -437,7 +427,7 @@ const HASIL_DASAR: Omit<HasilQuiz, "kegiatanId">[] = [
     selesai: "2026-10-27T10:09",
     otomatis: false,
   },
-  // DKP dan Dinsos sudah menyelesaikan Pre-Test dan Post-Test, Evaluasi Pendalaman bisa dicoba
+    // DKP dan Dinsos sudah menyelesaikan Pre-Test dan Post-Test
   {
     opdId: "opd-04",
     quizId: "pretest",
@@ -472,16 +462,6 @@ const HASIL_DASAR: Omit<HasilQuiz, "kegiatanId">[] = [
     jawaban: { "pt-01": 2, "pt-02": 0, "pt-03": 2, "pt-04": 1, "pt-05": 1, "pt-06": 0, "pt-07": 0, "pt-08": 1 },
     mulai: "2026-10-27T12:00",
     selesai: "2026-10-27T12:11",
-    otomatis: false,
-  },
-  // Hasil contoh Evaluasi Pendalaman: hanya Dinkes yang sudah selesai (DKP dan Dinsos belum)
-  {
-    opdId: "opd-02",
-    quizId: "evaluasi",
-    urutanSoal: ["pt-08", "pt-03", "pt-06", "pt-01", "pt-05", "pt-02", "pt-07", "pt-04"],
-    jawaban: { "pt-01": 2, "pt-02": 0, "pt-03": 2, "pt-04": 1, "pt-05": 0, "pt-06": 0, "pt-07": 1, "pt-08": 1 },
-    mulai: "2026-10-27T11:00",
-    selesai: "2026-10-27T11:08",
     otomatis: false,
   },
 ];

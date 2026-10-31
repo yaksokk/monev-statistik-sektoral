@@ -13,18 +13,16 @@ export type StatusQuiz = "selesai" | "belum_dibuka" | "terkunci" | "terbuka";
 // Status menurut waktu saja, dipakai admin
 export type StatusWaktuQuiz = "belum_dibuka" | "dibuka" | "ditutup";
 
-export const JENIS_QUIZ: JenisQuiz[] = ["pretest", "posttest", "evaluasi"];
+export const JENIS_QUIZ: JenisQuiz[] = ["pretest", "posttest"];
 
 export const LABEL_QUIZ: Record<JenisQuiz, string> = {
   pretest: "Pre-Test",
-  posttest: "Post-Test",
-  evaluasi: "Evaluasi Pendalaman",
+  posttest: "Post-Test"
 };
 
 const KUNCI_SAKLAR = {
   pretest: "preTestAktif",
   posttest: "postTestAktif",
-  evaluasi: "evaluasiAktif",
 } as const satisfies Record<JenisQuiz, keyof Kegiatan>;
 
 // Saklar kosong dianggap aktif

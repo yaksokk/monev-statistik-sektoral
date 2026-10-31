@@ -30,19 +30,17 @@ export default async function DashboardOpdPage() {
 
   const pre = ambilQuizOpd(kegiatan, "pretest", opd.id);
   const post = ambilQuizOpd(kegiatan, "posttest", opd.id);
-  const evaluasi = ambilQuizOpd(kegiatan, "evaluasi", opd.id);
   const nilaiPre = pre.hasil ? hitungHasil(pre.soal, pre.hasil.jawaban).nilai : null;
   const nilaiPost = post.hasil ? hitungHasil(post.soal, post.hasil.jawaban).nilai : null;
   const nGainBerlaku = kegiatan ? nGainTersedia(kegiatan) : true;
   const nGain = nGainBerlaku ? hitungNGain(nilaiPre, nilaiPost) : null;
 
   // syarat kelulusan (kelengkapan dokumen bukan syarat); syarat quiz yang dimatikan gugur (null)
-  const syarat = {
+   const syarat = {
     presensi: kegiatan ? apakahLulusKehadiran(kehadiran.persen, kegiatan) : false,
     postTest: post.aktif ? nilaiPost !== null && nilaiPost >= AMBANG_POSTTEST : null,
-    evaluasi: evaluasi.aktif ? evaluasi.hasil !== null : null,
   };
-  const lulus = syarat.presensi && syarat.postTest !== false && syarat.evaluasi !== false;
+  const lulus = syarat.presensi && syarat.postTest !== false;
   // link baru dikirim ke komponen bila semua syarat terpenuhi
   const linkSertifikat = lulus ? linkHttps(opd.linkSertifikat) : null;
 

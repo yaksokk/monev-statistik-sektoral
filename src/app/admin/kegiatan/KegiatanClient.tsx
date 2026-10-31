@@ -343,7 +343,6 @@ export default function KegiatanClient({
       jumlahHasil: {
         pretest: hasilQuiz[`${k.id}:pretest`] ?? 0,
         posttest: hasilQuiz[`${k.id}:posttest`] ?? 0,
-        evaluasi: hasilQuiz[`${k.id}:evaluasi`] ?? 0,
       },
       onSaklar: (jenis, nilai) => ubahSaklar(k, jenis, nilai),
       onUbah: () => setForm({ id: k.id }),

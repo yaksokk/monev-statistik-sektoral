@@ -42,7 +42,6 @@ export interface Kegiatan {
   // Saklar quiz per kegiatan. Kosong dianggap aktif; terkunci bila kegiatan diarsipkan
   preTestAktif?: boolean;
   postTestAktif?: boolean;
-  evaluasiAktif?: boolean;
   // Surat undangan, diisi admin, sama untuk semua OPD
   judulUndangan?: string;
   tanggalUndangan?: string; // ISO yyyy-mm-dd, tanggal surat
@@ -93,7 +92,7 @@ export interface Presensi {
   catatan: string | null; // wajib bila terlambat atau izin
 }
 
-export type JenisQuiz = "pretest" | "posttest" | "evaluasi";
+export type JenisQuiz = "pretest" | "posttest";
 
 // Soal pilihan ganda milik satu quiz pada satu kegiatan. kunci = indeks opsi yang benar (mulai dari 0)
 export interface SoalQuiz {

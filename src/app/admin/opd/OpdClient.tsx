@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Copy, FileSpreadsheet, KeyRound, Pencil, Plus, Search } from "lucide-react";
+import { Copy, ExternalLink, FileSpreadsheet, KeyRound, Link2, Pencil, Plus, Search } from "lucide-react";
+import { linkHttps } from "@/lib/dashboard";
 import type { Opd, Pengguna } from "@/lib/types";
 
 export type BarisOpd = { opd: Opd; operator: Pengguna };
@@ -97,6 +98,88 @@ function FormOpd({ awal, onSimpan, onBatal }: { awal: Isian; onSimpan: (v: Isian
   );
 }
 
+function KolomSertifikat({ opd }: { opd: Opd }) {
+  const link = linkHttps(opd.linkSertifikat);
+  if (!link) return <span className="text-ink-muted">Belum diisi</span>;
+  return (
+    <div className="flex items-center gap-2">
+      <span className="rounded-full bg-status-disetujui-bg px-2 py-0.5 text-xs font-medium text-status-disetujui-fg">
+        Terisi
+      </span>
+      <a
+        href={link}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Buka link sertifikat ${opd.singkatan}`}
+        className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+      >
+        <ExternalLink className="size-4" aria-hidden />
+        Buka
+      </a>
+    </div>
+  );
+}
+
+function FormLink({ awal, onSimpan, onBatal }: { awal: string; onSimpan: (link: string) => void; onBatal: () => void }) {
+  const [v, setV] = useState(awal);
+  const [galat, setGalat] = useState("");
+  const aman = linkHttps(v.trim());
+
+  function kirim() {
+    const teks = v.trim();
+    if (teks && !linkHttps(teks)) return setGalat("Link harus diawali https://");
+    onSimpan(teks);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <label htmlFor="f-link" className="text-sm font-medium">
+          Link sertifikat (Google Drive)
+        </label>
+        <input
+          id="f-link"
+          type="url"
+          value={v}
+          onChange={(e) => {
+            setV(e.target.value);
+            setGalat("");
+          }}
+          placeholder="https://drive.google.com/..."
+          className={kolomInput}
+        />
+        <p className="text-sm text-ink-muted">Kosongkan kolom lalu simpan untuk menghapus link.</p>
+      </div>
+      {galat && (
+        <p role="alert" className="text-sm text-status-revisi-fg">
+          {galat}
+        </p>
+      )}
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+        {aman ? (
+          <a href={aman} target="_blank" rel="noopener noreferrer" className={tombolSekunder}>
+            <ExternalLink className="size-4" aria-hidden />
+            Buka link
+          </a>
+        ) : (
+          <button disabled className={`${tombolSekunder} disabled:cursor-not-allowed disabled:opacity-50`}>
+            <ExternalLink className="size-4" aria-hidden />
+            Buka link
+          </button>
+        )}
+        <div className="flex gap-2">
+          <button onClick={onBatal} className={tombolSekunder}>
+            Batal
+          </button>
+          <button onClick={kirim} className={tombolUtama}>
+            Simpan
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function OpdClient({ awal }: { awal: BarisOpd[] }) {
   const [baris, setBaris] = useState(awal);
   const [cari, setCari] = useState("");
@@ -105,12 +188,14 @@ export default function OpdClient({ awal }: { awal: BarisOpd[] }) {
   const [fileImpor, setFileImpor] = useState<File | null>(null);
   const [reset, setReset] = useState<{ b: BarisOpd; sandi: string | null } | null>(null);
   const [pesan, setPesan] = useState("");
+  const [idLink, setIdLink] = useState<string | null>(null);
 
   const tampil = baris.filter(({ opd, operator }) =>
     `${opd.nama} ${opd.singkatan} ${operator.nama} ${operator.email}`.toLowerCase().includes(cari.toLowerCase()),
   );
 
   const diedit = form?.id ? baris.find((b) => b.opd.id === form.id) : undefined;
+  const linkOpd = idLink ? baris.find((b) => b.opd.id === idLink) : undefined;
 
   function simpan(v: Isian) {
     if (diedit) {
@@ -140,6 +225,16 @@ export default function OpdClient({ awal }: { awal: BarisOpd[] }) {
       setPesan(`${v.singkatan} ditambahkan.`);
     }
     setForm(null);
+  }
+
+  function simpanLink(link: string) {
+    if (!linkOpd) return;
+    const { id, singkatan } = linkOpd.opd;
+    setBaris((prev) =>
+      prev.map((b) => (b.opd.id === id ? { ...b, opd: { ...b.opd, linkSertifikat: link || undefined } } : b)),
+    );
+    setPesan(link ? `Link sertifikat ${singkatan} disimpan.` : `Link sertifikat ${singkatan} dihapus.`);
+    setIdLink(null);
   }
 
   return (
@@ -184,11 +279,12 @@ export default function OpdClient({ awal }: { awal: BarisOpd[] }) {
       </p>
 
       <div className="overflow-x-auto rounded-card border border-line bg-surface shadow-card">
-        <table className="w-full min-w-160 text-left text-sm">
+        <table className="w-full min-w-200 text-left text-sm">
           <thead className="bg-surface-muted text-ink-muted">
             <tr>
               <th className="px-4 py-3 font-medium">OPD</th>
               <th className="px-4 py-3 font-medium">Operator</th>
+              <th className="px-4 py-3 font-medium">Sertifikat</th>
               <th className="px-4 py-3 text-right font-medium">Aksi</th>
             </tr>
           </thead>
@@ -204,7 +300,14 @@ export default function OpdClient({ awal }: { awal: BarisOpd[] }) {
                   <p className="text-ink-muted">{b.operator.email}</p>
                 </td>
                 <td className="px-4 py-3">
+                  <KolomSertifikat opd={b.opd} />
+                </td>
+                <td className="px-4 py-3">
                   <div className="flex justify-end gap-2">
+                    <button onClick={() => setIdLink(b.opd.id)} className={tombolSekunder}>
+                      <Link2 className="size-4" aria-hidden />
+                      Link sertifikat
+                    </button>
                     <button onClick={() => setForm({ id: b.opd.id })} className={tombolSekunder}>
                       <Pencil className="size-4" aria-hidden />
                       Ubah
@@ -219,7 +322,7 @@ export default function OpdClient({ awal }: { awal: BarisOpd[] }) {
             ))}
             {tampil.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-4 py-10 text-center text-ink-muted">
+                <td colSpan={4} className="px-4 py-10 text-center text-ink-muted">
                   Tidak ada OPD yang cocok dengan pencarian.
                 </td>
               </tr>
@@ -238,6 +341,12 @@ export default function OpdClient({ awal }: { awal: BarisOpd[] }) {
           onSimpan={simpan}
           onBatal={() => setForm(null)}
         />
+      </Dialog>
+
+      <Dialog buka={!!linkOpd} onTutup={() => setIdLink(null)} judul={`Link sertifikat ${linkOpd?.opd.singkatan ?? ""}`}>
+        {linkOpd && (
+          <FormLink awal={linkOpd.opd.linkSertifikat ?? ""} onSimpan={simpanLink} onBatal={() => setIdLink(null)} />
+        )}
       </Dialog>
 
       <Dialog buka={impor} onTutup={() => setImpor(false)} judul="Impor OPD dari Excel">

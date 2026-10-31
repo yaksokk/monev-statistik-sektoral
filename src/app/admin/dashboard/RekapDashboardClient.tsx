@@ -6,7 +6,7 @@ import { formatNGain } from "@/lib/dashboard";
 import { formatNilai } from "@/lib/quiz";
 import type { BarisRekapOpd, RingkasanKegiatan } from "@/lib/ringkasan-admin";
 import type { Kegiatan } from "@/lib/types";
-import KartuRingkasan, { susunKartu, type IdKartu } from "./KartuRingkasan";
+import KartuRingkasan, { susunKartu } from "./KartuRingkasan";
 
 interface Kolom {
   id: string;
@@ -15,19 +15,16 @@ interface Kolom {
   sel: (b: BarisRekapOpd) => ReactNode;
 }
 
+interface Grup {
+  id: string;
+  judul: string;
+  kolom: Kolom[];
+}
+
 interface Urutan {
   kolom: string;
   arah: "turun" | "naik";
 }
-
-const JUDUL_TABEL: Record<IdKartu, string> = {
-  lulus: "Status kelulusan",
-  kehadiran: "Kehadiran",
-  pretest: "Nilai Pre-Test",
-  posttest: "Nilai Post-Test",
-  ngain: "N-Gain",
-  dokumen: "Kelengkapan dokumen",
-};
 
 const NADA = {
   hijau: "bg-status-disetujui-bg text-status-disetujui-fg",
@@ -48,147 +45,110 @@ function Lencana({ nada, children }: { nada: keyof typeof NADA; children: ReactN
 const nilaiAtauBelum = (n: number | null) =>
   n === null ? <span className="text-ink-muted">Belum</span> : formatNilai(n);
 
-const kolomPersen: Kolom = {
-  id: "persen",
-  judul: "Kehadiran",
-  urut: (b) => b.kehadiran.persen,
-  sel: (b) => `${formatNilai(b.kehadiran.persen)}%`,
-};
-
-// Kolom mengikuti kartu yang dipilih. Nilai akhir sengaja tidak ada (rumusnya masih sementara).
-function kolomUntuk(id: IdKartu, r: RingkasanKegiatan): Kolom[] {
-  switch (id) {
-    case "lulus":
-      return [
-        kolomPersen,
-        ...(r.aktif.posttest
-          ? [
-              {
-                id: "post",
-                judul: "Post-Test",
-                urut: (b: BarisRekapOpd) => b.postTest,
-                sel: (b: BarisRekapOpd) => nilaiAtauBelum(b.postTest),
-              },
-            ]
-          : []),
-        {
-          id: "status",
-          judul: "Status",
-          urut: (b) => (b.lulus ? 1 : 0),
-          sel: (b) => (
-            <Lencana nada={b.lulus ? "hijau" : "merah"}>
-              {b.lulus ? "Lulus" : "Belum lulus"}
-            </Lencana>
-          ),
-        },
-      ];
-    case "kehadiran":
-      return [
+// Semua rekapan tampil sekaligus. Kelompok Pre-Test, Post-Test, dan N-Gain
+// hanya ada bila quiz-nya aktif. Nilai akhir sengaja tidak ada (rumusnya masih sementara).
+function susunGrup(r: RingkasanKegiatan): Grup[] {
+  const grup: Grup[] = [
+    {
+      id: "kehadiran",
+      judul: "Kehadiran",
+      kolom: [
         {
           id: "hadir",
           judul: "Sesi dihadiri",
           urut: (b) => b.kehadiran.hadir,
           sel: (b) => `${b.kehadiran.hadir} dari ${b.kehadiran.total}`,
         },
-        { ...kolomPersen, judul: "Persen kehadiran" },
         {
-          id: "status",
-          judul: "Status kehadiran",
-          urut: (b) => (b.kehadiran.lulus ? 1 : 0),
-          sel: (b) => (
-            <Lencana nada={b.kehadiran.lulus ? "hijau" : "merah"}>
-              {b.kehadiran.lulus ? "Lulus" : "Belum lulus"}
-            </Lencana>
-          ),
+          id: "persen",
+          judul: "Persen",
+          urut: (b) => b.kehadiran.persen,
+          sel: (b) => `${formatNilai(b.kehadiran.persen)}%`,
         },
-      ];
-    case "pretest":
-      return [
-        {
-          id: "pre",
-          judul: "Nilai Pre-Test",
-          urut: (b) => b.preTest,
-          sel: (b) => nilaiAtauBelum(b.preTest),
-        },
-      ];
-    case "posttest":
-      return [
-        {
-          id: "post",
-          judul: "Nilai Post-Test",
-          urut: (b) => b.postTest,
-          sel: (b) => nilaiAtauBelum(b.postTest),
-        },
-        {
-          id: "status",
-          judul: "Status Post-Test",
-          // lulus 2, belum lulus 1, belum mengerjakan 0
-          urut: (b) => (b.postTest === null ? 0 : b.syarat.postTest ? 2 : 1),
-          sel: (b) =>
-            b.postTest === null ? (
-              <Lencana nada="abu">Belum mengerjakan</Lencana>
-            ) : (
-              <Lencana nada={b.syarat.postTest ? "hijau" : "merah"}>
-                {b.syarat.postTest ? "Lulus" : "Belum lulus"}
-              </Lencana>
-            ),
-        },
-      ];
-    case "ngain":
-      return [
-        {
-          id: "pre",
-          judul: "Pre-Test",
-          urut: (b) => b.preTest,
-          sel: (b) => nilaiAtauBelum(b.preTest),
-        },
-        {
-          id: "post",
-          judul: "Post-Test",
-          urut: (b) => b.postTest,
-          sel: (b) => nilaiAtauBelum(b.postTest),
-        },
-        {
-          id: "ngain",
-          judul: "N-Gain",
-          urut: (b) => b.nGain,
-          sel: (b) => (b.nGain === null ? "-" : formatNGain(b.nGain)),
-        },
-      ];
-    case "dokumen":
-      return [
-        {
-          id: "disetujui",
-          judul: "Disetujui",
-          urut: (b) => b.dokumen.status.disetujui,
-          sel: (b) => b.dokumen.status.disetujui,
-        },
-        {
-          id: "menunggu",
-          judul: "Menunggu",
-          urut: (b) => b.dokumen.status.menunggu,
-          sel: (b) => b.dokumen.status.menunggu,
-        },
-        {
-          id: "revisi",
-          judul: "Revisi",
-          urut: (b) => b.dokumen.status.revisi,
-          sel: (b) => b.dokumen.status.revisi,
-        },
-        {
-          id: "belum",
-          judul: "Belum",
-          urut: (b) => b.dokumen.status.belum,
-          sel: (b) => b.dokumen.status.belum,
-        },
-        {
-          id: "kelengkapan",
-          judul: "Kelengkapan",
-          urut: (b) => b.dokumen.kelengkapan,
-          sel: (b) => `${formatNilai(b.dokumen.kelengkapan)}%`,
-        },
-      ];
+      ],
+    },
+  ];
+
+  const nilai: Kolom[] = [];
+  if (r.aktif.pretest) {
+    nilai.push({
+      id: "pre",
+      judul: "Pre-Test",
+      urut: (b) => b.preTest,
+      sel: (b) => nilaiAtauBelum(b.preTest),
+    });
   }
+  if (r.aktif.posttest) {
+    nilai.push({
+      id: "post",
+      judul: "Post-Test",
+      urut: (b) => b.postTest,
+      sel: (b) => nilaiAtauBelum(b.postTest),
+    });
+  }
+  if (r.nGainTersedia) {
+    nilai.push({
+      id: "ngain",
+      judul: "N-Gain",
+      urut: (b) => b.nGain,
+      sel: (b) => (b.nGain === null ? "-" : formatNGain(b.nGain)),
+    });
+  }
+  if (nilai.length > 0) grup.push({ id: "nilai", judul: "Nilai quiz", kolom: nilai });
+
+  grup.push({
+    id: "dokumen",
+    judul: "Dokumen",
+    kolom: [
+      {
+        id: "disetujui",
+        judul: "Disetujui",
+        urut: (b) => b.dokumen.status.disetujui,
+        sel: (b) => b.dokumen.status.disetujui,
+      },
+      {
+        id: "menunggu",
+        judul: "Menunggu",
+        urut: (b) => b.dokumen.status.menunggu,
+        sel: (b) => b.dokumen.status.menunggu,
+      },
+      {
+        id: "revisi",
+        judul: "Revisi",
+        urut: (b) => b.dokumen.status.revisi,
+        sel: (b) => b.dokumen.status.revisi,
+      },
+      {
+        id: "belum",
+        judul: "Belum",
+        urut: (b) => b.dokumen.status.belum,
+        sel: (b) => b.dokumen.status.belum,
+      },
+      {
+        id: "kelengkapan",
+        judul: "Kelengkapan",
+        urut: (b) => b.dokumen.kelengkapan,
+        sel: (b) => `${formatNilai(b.dokumen.kelengkapan)}%`,
+      },
+    ],
+  });
+
+  grup.push({
+    id: "kelulusan",
+    judul: "Kelulusan",
+    kolom: [
+      {
+        id: "status",
+        judul: "Status",
+        urut: (b) => (b.lulus ? 1 : 0),
+        sel: (b) => (
+          <Lencana nada={b.lulus ? "hijau" : "merah"}>{b.lulus ? "Lulus" : "Belum lulus"}</Lencana>
+        ),
+      },
+    ],
+  });
+
+  return grup;
 }
 
 interface Props {
@@ -198,12 +158,12 @@ interface Props {
 }
 
 export default function RekapDashboardClient({ kegiatan, ringkasan, baris }: Props) {
-  const [kartuAktif, setKartuAktif] = useState<IdKartu>("lulus");
   const [urut, setUrut] = useState<Urutan | null>(null);
   const [cari, setCari] = useState("");
 
   const kartu = susunKartu(kegiatan, ringkasan);
-  const kolom = useMemo(() => kolomUntuk(kartuAktif, ringkasan), [kartuAktif, ringkasan]);
+  const grup = useMemo(() => susunGrup(ringkasan), [ringkasan]);
+  const kolom = useMemo(() => grup.flatMap((g) => g.kolom), [grup]);
 
   const tampil = useMemo(() => {
     const q = cari.trim().toLowerCase();
@@ -224,11 +184,6 @@ export default function RekapDashboardClient({ kegiatan, ringkasan, baris }: Pro
     });
   }, [baris, cari, urut, kolom]);
 
-  function pilihKartu(id: IdKartu) {
-    setKartuAktif(id);
-    setUrut(null);
-  }
-
   // klik pertama: tertinggi ke terendah, klik berikutnya: bergantian
   function klikJudul(id: string) {
     setUrut((u) => ({ kolom: id, arah: u?.kolom === id && u.arah === "turun" ? "naik" : "turun" }));
@@ -238,12 +193,7 @@ export default function RekapDashboardClient({ kegiatan, ringkasan, baris }: Pro
     <>
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {kartu.map(({ id, ...isi }) => (
-          <KartuRingkasan
-            key={id}
-            {...isi}
-            terpilih={id === kartuAktif}
-            onKlik={() => pilihKartu(id)}
-          />
+          <KartuRingkasan key={id} {...isi} />
         ))}
       </div>
 
@@ -254,7 +204,7 @@ export default function RekapDashboardClient({ kegiatan, ringkasan, baris }: Pro
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
           <div>
             <h2 id="judul-rekap" className="text-base font-semibold text-ink">
-              Rekap per OPD: {JUDUL_TABEL[kartuAktif]}
+              Rekap per OPD
             </h2>
             <p className="tabular text-sm text-ink-muted">
               {tampil.length} dari {baris.length} OPD · klik judul kolom untuk mengurutkan
@@ -280,46 +230,72 @@ export default function RekapDashboardClient({ kegiatan, ringkasan, baris }: Pro
           <table className="w-full text-left text-sm">
             <thead className="bg-surface-muted text-ink-muted">
               <tr>
-                <th scope="col" className="px-5 py-3 font-medium">
+                <th
+                  scope="col"
+                  rowSpan={2}
+                  className="sticky left-0 z-10 min-w-56 bg-surface-muted px-5 py-3 align-bottom font-medium"
+                >
                   OPD
                 </th>
-                {kolom.map((k) => {
-                  const arah = urut?.kolom === k.id ? urut.arah : null;
-                  const Ikon = arah === null ? ArrowUpDown : arah === "turun" ? ArrowDown : ArrowUp;
-                  return (
-                    <th
-                      key={k.id}
-                      scope="col"
-                      aria-sort={
-                        arah === null ? undefined : arah === "turun" ? "descending" : "ascending"
-                      }
-                      className="px-5 py-3 font-medium"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => klikJudul(k.id)}
-                        className="inline-flex items-center gap-1.5 font-medium hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
+                {grup.map((g) => (
+                  <th
+                    key={g.id}
+                    scope="colgroup"
+                    colSpan={g.kolom.length}
+                    className="whitespace-nowrap border-l text-center border-line px-5 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide"
+                  >
+                    {g.judul}
+                  </th>
+                ))}
+              </tr>
+              <tr>
+                {grup.map((g) =>
+                  g.kolom.map((k, i) => {
+                    const arah = urut?.kolom === k.id ? urut.arah : null;
+                    const Ikon =
+                      arah === null ? ArrowUpDown : arah === "turun" ? ArrowDown : ArrowUp;
+                    return (
+                      <th
+                        key={k.id}
+                        scope="col"
+                        aria-sort={
+                          arah === null ? undefined : arah === "turun" ? "descending" : "ascending"
+                        }
+                        className={`whitespace-nowrap px-5 pb-3 pt-1 font-medium ${i === 0 ? "border-l border-line" : ""}`}
                       >
-                        {k.judul}
-                        <Ikon
-                          className={`size-3.5 ${arah === null ? "text-ink-muted" : "text-primary"}`}
-                          aria-hidden
-                        />
-                      </button>
-                    </th>
-                  );
-                })}
+                        <button
+                          type="button"
+                          onClick={() => klikJudul(k.id)}
+                          className="inline-flex items-center gap-1.5 font-medium hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
+                        >
+                          {k.judul}
+                          <Ikon
+                            className={`size-3.5 ${arah === null ? "text-ink-muted" : "text-primary"}`}
+                            aria-hidden
+                          />
+                        </button>
+                      </th>
+                    );
+                  }),
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {tampil.map((b) => (
                 <tr key={b.opd.id}>
-                  <td className="px-5 py-3 font-medium text-ink">{b.opd.nama}</td>
-                  {kolom.map((k) => (
-                    <td key={k.id} className="tabular px-5 py-3 text-ink">
-                      {k.sel(b)}
-                    </td>
-                  ))}
+                  <td className="sticky left-0 z-10 min-w-56 bg-surface px-5 py-3 font-medium text-ink">
+                    {b.opd.nama}
+                  </td>
+                  {grup.map((g) =>
+                    g.kolom.map((k, i) => (
+                      <td
+                        key={k.id}
+                        className={`tabular whitespace-nowrap px-5 py-3 text-ink ${i === 0 ? "border-l border-line" : ""}`}
+                      >
+                        {k.sel(b)}
+                      </td>
+                    )),
+                  )}
                 </tr>
               ))}
               {tampil.length === 0 && (

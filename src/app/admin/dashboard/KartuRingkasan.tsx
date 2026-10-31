@@ -116,23 +116,19 @@ export function susunKartu(kegiatan: Kegiatan, r: RingkasanKegiatan): DefKartu[]
   return kartu;
 }
 
-interface Props extends Omit<DefKartu, "id"> {
-  onKlik?: () => void; // memilih kartu ini sebagai dasar kolom tabel rekap
-  terpilih?: boolean;
-}
+type Props = Omit<DefKartu, "id">;
 
+// Kartu hanya tampilan ringkasan; semua rekap ada di tabel di bawahnya
 export default function KartuRingkasan({
   ikon: Ikon,
   label,
   nilai,
   keterangan,
   warna,
-  onKlik,
-  terpilih = false,
 }: Props) {
   const w = WARNA[warna];
-  const isi = (
-    <>
+  return (
+    <div className={`flex w-full items-center gap-4 rounded-card border p-4 shadow-card ${w.kartu}`}>
       <div className={`flex size-12 shrink-0 items-center justify-center rounded-xl ${w.ikon}`}>
         <Ikon className="size-6" aria-hidden />
       </div>
@@ -141,20 +137,6 @@ export default function KartuRingkasan({
         <p className={`tabular text-2xl font-bold ${w.nilai}`}>{nilai}</p>
         <p className="text-xs text-ink-muted">{keterangan}</p>
       </div>
-    </>
-  );
-  const kelas = `flex w-full items-center gap-4 rounded-card border p-4 text-left shadow-card ${w.kartu}`;
-
-  return onKlik ? (
-    <button
-      type="button"
-      onClick={onKlik}
-      aria-pressed={terpilih}
-      className={`${kelas} cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-primary ${terpilih ? "ring-2 ring-primary" : ""}`}
-    >
-      {isi}
-    </button>
-  ) : (
-    <div className={kelas}>{isi}</div>
+    </div>
   );
 }

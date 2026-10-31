@@ -99,24 +99,11 @@ function FormOpd({ awal, onSimpan, onBatal }: { awal: Isian; onSimpan: (v: Isian
 }
 
 function KolomSertifikat({ opd }: { opd: Opd }) {
-  const link = linkHttps(opd.linkSertifikat);
-  if (!link) return <span className="text-ink-muted">Belum diisi</span>;
+  if (!linkHttps(opd.linkSertifikat)) return <span className="text-ink-muted">Belum diisi</span>;
   return (
-    <div className="flex items-center gap-2">
-      <span className="rounded-full bg-status-disetujui-bg px-2 py-0.5 text-xs font-medium text-status-disetujui-fg">
-        Terisi
-      </span>
-      <a
-        href={link}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`Buka link sertifikat ${opd.singkatan}`}
-        className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-      >
-        <ExternalLink className="size-4" aria-hidden />
-        Buka
-      </a>
-    </div>
+    <span className="rounded-full bg-status-disetujui-bg px-2 py-0.5 text-xs font-medium text-status-disetujui-fg">
+      Terisi
+    </span>
   );
 }
 
@@ -285,7 +272,7 @@ export default function OpdClient({ awal }: { awal: BarisOpd[] }) {
               <th className="px-4 py-3 font-medium">OPD</th>
               <th className="px-4 py-3 font-medium">Operator</th>
               <th className="px-4 py-3 font-medium">Sertifikat</th>
-              <th className="px-4 py-3 text-right font-medium">Aksi</th>
+              <th className="px-4 py-3 text-center font-medium">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">

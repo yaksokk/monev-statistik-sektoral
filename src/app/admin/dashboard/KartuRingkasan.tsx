@@ -109,7 +109,7 @@ export function susunKartu(kegiatan: Kegiatan, r: RingkasanKegiatan): DefKartu[]
     ikon: FileCheck,
     label: "Kelengkapan dokumen",
     nilai: `${formatNilai(r.dokumen.rataKelengkapan)}%`,
-    keterangan: `${r.dokumen.menunggu} dokumen menunggu pemeriksaan`,
+    keterangan: `${r.dokumen.totalDokumen} dokumen dari seluruh OPD`,
     warna: "amber",
   });
 

@@ -111,13 +111,6 @@ const PROFIL_OPD = [0.95, 0.85, 0.75, 0.65, 0.55, 0.4, 0.25, 0.1];
 // Kegiatan yang lebih jauh = lebih sedikit yang sudah terisi
 const FAKTOR_KEGIATAN = [1, 0.6, 0.25];
 
-const CATATAN_REVISI = [
-  "Berkas tidak terbaca, mohon unggah ulang dengan resolusi lebih jelas.",
-  "Dokumen belum ditandatangani, mohon lengkapi.",
-  "Format berkas tidak sesuai, gunakan PDF.",
-  "Isi dokumen belum lengkap, periksa kembali daftar yang diminta.",
-];
-
 const rand = mulberry32(2026);
 
 export const DOKUMEN_LIST: Dokumen[] = OPD_LIST.flatMap((opd, o) =>
@@ -126,10 +119,7 @@ export const DOKUMEN_LIST: Dokumen[] = OPD_LIST.flatMap((opd, o) =>
       const peluangTerisi = PROFIL_OPD[o] * FAKTOR_KEGIATAN[k];
 
       let status: StatusDokumen = "belum";
-      if (rand() < peluangTerisi) {
-        const s = rand();
-        status = s < 0.6 ? "disetujui" : s < 0.85 ? "menunggu" : "revisi";
-      }
+      if (rand() < peluangTerisi) status = "disetujui";
 
       const sudahUnggah = status !== "belum";
       const hari = String(1 + Math.floor(rand() * 10)).padStart(2, "0");
@@ -142,8 +132,6 @@ export const DOKUMEN_LIST: Dokumen[] = OPD_LIST.flatMap((opd, o) =>
         status,
         namaFile: sudahUnggah ? `${opd.singkatan.toLowerCase()}-${item.id}.pdf` : null,
         diunggahPada: sudahUnggah ? `${kegiatan.tanggalMulai.slice(0, 8)}${hari}` : null,
-        catatanRevisi:
-          status === "revisi" ? CATATAN_REVISI[Math.floor(rand() * CATATAN_REVISI.length)] : null,
       };
     }),
   ),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState, type ChangeEvent, type DragEvent } from "react";
-import { CalendarClock, FileText, FileUp, MessageSquareWarning, Upload, X } from "lucide-react";
+import { CalendarClock, FileText, FileUp, Upload, X } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { STATUS_LABEL, type Dokumen, type ItemDokumen, type Kegiatan, type Opd } from "@/lib/types";
@@ -237,28 +237,20 @@ export default function DaftarDokumenClient({ opd, kegiatan, item, dokumen }: Pr
   const ok = baris.filter((b) => b.dok.status === "disetujui").length;
   const persen = total ? Math.round((ok / total) * 100) : 0;
 
-  // dokumen yang sudah disetujui terkunci, tidak bisa dipilih di popup
-  const pilihan: PilihanDokumen[] = baris
-    .filter((b) => b.dok.status !== "disetujui")
-    .map((b) => ({ dok: b.dok, nama: b.item.nama }));
+  // semua dokumen bisa diunggah ulang, file lama diganti
+  const pilihan: PilihanDokumen[] = baris.map((b) => ({ dok: b.dok, nama: b.item.nama }));
 
   function kirim(dokId: string, file: File) {
     // simulasi: hanya mengubah state browser
     setDaftar((prev) =>
       prev.map((d) =>
         d.id === dokId
-          ? {
-              ...d,
-              status: "menunggu",
-              namaFile: file.name,
-              diunggahPada: new Date().toISOString(),
-              catatanRevisi: null,
-            }
+          ? { ...d, status: "disetujui", namaFile: file.name, diunggahPada: new Date().toISOString() }
           : d,
       ),
     );
     const nama = item.find((i) => i.id === daftar.find((d) => d.id === dokId)?.itemId)?.nama;
-    setInfo(`${nama ?? "Dokumen"} berhasil diunggah dan menunggu pemeriksaan.`);
+    setInfo(`${nama ?? "Dokumen"} berhasil diunggah.`);
     setDialogBuka(false);
   }
 
@@ -333,7 +325,7 @@ export default function DaftarDokumenClient({ opd, kegiatan, item, dokumen }: Pr
 
         <ul className="divide-y divide-line">
           {baris.map(({ item: i, dok }) => (
-            <li key={dok.id} className="space-y-3 p-4 sm:p-5">
+            <li key={dok.id} className="p-4 sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1">
                   <p className="font-medium text-ink">{i.nama}</p>
@@ -347,13 +339,6 @@ export default function DaftarDokumenClient({ opd, kegiatan, item, dokumen }: Pr
                 </div>
                 <StatusBadge status={dok.status} />
               </div>
-
-              {dok.status === "revisi" && dok.catatanRevisi && (
-                <div className="flex gap-2 rounded-lg bg-status-revisi-bg p-3 text-sm text-status-revisi-fg">
-                  <MessageSquareWarning className="mt-0.5 size-4 shrink-0" aria-hidden />
-                  <p>{dok.catatanRevisi}</p>
-                </div>
-              )}
             </li>
           ))}
         </ul>

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Check, ChevronRight, Clock, FileSearch, type LucideIcon } from "lucide-react";
+import { Check, ChevronRight, Clock, type LucideIcon } from "lucide-react";
 import { formatWaktu } from "@/lib/presensi";
 import type { PerluTindakan } from "@/lib/ringkasan-admin";
 
@@ -44,8 +44,8 @@ export default function PerluTindakanAdmin({
   tindakan: PerluTindakan;
   arsip: boolean;
 }) {
-  const { dokumenMenunggu, quizMendekatiBatas, hariDekat } = tindakan;
-  const kosong = dokumenMenunggu === 0 && quizMendekatiBatas.length === 0;
+  const { quizMendekatiBatas, hariDekat } = tindakan;
+  const kosong = quizMendekatiBatas.length === 0;
 
   return (
     <section
@@ -72,13 +72,6 @@ export default function PerluTindakanAdmin({
         </p>
       ) : (
         <ul className="divide-y divide-line">
-          {dokumenMenunggu > 0 && (
-            <Butir
-              href="/admin/pemeriksaan"
-              ikon={FileSearch}
-              judul={`${dokumenMenunggu} dokumen menunggu pemeriksaan`}
-            />
-          )}
           {quizMendekatiBatas.map((q) => {
             const { tanggal, jam } = formatWaktu(q.batasAkhir);
             const sisa = q.opdBelum.length - TAMPIL_OPD;

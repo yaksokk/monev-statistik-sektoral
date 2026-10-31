@@ -67,7 +67,7 @@ export interface RingkasanKegiatan {
   preTest: RataNilai;
   postTest: RataNilai;
   nGain: RataNilai;
-  dokumen: { rataKelengkapan: number; menunggu: number; totalDokumen: number };
+  dokumen: { rataKelengkapan: number; totalDokumen: number };
 }
 
 export interface TindakanQuiz {
@@ -80,7 +80,6 @@ export interface TindakanQuiz {
 
 export interface PerluTindakan {
   hariDekat: number;
-  dokumenMenunggu: number;
   quizMendekatiBatas: TindakanQuiz[];
 }
 
@@ -156,7 +155,6 @@ export function susunRingkasan(kegiatan: Kegiatan, baris: BarisRekapOpd[]): Ring
     nGain: rataNilai(baris.map((b) => b.nGain), total),
     dokumen: {
       rataKelengkapan: bagi(baris.reduce((s, b) => s + b.dokumen.kelengkapan, 0)),
-      menunggu: baris.reduce((s, b) => s + b.dokumen.status.menunggu, 0),
       totalDokumen: baris.reduce((s, b) => s + b.dokumen.total, 0),
     },
   };
@@ -171,7 +169,7 @@ export function susunPerluTindakan(
   sekarang: string,
 ): PerluTindakan {
   if (kegiatan.arsip) {
-    return { hariDekat: HARI_DEKAT_BATAS, dokumenMenunggu: 0, quizMendekatiBatas: [] };
+    return { hariDekat: HARI_DEKAT_BATAS, quizMendekatiBatas: [] };
   }
 
   const quizMendekatiBatas: TindakanQuiz[] = [];
@@ -203,7 +201,6 @@ export function susunPerluTindakan(
 
   return {
     hariDekat: HARI_DEKAT_BATAS,
-    dokumenMenunggu: baris.reduce((s, b) => s + b.dokumen.status.menunggu, 0),
     quizMendekatiBatas,
   };
 }

@@ -1,12 +1,10 @@
 export type Peran = "admin" | "operator";
 
-export type StatusDokumen = "belum" | "menunggu" | "disetujui" | "revisi";
+export type StatusDokumen = "belum" | "disetujui";
 
 export const STATUS_LABEL: Record<StatusDokumen, string> = {
-  belum: "Belum diunggah",
-  menunggu: "Menunggu pemeriksaan",
+  belum: "Belum",
   disetujui: "Disetujui",
-  revisi: "Perlu revisi",
 };
 
 export interface Opd {
@@ -60,7 +58,6 @@ export interface Dokumen {
   status: StatusDokumen;
   namaFile: string | null;
   diunggahPada: string | null; // ISO yyyy-mm-dd
-  catatanRevisi: string | null;
 }
 
 export interface NilaiUjian {

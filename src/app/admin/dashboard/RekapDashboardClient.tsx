@@ -107,18 +107,6 @@ function susunGrup(r: RingkasanKegiatan): Grup[] {
         sel: (b) => b.dokumen.status.disetujui,
       },
       {
-        id: "menunggu",
-        judul: "Menunggu",
-        urut: (b) => b.dokumen.status.menunggu,
-        sel: (b) => b.dokumen.status.menunggu,
-      },
-      {
-        id: "revisi",
-        judul: "Revisi",
-        urut: (b) => b.dokumen.status.revisi,
-        sel: (b) => b.dokumen.status.revisi,
-      },
-      {
         id: "belum",
         judul: "Belum",
         urut: (b) => b.dokumen.status.belum,

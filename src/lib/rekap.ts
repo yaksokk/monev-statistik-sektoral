@@ -5,7 +5,7 @@ const bulatkan1 = (n: number) => Math.round(n * 10) / 10;
 
 /** Jumlah dokumen per status untuk satu OPD pada satu kegiatan. */
 export function hitungStatus(opdId: string, kegiatanId: string) {
-  const hasil: Record<StatusDokumen, number> = { belum: 0, menunggu: 0, disetujui: 0, revisi: 0 };
+  const hasil: Record<StatusDokumen, number> = { belum: 0, disetujui: 0 };
   for (const d of DOKUMEN_LIST) {
     if (d.opdId === opdId && d.kegiatanId === kegiatanId) hasil[d.status] += 1;
   }

@@ -3,7 +3,7 @@ import { ambilOperator } from "@/lib/operator";
 import DaftarDokumenClient from "./DaftarDokumenClient";
 
 export default async function DaftarDokumenPage() {
-  const { opd } = await ambilOperator();
+  const { pengguna, opd } = await ambilOperator();
 
   // OPD hanya melihat kegiatan yang sedang aktif (ditentukan admin)
   const kegiatan = KEGIATAN_LIST.find((k) => k.aktif);
@@ -17,13 +17,12 @@ export default async function DaftarDokumenPage() {
     );
   }
 
-  // hanya item dan dokumen milik kegiatan aktif dan OPD yang sedang login
+  // hanya item milik kegiatan aktif dan dokumen milik pegawai yang sedang login
   const item = ITEM_LIST.filter((i) => i.kegiatanId === kegiatan.id);
   const dokumen = DOKUMEN_LIST.filter(
-    (d) => d.opdId === opd.id && d.kegiatanId === kegiatan.id,
+    (d) => d.penggunaId === pengguna.id && d.kegiatanId === kegiatan.id,
   );
 
-    // link sertifikat tidak perlu sampai ke client di halaman ini
   const opdAman = { id: opd.id, nama: opd.nama, singkatan: opd.singkatan };
 
   return <DaftarDokumenClient opd={opdAman} kegiatan={kegiatan} item={item} dokumen={dokumen} />;

@@ -9,7 +9,7 @@ import {
   jumlahSelesaiBab,
   rapikanBab,
 } from "@/lib/modul-admin";
-import type { BabModul, BabSelesai, ModulPembelajaran, Opd } from "@/lib/types";
+import type { BabModul, BabSelesai, ModulPembelajaran, Opd, Pengguna } from "@/lib/types";
 import TabKelola, { type AksiTabKelola } from "./TabKelola";
 import TabPantauan from "./TabPantauan";
 
@@ -22,12 +22,13 @@ const DAFTAR_TAB: { id: NamaTab; label: string }[] = [
 
 type Props = {
   opdList: Opd[];
+  pegawaiList: Pengguna[];
   modulAwal: ModulPembelajaran[];
   babAwal: BabModul[];
   selesaiAwal: BabSelesai[];
 };
 
-export default function ModulAdminClient({ opdList, modulAwal, babAwal, selesaiAwal }: Props) {
+export default function ModulAdminClient({ opdList, pegawaiList, modulAwal, babAwal, selesaiAwal }: Props) {
   // Simulasi: hanya di state browser. Nanti disimpan ke server
   const [modulList, setModulList] = useState(modulAwal);
   const [babList, setBabList] = useState(babAwal);
@@ -126,7 +127,13 @@ export default function ModulAdminClient({ opdList, modulAwal, babAwal, selesaiA
         {tab === "kelola" ? (
           <TabKelola modul={modul} babList={babModulIni} jumlahSelesai={jumlahSelesai} aksi={aksi} />
         ) : (
-          <TabPantauan modul={modul} babList={babModulIni} opdList={opdList} selesaiList={selesaiList} />
+          <TabPantauan
+            modul={modul}
+            babList={babModulIni}
+            opdList={opdList}
+            pegawaiList={pegawaiList}
+            selesaiList={selesaiList}
+          />
         )}
       </div>
     </div>

@@ -1,4 +1,4 @@
-import type { BabModul, BabSelesai, Opd } from "@/lib/types";
+import type { BabModul, BabSelesai, Pengguna } from "@/lib/types";
 
 export type Pembinaan = BabModul["pembinaan"];
 export const DAFTAR_PEMBINAAN: Pembinaan[] = [1, 2];
@@ -51,12 +51,15 @@ export function jumlahSelesaiBab(selesai: BabSelesai[], babId: string) {
 }
 
 // OPD yang sudah dan belum menandai satu bab selesai
-export function pantauBab(babId: string, selesai: BabSelesai[], opdList: Opd[]) {
-  const catatan = new Map(selesai.filter((s) => s.babId === babId).map((s) => [s.opdId, s.selesaiPada]));
+// Pegawai yang sudah dan belum menandai satu bab selesai
+export function pantauBab(babId: string, selesai: BabSelesai[], pegawaiList: Pengguna[]) {
+  const catatan = new Map(
+    selesai.filter((s) => s.babId === babId).map((s) => [s.penggunaId, s.selesaiPada]),
+  );
   return {
-    sudah: opdList
-      .filter((o) => catatan.has(o.id))
-      .map((opd) => ({ opd, selesaiPada: catatan.get(opd.id)! })),
-    belum: opdList.filter((o) => !catatan.has(o.id)),
+    sudah: pegawaiList
+      .filter((p) => catatan.has(p.id))
+      .map((pegawai) => ({ pegawai, selesaiPada: catatan.get(pegawai.id)! })),
+    belum: pegawaiList.filter((p) => !catatan.has(p.id)),
   };
 }

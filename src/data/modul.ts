@@ -22,9 +22,15 @@ export const BAB_LIST: BabModul[] = [
   { id: "m1-b6", modulId: "modul-1", urutan: 6, judul: "Statistik Nasional", linkMateri: driveFile("1mz1UTSRgAvdTU_1LB2TGkD0lWPaaqC60"), pembinaan: 2 },
 ];
 
-// Catatan bab yang sudah ditandai selesai oleh OPD (dasar tampilan admin)
+// Catatan bab yang sudah ditandai selesai oleh pegawai (dasar tampilan admin)
 export const BAB_SELESAI_LIST: BabSelesai[] = [
-  { opdId: "opd-02", babId: "m1-b1", selesaiPada: "2026-10-26T09:15" },
-  { opdId: "opd-02", babId: "m1-b2", selesaiPada: "2026-10-26T10:02" },
-  { opdId: "opd-03", babId: "m1-b1", selesaiPada: "2026-10-27T08:40" },
+  { penggunaId: "usr-op-03", opdId: "opd-02", babId: "m1-b1", selesaiPada: "2026-10-26T09:15" },
+  { penggunaId: "usr-op-04", opdId: "opd-02", babId: "m1-b1", selesaiPada: "2026-10-26T09:40" },
+  { penggunaId: "usr-op-04", opdId: "opd-02", babId: "m1-b2", selesaiPada: "2026-10-26T10:02" },
+  { penggunaId: "usr-op-06", opdId: "opd-05", babId: "m1-b1", selesaiPada: "2026-10-27T08:40" },
+  { penggunaId: "usr-op-09", opdId: "opd-07", babId: "m1-b1", selesaiPada: "2026-10-26T08:30" },
+  { penggunaId: "usr-op-09", opdId: "opd-07", babId: "m1-b2", selesaiPada: "2026-10-26T09:10" },
+  { penggunaId: "usr-op-09", opdId: "opd-07", babId: "m1-b3", selesaiPada: "2026-10-26T09:55" },
+  { penggunaId: "usr-op-10", opdId: "opd-07", babId: "m1-b1", selesaiPada: "2026-10-26T08:45" },
+  { penggunaId: "usr-op-10", opdId: "opd-07", babId: "m1-b2", selesaiPada: "2026-10-26T09:30" },
 ];

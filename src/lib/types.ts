@@ -175,8 +175,9 @@ export interface BabModul {
   pembinaan: 1 | 2; // bab ini masuk Pembinaan 1 atau 2
 }
  
-// Catatan OPD menandai bab selesai; dipakai admin nanti untuk melihat siapa yang sudah belajar
+// Catatan pegawai menandai bab selesai; dipakai admin nanti untuk melihat siapa yang sudah belajar
 export interface BabSelesai {
+  penggunaId: string;
   opdId: string;
   babId: string;
   selesaiPada: string; // yyyy-mm-ddTHH:mm

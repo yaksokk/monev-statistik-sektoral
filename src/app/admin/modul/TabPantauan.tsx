@@ -4,26 +4,29 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { LENCANA, Lencana, kartu, teksWaktu } from "@/app/admin/quiz/ui";
 import { pantauBab } from "@/lib/modul-admin";
-import type { BabModul, BabSelesai, ModulPembelajaran, Opd } from "@/lib/types";
+import type { BabModul, BabSelesai, ModulPembelajaran, Opd, Pengguna } from "@/lib/types";
 
 type Props = {
   modul: ModulPembelajaran | undefined;
   babList: BabModul[]; // bab modul ini, sudah urut
   opdList: Opd[];
+  pegawaiList: Pengguna[];
   selesaiList: BabSelesai[];
 };
 
-export default function TabPantauan({ modul, babList, opdList, selesaiList }: Props) {
+export default function TabPantauan({ modul, babList, opdList, pegawaiList, selesaiList }: Props) {
   const [bukaId, setBukaId] = useState<string | null>(null);
 
   if (!modul || babList.length === 0) {
     return <p className="py-8 text-center text-sm text-ink-muted">Belum ada bab untuk dipantau.</p>;
   }
 
+  const singkatan = (p: Pengguna) => opdList.find((o) => o.id === p.opdId)?.singkatan ?? "";
+
   return (
     <ul className="space-y-3">
       {babList.map((b) => {
-        const { sudah, belum } = pantauBab(b.id, selesaiList, opdList);
+        const { sudah, belum } = pantauBab(b.id, selesaiList, pegawaiList);
         const terbuka = bukaId === b.id;
         return (
           <li key={b.id} className={kartu}>
@@ -42,7 +45,7 @@ export default function TabPantauan({ modul, babList, opdList, selesaiList }: Pr
               </span>
               <span className="flex shrink-0 items-center gap-2 text-sm text-ink-muted">
                 <span className="tabular">
-                  {sudah.length} dari {opdList.length} OPD
+                  {sudah.length} dari {pegawaiList.length} pegawai
                 </span>
                 <ChevronDown className={`size-4 transition-transform ${terbuka ? "rotate-180" : ""}`} aria-hidden />
               </span>
@@ -56,11 +59,11 @@ export default function TabPantauan({ modul, babList, opdList, selesaiList }: Pr
                     <p className="mt-2 text-sm text-ink-muted">Belum ada.</p>
                   ) : (
                     <ul className="mt-2 space-y-1.5 text-sm">
-                      {sudah.map(({ opd, selesaiPada }) => (
-                        <li key={opd.id} className="text-ink">
-                          {opd.nama}
+                      {sudah.map(({ pegawai, selesaiPada }) => (
+                        <li key={pegawai.id} className="text-ink">
+                          {pegawai.nama}
                           <span className="tabular block text-xs text-ink-muted">
-                            {teksWaktu(selesaiPada, "–")}
+                            {singkatan(pegawai)} · {teksWaktu(selesaiPada, "–")}
                           </span>
                         </li>
                       ))}
@@ -70,11 +73,14 @@ export default function TabPantauan({ modul, babList, opdList, selesaiList }: Pr
                 <div>
                   <h3 className="text-sm font-semibold text-ink-muted">Belum selesai ({belum.length})</h3>
                   {belum.length === 0 ? (
-                    <p className="mt-2 text-sm text-ink-muted">Semua OPD sudah selesai.</p>
+                    <p className="mt-2 text-sm text-ink-muted">Semua pegawai sudah selesai.</p>
                   ) : (
                     <ul className="mt-2 space-y-1.5 text-sm text-ink">
-                      {belum.map((o) => (
-                        <li key={o.id}>{o.nama}</li>
+                      {belum.map((p) => (
+                        <li key={p.id}>
+                          {p.nama}
+                          <span className="block text-xs text-ink-muted">{singkatan(p)}</span>
+                        </li>
                       ))}
                     </ul>
                   )}

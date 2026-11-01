@@ -20,7 +20,7 @@ export default async function Pembinaan2Page({ searchParams }: Props) {
   const babList = BAB_LIST.filter(
     (b) => b.modulId === modul.id && b.pembinaan === PEMBINAAN,
   ).sort((a, b) => a.urutan - b.urutan);
-  const babSelesaiAwal = BAB_SELESAI_LIST.filter((s) => s.opdId === opd.id).map((s) => s.babId);
+  const babSelesaiAwal = BAB_SELESAI_LIST.filter((s) => s.penggunaId === pengguna.id).map((s) => s.babId);
 
   // bab dari tautan dashboard; id tidak dikenal jatuh ke bab pertama
   const indeksAwal = Math.max(

@@ -1,4 +1,4 @@
-import { OPD_LIST } from "@/data/dummy";
+import { OPD_LIST, PENGGUNA_LIST } from "@/data/dummy";
 import { BAB_LIST, BAB_SELESAI_LIST, MODUL_LIST } from "@/data/modul";
 import ModulAdminClient from "./ModulAdminClient";
 
@@ -14,6 +14,7 @@ export default function KelolaModulPage() {
 
       <ModulAdminClient
         opdList={OPD_LIST}
+        pegawaiList={PENGGUNA_LIST.filter((p) => p.peran === "operator" && p.opdId)}
         modulAwal={MODUL_LIST}
         babAwal={BAB_LIST}
         selesaiAwal={BAB_SELESAI_LIST}

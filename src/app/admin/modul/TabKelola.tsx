@@ -230,7 +230,7 @@ export default function TabKelola({ modul, babList, jumlahSelesai, aksi }: Props
                               Bab {b.urutan}: {b.judul}
                             </p>
                             <Lencana kelas="bg-surface-muted text-ink-muted">
-                              {jumlahSelesai[b.id] ?? 0} OPD selesai
+                              {jumlahSelesai[b.id] ?? 0} pegawai selesai
                             </Lencana>
                           </div>
                           <a
@@ -306,8 +306,8 @@ export default function TabKelola({ modul, babList, jumlahSelesai, aksi }: Props
             <p className="text-sm text-ink-muted">
               Hapus <span className="font-medium text-ink">Bab {dihapus.urutan}: {dihapus.judul}</span>?{" "}
               {terdampak > 0
-                ? `${terdampak} OPD sudah menandai bab ini selesai, dan catatannya ikut hilang.`
-                : "Belum ada OPD yang menandai bab ini selesai."}{" "}
+                ? `${terdampak} pegawai sudah menandai bab ini selesai, dan catatannya ikut hilang.`
+                : "Belum ada pegawai yang menandai bab ini selesai."}{" "}
               Tindakan ini tidak bisa dibatalkan.
             </p>
             <div className="flex justify-end gap-2 pt-2">

@@ -47,7 +47,7 @@ export default async function DashboardOpdPage() {
   // progress bab
   const modul = MODUL_LIST[0];
   const babSelesai = new Set(
-    BAB_SELESAI_LIST.filter((s) => s.opdId === opd.id).map((s) => s.babId),
+    BAB_SELESAI_LIST.filter((s) => s.penggunaId === pengguna.id).map((s) => s.babId),
   );
   const babList = modul
     ? BAB_LIST.filter((b) => b.modulId === modul.id)

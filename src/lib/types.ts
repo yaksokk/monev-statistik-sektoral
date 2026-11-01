@@ -191,3 +191,18 @@ export interface Undangan {
   dikirimPada: string; // yyyy-mm-ddTHH:mm (waktu lokal), terisi otomatis saat dikirim
   opdIds: string[]; // OPD penerima; kosong = belum ada penerima
 }
+
+// Satu butir indikator keberhasilan; link dokumennya diisi admin
+export interface IndikatorKeberhasilan {
+  id: string;
+  teks: string;
+}
+
+// Satu baris tabel Monev Indikator Keberhasilan
+export interface AspekMonev {
+  id: string;
+  nama: string;
+  kondisiAktual: string;
+  kondisiDiharapkan: string;
+  indikator: IndikatorKeberhasilan[];
+}

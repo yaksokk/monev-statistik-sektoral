@@ -9,6 +9,7 @@ import {
   Library,
   ListChecks,
   Mail,
+  Target,
   type LucideIcon,
 } from "lucide-react";
 import type { Peran } from "@/lib/types";
@@ -22,6 +23,7 @@ export interface ItemMenu {
 export const MENU: Record<Peran, ItemMenu[]> = {
   admin: [
     { label: "Dashboard", href: "/admin/dashboard", ikon: LayoutDashboard },
+    { label: "Monev Indikator", href: "/admin/monev-indikator", ikon: Target },
     // { label: "Kegiatan", href: "/admin/kegiatan", ikon: CalendarRange },
     { label: "Daftar Hadir", href: "/admin/daftar-hadir", ikon: CalendarCheck },
     { label: "Modul", href: "/admin/modul", ikon: Library },

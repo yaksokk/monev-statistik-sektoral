@@ -22,6 +22,7 @@ type Prasyarat = { terpenuhi: boolean; pesan: string };
 type Props = {
   opdId: string;
   kegiatanId: string;
+  penggunaId: string;
   nama: string; // "Pre-Test" atau "Post-Test"
   pengaturan: PengaturanQuiz;
   soalList: SoalQuiz[];
@@ -41,6 +42,7 @@ const KELAS_TOMBOL_SEKUNDER =
 
 export default function QuizClient({
   opdId,
+  penggunaId,
   kegiatanId,
   nama,
   pengaturan,
@@ -71,6 +73,7 @@ export default function QuizClient({
     (otomatis: boolean) => {
       if (!sesi) return;
       setHasil({
+        penggunaId,
         opdId,
         kegiatanId,
         quizId: pengaturan.id,
@@ -83,7 +86,7 @@ export default function QuizClient({
       setSesi(null);
       setKonfirmasi(false);
     },
-    [sesi, jawaban, opdId, kegiatanId, pengaturan.id],
+    [sesi, jawaban, opdId, penggunaId, kegiatanId, pengaturan.id],
   );
 
   // Hitung mundur; saat habis, jawaban terkirim otomatis
@@ -123,7 +126,7 @@ export default function QuizClient({
     setIndeks(0);
     setSisaDetik(sisa);
     setSesi({
-      soal: acakSoal(soalMain, `${opdId}:${pengaturan.id}`),
+      soal: acakSoal(soalMain, `${penggunaId}:${pengaturan.id}`),
       mulai: waktu,
       berakhirPada: mulaiMs + sisa * 1000,
     });

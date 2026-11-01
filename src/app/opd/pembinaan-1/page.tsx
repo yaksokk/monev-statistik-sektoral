@@ -12,7 +12,7 @@ interface Props {
 }
 
 export default async function Pembinaan1Page({ searchParams }: Props) {
-  const { opd } = await ambilOperator();
+  const { pengguna, opd } = await ambilOperator();
   const { bab } = await searchParams;
   const sekarang = waktuSekarang();
 
@@ -29,7 +29,7 @@ export default async function Pembinaan1Page({ searchParams }: Props) {
   );
 
   // quiz mengikuti kegiatan berjalan; Pre-Test yang dimatikan admin disembunyikan
-  const pre = ambilQuizOpd(kegiatanBerjalan(), "pretest", opd.id);
+  const pre = ambilQuizOpd(kegiatanBerjalan(), "pretest", opd.id, pengguna.id);
 
   const rentang =
     babList.length > 0

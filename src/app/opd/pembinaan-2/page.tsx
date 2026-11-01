@@ -12,7 +12,7 @@ interface Props {
 }
 
 export default async function Pembinaan2Page({ searchParams }: Props) {
-  const { opd } = await ambilOperator();
+  const { pengguna, opd } = await ambilOperator();
   const { bab } = await searchParams;
   const sekarang = waktuSekarang();
 
@@ -30,8 +30,8 @@ export default async function Pembinaan2Page({ searchParams }: Props) {
 
   // quiz mengikuti kegiatan berjalan; Post-Test yang dimatikan admin disembunyikan
   const kegiatan = kegiatanBerjalan();
-  const pre = ambilQuizOpd(kegiatan, "pretest", opd.id);
-  const post = ambilQuizOpd(kegiatan, "posttest", opd.id);
+  const pre = ambilQuizOpd(kegiatan, "pretest", opd.id, pengguna.id);
+  const post = ambilQuizOpd(kegiatan, "posttest", opd.id, pengguna.id);
 
   const rentang =
     babList.length > 0

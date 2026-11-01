@@ -7,10 +7,10 @@ import { ambilQuizOpd, kegiatanBerjalan } from "@/lib/quiz-opd";
 const KELAS_PESAN = "rounded-lg bg-surface-muted px-4 py-3 text-sm text-ink-muted";
 
 export default async function PreTestPage() {
-  const { opd } = await ambilOperator();
+  const { pengguna, opd } = await ambilOperator();
 
   const kegiatan = kegiatanBerjalan();
-  const pre = ambilQuizOpd(kegiatan, "pretest", opd.id);
+  const pre = ambilQuizOpd(kegiatan, "pretest", opd.id, pengguna.id);
 
   return (
     <div className="space-y-6">
@@ -36,6 +36,7 @@ export default async function PreTestPage() {
         /* Dummy: kunci ikut dikirim ke browser. Setelah ada server, penilaian dilakukan di server */
         <QuizClient
           opdId={opd.id}
+          penggunaId={pengguna.id}
           kegiatanId={kegiatan.id}
           nama="Pre-Test"
           pengaturan={pre.pengaturan}

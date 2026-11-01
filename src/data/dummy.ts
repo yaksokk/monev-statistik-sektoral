@@ -32,7 +32,7 @@ export const OPD_LIST: Opd[] = [
   { id: "opd-06", nama: "Dinas Pariwisata", singkatan: "Dispar" },
   { id: "opd-07", nama: "Dinas Komunikasi dan Informatika", singkatan: "Diskominfo" },
   { id: "opd-08", nama: "Dinas Kependudukan dan Pencatatan Sipil", singkatan: "Disdukcapil" },
-].map((opd) => ({ ...opd, linkSertifikat: LINK_SERTIFIKAT_CONTOH }));
+]
 
 // Dokumen yang harus diunggah OPD pada kegiatan aktif.
 export const ITEM_LIST: ItemDokumen[] = [

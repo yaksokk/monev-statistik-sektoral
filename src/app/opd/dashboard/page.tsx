@@ -9,7 +9,7 @@ import {
   nGainTersedia,
 } from "@/lib/dashboard";
 import { ambilOperator } from "@/lib/operator";
-import { apakahLulusKehadiran, hitungKehadiran, sesiKegiatan } from "@/lib/presensi";
+import { apakahLulusKehadiran, hitungKehadiranPegawai, sesiKegiatan } from "@/lib/presensi";
 import { formatNilai, hitungHasil } from "@/lib/quiz";
 import { ambilQuizOpd } from "@/lib/quiz-opd";
 import KartuMetrik from "./KartuMetrik";
@@ -19,17 +19,17 @@ import PanelModul from "./PanelModul";
 import KartuUndangan from "./KartuUndangan";
 
 export default async function DashboardOpdPage() {
-  const { opd } = await ambilOperator();
+  const { pengguna, opd } = await ambilOperator();
 
   // presensi, ambang, dan dokumen mengikuti kegiatan aktif
   const kegiatan = KEGIATAN_LIST.find((k) => k.aktif);
 
   // kehadiran dan quiz
   const sesiAktif = kegiatan ? sesiKegiatan(SESI_LIST, kegiatan.id) : [];
-  const kehadiran = hitungKehadiran(opd.id, sesiAktif, PRESENSI_LIST);
+  const kehadiran = hitungKehadiranPegawai(pengguna.id, sesiAktif, PRESENSI_LIST);
 
-  const pre = ambilQuizOpd(kegiatan, "pretest", opd.id);
-  const post = ambilQuizOpd(kegiatan, "posttest", opd.id);
+  const pre = ambilQuizOpd(kegiatan, "pretest", opd.id, pengguna.id);
+  const post = ambilQuizOpd(kegiatan, "posttest", opd.id, pengguna.id);
   const nilaiPre = pre.hasil ? hitungHasil(pre.soal, pre.hasil.jawaban).nilai : null;
   const nilaiPost = post.hasil ? hitungHasil(post.soal, post.hasil.jawaban).nilai : null;
   const nGainBerlaku = kegiatan ? nGainTersedia(kegiatan) : true;
@@ -42,7 +42,7 @@ export default async function DashboardOpdPage() {
   };
   const lulus = syarat.presensi && syarat.postTest !== false;
   // link baru dikirim ke komponen bila semua syarat terpenuhi
-  const linkSertifikat = lulus ? linkHttps(opd.linkSertifikat) : null;
+  const linkSertifikat = lulus ? linkHttps(pengguna.linkSertifikat) : null;
 
   // progress bab
   const modul = MODUL_LIST[0];
@@ -71,7 +71,7 @@ export default async function DashboardOpdPage() {
         nama: item.nama,
         status:
           DOKUMEN_LIST.find(
-            (d) => d.opdId === opd.id && d.kegiatanId === kegiatan.id && d.itemId === item.id,
+            (d) => d.penggunaId === pengguna.id && d.kegiatanId === kegiatan.id && d.itemId === item.id,
           )?.status ?? "belum",
       }))
     : [];

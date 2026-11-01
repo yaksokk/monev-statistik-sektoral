@@ -21,6 +21,7 @@ import {
 
 type Props = {
   opdId: string;
+  penggunaId: string;
   sesiList: SesiPembinaan[];
   presensiAwal: Presensi[];
 };
@@ -53,7 +54,7 @@ function Lencana({ jenis, children }: { jenis: keyof typeof WARNA_LENCANA; child
   );
 }
 
-export default function DaftarHadirClient({ opdId, sesiList, presensiAwal }: Props) {
+export default function DaftarHadirClient({ opdId, penggunaId, sesiList, presensiAwal }: Props) {
   const [presensi, setPresensi] = useState(presensiAwal);
   const [sekarang, setSekarang] = useState<string | null>(null);
   const [sesiId, setSesiId] = useState("");
@@ -104,7 +105,8 @@ export default function DaftarHadirClient({ opdId, sesiList, presensiAwal }: Pro
     setPresensi((prev) => [
       ...prev,
       {
-        id: `hadir-${opdId}-${sesiTerpilih.id}`,
+        id: `hadir-${penggunaId}-${sesiTerpilih.id}`,
+        penggunaId,
         opdId,
         sesiId: sesiTerpilih.id,
         status,

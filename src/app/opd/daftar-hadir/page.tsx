@@ -3,10 +3,10 @@ import { ambilOperator } from "@/lib/operator";
 import DaftarHadirClient from "./DaftarHadirClient";
 
 export default async function DaftarHadirPage() {
-  const { opd } = await ambilOperator();
+  const { pengguna, opd } = await ambilOperator();
 
   const sesiList = [...SESI_LIST].sort((a, b) => a.urutan - b.urutan);
-  const presensi = PRESENSI_LIST.filter((p) => p.opdId === opd.id);
+  const presensi = PRESENSI_LIST.filter((p) => p.penggunaId === pengguna.id);
 
   return (
     <div className="space-y-6">
@@ -17,7 +17,12 @@ export default async function DaftarHadirPage() {
         </p>
       </header>
 
-      <DaftarHadirClient opdId={opd.id} sesiList={sesiList} presensiAwal={presensi} />
+      <DaftarHadirClient
+        opdId={opd.id}
+        penggunaId={pengguna.id}
+        sesiList={sesiList}
+        presensiAwal={presensi}
+      />
     </div>
   );
 }

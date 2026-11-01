@@ -59,13 +59,16 @@ export const KEGIATAN_LIST: Kegiatan[] = [
 
 export const PENGGUNA_LIST: Pengguna[] = [
   { id: "usr-admin", nama: "Admin BPS", email: "admin@example.com", peran: "admin" },
-  ...OPD_LIST.map<Pengguna>((opd, i) => ({
-    id: `usr-op-${String(i + 1).padStart(2, "0")}`,
-    nama: `Operator ${opd.singkatan}`,
-    email: `operator.${opd.singkatan.toLowerCase()}@example.com`,
-    peran: "operator",
-    opdId: opd.id,
-  })),
+  { id: "usr-op-01", nama: "Kezia Siwi", email: "operator@monev.test", peran: "operator", opdId: "opd-01" },
+  { id: "usr-op-02", nama: "Monita Purba", email: "monita.disdikbud@monev.test", peran: "operator", opdId: "opd-01" },
+  { id: "usr-op-03", nama: "Keisya Akay", email: "keisya.dinkes@monev.test", peran: "operator", opdId: "opd-02" },
+  { id: "usr-op-04", nama: "Arya Mandy", email: "arya.dinkes@monev.test", peran: "operator", opdId: "opd-02" },
+  { id: "usr-op-05", nama: "Silvana Arikalang", email: "silvana.dinsos@monev.test", peran: "operator", opdId: "opd-05" },
+  { id: "usr-op-06", nama: "La Ode", email: "laode.dinsos@monev.test", peran: "operator", opdId: "opd-05" },
+  { id: "usr-op-07", nama: "Arturito Rawung", email: "arturito.dkp@monev.test", peran: "operator", opdId: "opd-04" },
+  { id: "usr-op-08", nama: "Marya Zahra", email: "marya.dkp@monev.test", peran: "operator", opdId: "opd-04" },
+  { id: "usr-op-09", nama: "Samuel Untu", email: "samuel.diskominfo@monev.test", peran: "operator", opdId: "opd-07" },
+  { id: "usr-op-10", nama: "Dina Yanti Nainggolan", email: "dina.diskominfo@monev.test", peran: "operator", opdId: "opd-07" },
 ];
 
 /* ------------------------------------------------------------------ */

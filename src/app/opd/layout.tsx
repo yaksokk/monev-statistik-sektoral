@@ -6,10 +6,10 @@ export default async function OpdLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { pengguna } = await ambilOperator();
+  const { pengguna, opd } = await ambilOperator();
 
   return (
-    <AppShell peran="operator" namaPengguna={pengguna.nama}>
+    <AppShell peran="operator" namaPengguna={pengguna.nama} namaOpd={opd.nama}>
       {children}
     </AppShell>
   );

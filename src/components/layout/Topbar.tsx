@@ -54,9 +54,9 @@ export function Topbar({ nama, peranLabel, onBukaMenu, hrefGantiSandi }: TopbarP
           aria-expanded={terbuka}
           className="flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-surface-muted"
         >
-          <span className="text-right leading-tight">
-            <span className="block text-sm font-medium text-ink">{nama}</span>
-            <span className="block text-xs text-ink-muted">{peranLabel}</span>
+          <span className="max-w-48 text-right leading-tight sm:max-w-64">
+            <span className="block truncate text-sm font-medium text-ink">{nama}</span>
+            <span className="block truncate text-xs text-ink-muted">{peranLabel}</span>
           </span>
           <span
             aria-hidden="true"

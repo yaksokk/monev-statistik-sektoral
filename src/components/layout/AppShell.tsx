@@ -13,10 +13,11 @@ const LABEL_PERAN: Record<Peran, string> = {
 interface AppShellProps {
   peran: Peran;
   namaPengguna: string;
+  namaOpd?: string;
   children: React.ReactNode;
 }
 
-export function AppShell({ peran, namaPengguna, children }: AppShellProps) {
+export function AppShell({ peran, namaPengguna, namaOpd, children }: AppShellProps) {
   const [menuTerbuka, setMenuTerbuka] = useState(false);
 
   useEffect(() => {
@@ -50,7 +51,7 @@ export function AppShell({ peran, namaPengguna, children }: AppShellProps) {
 
       <Topbar
         nama={namaPengguna}
-        peranLabel={LABEL_PERAN[peran]}
+        peranLabel={namaOpd ?? LABEL_PERAN[peran]}
         onBukaMenu={() => setMenuTerbuka(true)}
         hrefGantiSandi={peran === "operator" ? "/opd/ganti-kata-sandi" : undefined}
       />

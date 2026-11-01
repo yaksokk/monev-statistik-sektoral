@@ -5,6 +5,7 @@ import {
   CalendarCheck,
   CalendarRange,
   FileText,
+  Flag,
   LayoutDashboard,
   Library,
   ListChecks,
@@ -24,6 +25,7 @@ export const MENU: Record<Peran, ItemMenu[]> = {
   admin: [
     { label: "Dashboard", href: "/admin/dashboard", ikon: LayoutDashboard },
     { label: "Monev Indikator", href: "/admin/monev-indikator", ikon: Target },
+    { label: "Monev Milestone", href: "/admin/monev-milestone", ikon: Flag },
     // { label: "Kegiatan", href: "/admin/kegiatan", ikon: CalendarRange },
     { label: "Daftar Hadir", href: "/admin/daftar-hadir", ikon: CalendarCheck },
     { label: "Modul", href: "/admin/modul", ikon: Library },

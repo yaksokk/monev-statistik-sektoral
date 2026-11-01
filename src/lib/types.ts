@@ -206,3 +206,17 @@ export interface AspekMonev {
   kondisiDiharapkan: string;
   indikator: IndikatorKeberhasilan[];
 }
+
+// Satu butir output milestone; link dokumennya diisi admin
+export interface OutputMilestone {
+  id: string;
+  teks: string;
+}
+
+// Satu baris tabel Monev Milestone
+export interface Milestone {
+  id: string;
+  tujuan: string;
+  jadwal: string;
+  output: OutputMilestone[];
+}

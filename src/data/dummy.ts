@@ -15,6 +15,7 @@ import type {
   SoalQuiz,
   StatusDokumen,
   Undangan,
+  StatusKehadiran,
 } from "@/lib/types";
 
 
@@ -57,7 +58,7 @@ export const KEGIATAN_LIST: Kegiatan[] = [
   },
 ];
 
-export const PENGGUNA_LIST: Pengguna[] = [
+const PENGGUNA_DASAR: Pengguna[] = [
   { id: "usr-admin", nama: "Admin BPS", email: "admin@example.com", peran: "admin" },
   { id: "usr-op-01", nama: "Kezia Siwi", email: "operator@monev.test", peran: "operator", opdId: "opd-01" },
   { id: "usr-op-02", nama: "Monita Purba", email: "monita.disdikbud@monev.test", peran: "operator", opdId: "opd-01" },
@@ -71,6 +72,9 @@ export const PENGGUNA_LIST: Pengguna[] = [
   { id: "usr-op-10", nama: "Dina Yanti Nainggolan", email: "dina.diskominfo@monev.test", peran: "operator", opdId: "opd-07" },
 ];
 
+export const PENGGUNA_LIST: Pengguna[] = PENGGUNA_DASAR.map((p) =>
+  p.peran === "operator" ? { ...p, linkSertifikat: LINK_SERTIFIKAT_CONTOH } : p,
+);
 /* ------------------------------------------------------------------ */
 /* Dokumen dummy (dibangkitkan deterministik, aman untuk SSR/hydration) */
 /* ------------------------------------------------------------------ */
@@ -85,25 +89,42 @@ function mulberry32(seed: number) {
   };
 }
 
-// Seberapa rajin tiap OPD (urut sesuai OPD_LIST) -> variasi tampilan
+// Dipakai NILAI_UJIAN_LIST di bawah
 const PROFIL_OPD = [0.95, 0.85, 0.75, 0.65, 0.55, 0.4, 0.25, 0.1];
-const FAKTOR_KEGIATAN = [1];
+
+// Seberapa rajin tiap pegawai mengunggah dokumen (1 = semua disetujui). Samuel dan Dina terbaik
+const PELUANG_DOKUMEN: Record<string, number> = {
+  "usr-op-01": 0.8,
+  "usr-op-02": 0.3,
+  "usr-op-03": 0.6,
+  "usr-op-04": 0.75,
+  "usr-op-05": 0.4,
+  "usr-op-06": 0.55,
+  "usr-op-07": 0.35,
+  "usr-op-08": 0.7,
+  "usr-op-09": 1,
+  "usr-op-10": 1,
+};
 
 const rand = mulberry32(2026);
 
-export const DOKUMEN_LIST: Dokumen[] = OPD_LIST.flatMap((opd, o) =>
-  KEGIATAN_LIST.flatMap((kegiatan, k) =>
+export const DOKUMEN_LIST: Dokumen[] = PENGGUNA_LIST.filter(
+  (p) => p.peran === "operator" && p.opdId,
+).flatMap((pegawai) =>
+  KEGIATAN_LIST.flatMap((kegiatan) =>
     ITEM_LIST.filter((i) => i.kegiatanId === kegiatan.id).map<Dokumen>((item) => {
-      const peluangTerisi = PROFIL_OPD[o] * FAKTOR_KEGIATAN[k];
+      const peluang = PELUANG_DOKUMEN[pegawai.id] ?? 0.5;
 
       let status: StatusDokumen = "belum";
-      if (rand() < peluangTerisi) status = "disetujui";
+      if (rand() < peluang) status = "disetujui";
 
       const sudahUnggah = status !== "belum";
       const hari = String(1 + Math.floor(rand() * 10)).padStart(2, "0");
+      const opd = OPD_LIST.find((o) => o.id === pegawai.opdId)!;
 
       return {
-        id: `dok-${opd.id}-${kegiatan.id}-${item.id}`,
+        id: `dok-${pegawai.id}-${kegiatan.id}-${item.id}`,
+        penggunaId: pegawai.id,
         opdId: opd.id,
         kegiatanId: kegiatan.id,
         itemId: item.id,
@@ -170,15 +191,38 @@ export const SESI_LIST: SesiPembinaan[] = [
   },
 ];
 
+function hadir(
+  penggunaId: string,
+  opdId: string,
+  sesiId: string,
+  status: StatusKehadiran,
+  waktuIsi: string,
+  catatan: string | null = null,
+): Presensi {
+  return { id: `hadir-${penggunaId}-${sesiId}`, penggunaId, opdId, sesiId, status, waktuIsi, catatan };
+}
+
 export const PRESENSI_LIST: Presensi[] = [
-  { id: "hadir-opd-01-sesi-1", opdId: "opd-01", sesiId: "sesi-1", status: "tepat_waktu", waktuIsi: "2026-10-08T08:30", catatan: "Mengikuti via Zoom" },
-  { id: "hadir-opd-02-sesi-1", opdId: "opd-02", sesiId: "sesi-1", status: "terlambat", waktuIsi: "2026-10-08T09:15", catatan: "Bergabung terlambat karena rapat internal" },
-  { id: "hadir-opd-02-sesi-2", opdId: "opd-02", sesiId: "sesi-2", status: "izin", waktuIsi: "2026-10-15T07:50", catatan: "Tugas dinas ke luar kota" },
-  { id: "hadir-opd-03-sesi-1", opdId: "opd-03", sesiId: "sesi-1", status: "tepat_waktu", waktuIsi: "2026-10-08T08:41", catatan: null },
-  { id: "hadir-opd-03-sesi-2", opdId: "opd-03", sesiId: "sesi-2", status: "tepat_waktu", waktuIsi: "2026-10-15T08:35", catatan: "Diskusi forum" },
-  { id: "hadir-opd-04-sesi-1", opdId: "opd-04", sesiId: "sesi-1", status: "tepat_waktu", waktuIsi: "2026-10-08T08:28", catatan: null },
-  { id: "hadir-opd-05-sesi-1", opdId: "opd-05", sesiId: "sesi-1", status: "terlambat", waktuIsi: "2026-10-08T09:40", catatan: "Kendala jaringan" },
-  { id: "hadir-opd-06-sesi-3", opdId: "opd-06", sesiId: "sesi-3", status: "tepat_waktu", waktuIsi: "2026-10-27T08:45", catatan: null },
+  hadir("usr-op-01", "opd-01", "sesi-1", "tepat_waktu", "2026-10-08T08:30", "Mengikuti via Zoom"),
+  hadir("usr-op-01", "opd-01", "sesi-2", "tepat_waktu", "2026-10-15T08:20"),
+  hadir("usr-op-02", "opd-01", "sesi-1", "terlambat", "2026-10-08T09:15", "Bergabung terlambat karena rapat internal"),
+  hadir("usr-op-03", "opd-02", "sesi-1", "terlambat", "2026-10-08T09:05", "Kendala jaringan"),
+  hadir("usr-op-03", "opd-02", "sesi-2", "izin", "2026-10-15T07:50", "Tugas dinas ke luar kota"),
+  hadir("usr-op-04", "opd-02", "sesi-1", "tepat_waktu", "2026-10-08T08:41"),
+  hadir("usr-op-04", "opd-02", "sesi-2", "tepat_waktu", "2026-10-15T08:35"),
+  hadir("usr-op-04", "opd-02", "sesi-3", "terlambat", "2026-10-27T09:30", "Jaringan tidak stabil"),
+  hadir("usr-op-05", "opd-05", "sesi-1", "terlambat", "2026-10-08T09:40", "Kendala jaringan"),
+  hadir("usr-op-06", "opd-05", "sesi-1", "tepat_waktu", "2026-10-08T08:28"),
+  hadir("usr-op-06", "opd-05", "sesi-2", "tepat_waktu", "2026-10-15T08:33"),
+  hadir("usr-op-07", "opd-04", "sesi-1", "tepat_waktu", "2026-10-08T08:28"),
+  hadir("usr-op-08", "opd-04", "sesi-1", "tepat_waktu", "2026-10-08T08:30"),
+  hadir("usr-op-08", "opd-04", "sesi-2", "tepat_waktu", "2026-10-15T08:36"),
+  hadir("usr-op-09", "opd-07", "sesi-1", "tepat_waktu", "2026-10-08T08:20"),
+  hadir("usr-op-09", "opd-07", "sesi-2", "tepat_waktu", "2026-10-15T08:18"),
+  hadir("usr-op-09", "opd-07", "sesi-3", "tepat_waktu", "2026-10-27T08:15"),
+  hadir("usr-op-10", "opd-07", "sesi-1", "tepat_waktu", "2026-10-08T08:25"),
+  hadir("usr-op-10", "opd-07", "sesi-2", "tepat_waktu", "2026-10-15T08:22"),
+  hadir("usr-op-10", "opd-07", "sesi-3", "tepat_waktu", "2026-10-27T08:40"),
 ];
 
 
@@ -335,85 +379,62 @@ export const PENGATURAN_QUIZ_LIST: PengaturanQuiz[] = [
   },
 ];
 
-// Hasil contoh Pre-Test: Dinkes selesai tepat waktu, Distan terkirim otomatis dengan jawaban belum lengkap
-const HASIL_DASAR: Omit<HasilQuiz, "kegiatanId">[] = [
-  {
-    opdId: "opd-02",
-    quizId: "pretest",
-    urutanSoal: ["pt-05", "pt-02", "pt-08", "pt-01", "pt-07", "pt-03", "pt-06", "pt-04"],
-    jawaban: { "pt-01": 1, "pt-02": 0, "pt-03": 2, "pt-04": 1, "pt-05": 1, "pt-06": 0, "pt-07": 1, "pt-08": 1 },
-    mulai: "2026-10-26T09:00",
-    selesai: "2026-10-26T09:11",
+// Jawaban dummy: `benar` soal pertama dijawab benar, sisanya salah
+function buatJawaban(quizId: JenisQuiz, benar: number): Record<string, number> {
+  return Object.fromEntries(
+    SOAL_DASAR.map((s, i) => [
+      s.id.replace("pt-", AWALAN_SOAL[quizId]),
+      i < benar ? s.kunci : (s.kunci + 1) % s.opsi.length,
+    ]),
+  );
+}
+
+function buatHasil(
+  penggunaId: string,
+  opdId: string,
+  quizId: JenisQuiz,
+  benar: number,
+  tanggal: string,
+  jam: string,
+): HasilQuiz {
+  const jawaban = buatJawaban(quizId, benar);
+  return {
+    penggunaId,
+    opdId,
+    kegiatanId: "kegiatan-1",
+    quizId,
+    urutanSoal: Object.keys(jawaban),
+    jawaban,
+    mulai: `${tanggal}T${jam}:00`,
+    selesai: `${tanggal}T${jam}:10`,
     otomatis: false,
-  },
-  {
-    opdId: "opd-03",
-    quizId: "pretest",
-    urutanSoal: ["pt-02", "pt-01", "pt-04", "pt-03", "pt-05", "pt-06", "pt-07", "pt-08"],
-    jawaban: { "pt-01": 2, "pt-02": 0, "pt-03": 0, "pt-04": 1, "pt-05": 1 },
-    mulai: "2026-10-26T13:00",
-    selesai: "2026-10-26T13:15",
-    otomatis: true,
-  },
-  // Hasil contoh Post-Test: hanya Dinkes yang sudah selesai
-  {
-    opdId: "opd-02",
-    quizId: "posttest",
-    urutanSoal: ["pt-04", "pt-07", "pt-01", "pt-06", "pt-03", "pt-08", "pt-02", "pt-05"],
-    jawaban: { "pt-01": 2, "pt-02": 0, "pt-03": 2, "pt-04": 1, "pt-05": 1, "pt-06": 1, "pt-07": 0, "pt-08": 1 },
-    mulai: "2026-10-27T10:00",
-    selesai: "2026-10-27T10:09",
-    otomatis: false,
-  },
-  // DKP dan Dinsos sudah menyelesaikan Pre-Test dan Post-Test
-  {
-    opdId: "opd-04",
-    quizId: "pretest",
-    urutanSoal: ["pt-01", "pt-02", "pt-03", "pt-04", "pt-05", "pt-06", "pt-07", "pt-08"],
-    jawaban: { "pt-01": 0, "pt-02": 0, "pt-03": 2, "pt-04": 1, "pt-05": 1, "pt-06": 1, "pt-07": 1, "pt-08": 1 },
-    mulai: "2026-10-26T14:00",
-    selesai: "2026-10-26T14:12",
-    otomatis: false,
-  },
-  {
-    opdId: "opd-04",
-    quizId: "posttest",
-    urutanSoal: ["pt-01", "pt-02", "pt-03", "pt-04", "pt-05", "pt-06", "pt-07", "pt-08"],
-    jawaban: { "pt-01": 2, "pt-02": 0, "pt-03": 2, "pt-04": 1, "pt-05": 1, "pt-06": 1, "pt-07": 1, "pt-08": 1 },
-    mulai: "2026-10-27T11:00",
-    selesai: "2026-10-27T11:10",
-    otomatis: false,
-  },
-  {
-    opdId: "opd-05",
-    quizId: "pretest",
-    urutanSoal: ["pt-01", "pt-02", "pt-03", "pt-04", "pt-05", "pt-06", "pt-07", "pt-08"],
-    jawaban: { "pt-01": 2, "pt-02": 1, "pt-03": 2, "pt-04": 0, "pt-05": 1, "pt-06": 0, "pt-07": 1, "pt-08": 1 },
-    mulai: "2026-10-26T15:00",
-    selesai: "2026-10-26T15:13",
-    otomatis: false,
-  },
-  {
-    opdId: "opd-05",
-    quizId: "posttest",
-    urutanSoal: ["pt-01", "pt-02", "pt-03", "pt-04", "pt-05", "pt-06", "pt-07", "pt-08"],
-    jawaban: { "pt-01": 2, "pt-02": 0, "pt-03": 2, "pt-04": 1, "pt-05": 1, "pt-06": 0, "pt-07": 0, "pt-08": 1 },
-    mulai: "2026-10-27T12:00",
-    selesai: "2026-10-27T12:11",
-    otomatis: false,
-  },
+  };
+}
+
+// [pegawai, jumlah benar Pre-Test, jumlah benar Post-Test dari 8 soal]; null = belum mengerjakan
+const SKOR_DUMMY: [string, number | null, number | null][] = [
+  ["usr-op-01", 3, null],
+  ["usr-op-02", null, null],
+  ["usr-op-03", 4, 5],
+  ["usr-op-04", 5, 6],
+  ["usr-op-05", 3, 4],
+  ["usr-op-06", 4, 5],
+  ["usr-op-07", 4, 6],
+  ["usr-op-08", 5, 6],
+  ["usr-op-09", 6, 8],
+  ["usr-op-10", 5, 8],
 ];
 
-// Id soal di hasil dasar memakai awalan pt-; disesuaikan ke awalan quiz masing-masing
-export const HASIL_QUIZ_LIST: HasilQuiz[] = HASIL_DASAR.map((h) => {
-  const ganti = (id: string) => id.replace("pt-", AWALAN_SOAL[h.quizId]);
-  return {
-    ...h,
-    kegiatanId: "kegiatan-1",
-    urutanSoal: h.urutanSoal.map(ganti),
-    jawaban: Object.fromEntries(Object.entries(h.jawaban).map(([id, v]) => [ganti(id), v])),
-  };
+export const HASIL_QUIZ_LIST: HasilQuiz[] = SKOR_DUMMY.flatMap(([penggunaId, pre, post], i) => {
+  const opdId = PENGGUNA_LIST.find((p) => p.id === penggunaId)!.opdId!;
+  const jam = String(8 + i).padStart(2, "0");
+  const hasil: HasilQuiz[] = [];
+  if (pre !== null) hasil.push(buatHasil(penggunaId, opdId, "pretest", pre, "2026-10-26", jam));
+  if (post !== null) hasil.push(buatHasil(penggunaId, opdId, "posttest", post, "2026-10-27", jam));
+  return hasil;
 });
+
+
 
 export const IZIN_KERJA_ULANG_LIST: IzinKerjaUlang[] = [];
 

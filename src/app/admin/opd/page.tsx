@@ -1,13 +1,9 @@
 import { OPD_LIST, PENGGUNA_LIST } from "@/data/dummy";
-import OpdClient, { type BarisOpd } from "./OpdClient";
+import OpdClient from "./OpdClient";
 
 export default function KelolaOpdPage() {
-  const operator = PENGGUNA_LIST.filter((p) => p.peran === "operator");
+  const pegawai = PENGGUNA_LIST.filter((p) => p.peran === "operator" && p.opdId);
 
-  const baris: BarisOpd[] = OPD_LIST.flatMap((opd) => {
-    const op = operator.find((p) => p.opdId === opd.id);
-    return op ? [{ opd, operator: op }] : [];
-  });
-
-  return <OpdClient awal={baris} />;
+  // Semua OPD dikirim (termasuk yang belum punya pegawai) supaya id OPD baru tidak bentrok
+  return <OpdClient opdAwal={OPD_LIST} pegawaiAwal={pegawai} />;
 }

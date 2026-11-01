@@ -20,6 +20,7 @@ export interface Pengguna {
   email: string;
   peran: Peran;
   opdId?: string; // hanya untuk peran "operator"
+  linkSertifikat?: string;
 }
 
 // Dokumen yang harus diunggah OPD pada setiap kegiatan
@@ -51,6 +52,7 @@ export interface Kegiatan {
 
 export interface Dokumen {
   id: string;
+  penggunaId?: string;
   opdId: string;
   kegiatanId: string;
   itemId: string;
@@ -85,6 +87,7 @@ export interface SesiPembinaan {
 
 export interface Presensi {
   id: string;
+  penggunaId?: string;
   opdId: string;
   sesiId: string;
   status: StatusKehadiran;
@@ -120,6 +123,7 @@ export interface PengaturanQuiz {
 
 // Hasil satu OPD, hanya ada setelah jawaban terkirim. Nilai tidak disimpan, dihitung dari jawaban dan kunci
 export interface HasilQuiz {
+  penggunaId?: string;
   opdId: string;
   kegiatanId: string;
   quizId: JenisQuiz;

@@ -4,8 +4,8 @@ import { Check, ChevronRight, Clock, type LucideIcon } from "lucide-react";
 import { formatWaktu } from "@/lib/presensi";
 import type { PerluTindakan } from "@/lib/ringkasan-admin";
 
-// Daftar OPD dipotong supaya satu butir tidak terlalu panjang
-const TAMPIL_OPD = 5;
+// Daftar pegawai dipotong supaya satu butir tidak terlalu panjang
+const TAMPIL_PEGAWAI = 5;
 
 function Butir({
   href,
@@ -74,18 +74,18 @@ export default function PerluTindakanAdmin({
         <ul className="divide-y divide-line">
           {quizMendekatiBatas.map((q) => {
             const { tanggal, jam } = formatWaktu(q.batasAkhir);
-            const sisa = q.opdBelum.length - TAMPIL_OPD;
+            const sisa = q.pegawaiBelum.length - TAMPIL_PEGAWAI;
             return (
               <Butir
                 key={q.jenis}
                 href="/admin/quiz"
                 ikon={Clock}
-                judul={`${q.opdBelum.length} OPD belum mengerjakan ${q.label}`}
+                judul={`${q.pegawaiBelum.length} pegawai belum mengerjakan ${q.label}`}
               >
                 Batas akhir {tanggal}, {jam} ({q.sisaHari} hari lagi):{" "}
-                {q.opdBelum
-                  .slice(0, TAMPIL_OPD)
-                  .map((o) => o.singkatan)
+                {q.pegawaiBelum
+                  .slice(0, TAMPIL_PEGAWAI)
+                  .map((p) => `${p.nama} (${p.opd})`)
                   .join(", ")}
                 {sisa > 0 && ` dan ${sisa} lainnya`}
               </Butir>

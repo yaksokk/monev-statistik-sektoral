@@ -3,12 +3,14 @@ import {
   KEGIATAN_LIST,
   OPD_LIST,
   PENGATURAN_QUIZ_LIST,
+  PENGGUNA_LIST,
   PRESENSI_LIST,
   SESI_LIST,
   SOAL_QUIZ_LIST,
 } from "@/data/dummy";
 import {
   susunRekapOpd,
+  susunRekapPegawai,
   susunRingkasan,
   type DataDashboardAdmin,
 } from "@/lib/ringkasan-admin";
@@ -18,6 +20,7 @@ import RekapDashboardClient from "./RekapDashboardClient";
 // Semua masih data dummy; nanti diganti data backend
 const DATA: DataDashboardAdmin = {
   opdList: OPD_LIST,
+  penggunaList: PENGGUNA_LIST,
   sesiList: SESI_LIST,
   presensiList: PRESENSI_LIST,
   soalList: SOAL_QUIZ_LIST,
@@ -28,13 +31,14 @@ const DATA: DataDashboardAdmin = {
 export default function DashboardAdmin() {
   const kegiatan = KEGIATAN_LIST.find((k) => k.aktif);
 
-  const baris = kegiatan ? susunRekapOpd(kegiatan, DATA) : [];
-  const ringkasan = kegiatan ? susunRingkasan(kegiatan, baris) : null;
+  const pegawai = kegiatan ? susunRekapPegawai(kegiatan, DATA) : [];
+  const baris = kegiatan ? susunRekapOpd(kegiatan, pegawai, DATA.opdList) : [];
+  const ringkasan = kegiatan ? susunRingkasan(kegiatan, pegawai) : null;
 
   return (
     <div>
       <h1 className="text-2xl font-semibold text-primary">Dashboard</h1>
-      <p className="mt-1 text-ink-muted">Ringkasan pembinaan dan kelengkapan dokumen seluruh OPD.</p>
+      <p className="mt-1 text-ink-muted">Ringkasan pembinaan dan kelengkapan dokumen seluruh pegawai OPD.</p>
 
       <HeaderKegiatan kegiatan={kegiatan} />
 

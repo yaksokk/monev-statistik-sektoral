@@ -77,6 +77,24 @@ export function hitungKehadiran(opdId: string, sesiList: SesiPembinaan[], presen
   return { hadir, total, persen: total === 0 ? 0 : (hadir * 100) / total };
 }
 
+// Sama seperti hitungKehadiran, tetapi untuk satu pegawai
+export function hitungKehadiranPegawai(
+  penggunaId: string,
+  sesiList: SesiPembinaan[],
+  presensi: Presensi[],
+) {
+  const hadir = sesiList.filter((s) =>
+    presensi.some(
+      (p) =>
+        p.penggunaId === penggunaId &&
+        p.sesiId === s.id &&
+        (p.status === "tepat_waktu" || p.status === "terlambat"),
+    ),
+  ).length;
+  const total = sesiList.length;
+  return { hadir, total, persen: total === 0 ? 0 : (hadir * 100) / total };
+}
+
 export function apakahLulusKehadiran(persen: number, kegiatan: Pick<Kegiatan, "ambangKehadiran">) {
   return persen >= kegiatan.ambangKehadiran;
 }

@@ -1,11 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Copy, ExternalLink, FileSpreadsheet, KeyRound, Link2, Pencil, Plus, Search } from "lucide-react";
+import { useState } from "react";
+import {
+  ChevronRight,
+  Copy,
+  ExternalLink,
+  FileSpreadsheet,
+  KeyRound,
+  Link2,
+  Pencil,
+  Plus,
+  Search,
+} from "lucide-react";
+import { Dialog } from "@/components/ui/Dialog";
 import { linkHttps } from "@/lib/dashboard";
 import type { Opd, Pengguna } from "@/lib/types";
-
-export type BarisOpd = { opd: Opd; operator: Pengguna };
 
 const tombolUtama =
   "inline-flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
@@ -14,31 +23,8 @@ const tombolSekunder =
 const kolomInput =
   "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-primary";
 
-function Dialog({ buka, onTutup, judul, children }: { buka: boolean; onTutup: () => void; judul: string; children: ReactNode }) {
-  const ref = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    const d = ref.current;
-    if (!d) return;
-    if (buka && !d.open) d.showModal();
-    if (!buka && d.open) d.close();
-  }, [buka]);
-
-  return (
-    <dialog
-      ref={ref}
-      onClose={onTutup}
-      className="m-auto w-[min(30rem,calc(100%-2rem))] rounded-card border border-line bg-surface p-0 text-ink shadow-card backdrop:bg-black/40"
-    >
-      {buka && (
-        <div className="space-y-4 p-5 sm:p-6">
-          <h2 className="text-lg font-semibold">{judul}</h2>
-          {children}
-        </div>
-      )}
-    </dialog>
-  );
-}
+const dua = (n: number) => String(n).padStart(2, "0");
+const angkaId = (id: string) => Number(id.replace(/\D/g, "")) || 0;
 
 function buatSandi() {
   const huruf = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
@@ -46,46 +32,107 @@ function buatSandi() {
   return Array.from(acak, (n) => huruf[n % huruf.length]).join("");
 }
 
-type Isian = { nama: string; singkatan: string; namaOperator: string; email: string };
+function Isian({
+  id,
+  label,
+  tipe = "text",
+  nilai,
+  onUbah,
+}: {
+  id: string;
+  label: string;
+  tipe?: string;
+  nilai: string;
+  onUbah: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="text-sm font-medium">
+        {label}
+      </label>
+      <input
+        id={id}
+        type={tipe}
+        value={nilai}
+        onChange={(e) => onUbah(e.target.value)}
+        className={kolomInput}
+      />
+    </div>
+  );
+}
 
-function FormOpd({ awal, onSimpan, onBatal }: { awal: Isian; onSimpan: (v: Isian) => void; onBatal: () => void }) {
+function Galat({ pesan }: { pesan: string }) {
+  if (!pesan) return null;
+  return (
+    <p role="alert" className="text-sm text-status-revisi-fg">
+      {pesan}
+    </p>
+  );
+}
+
+type IsianOpd = { nama: string; singkatan: string; namaPegawai: string; email: string };
+
+// denganPegawai = true saat tambah OPD: pegawai pertama diisi sekaligus
+function FormOpd({
+  awal,
+  denganPegawai,
+  emailDipakai,
+  onSimpan,
+  onBatal,
+}: {
+  awal: IsianOpd;
+  denganPegawai: boolean;
+  emailDipakai: (email: string) => boolean;
+  onSimpan: (v: IsianOpd) => void;
+  onBatal: () => void;
+}) {
   const [v, setV] = useState(awal);
   const [galat, setGalat] = useState("");
 
   function kirim() {
-    if (Object.values(v).some((x) => !x.trim())) return setGalat("Semua kolom wajib diisi.");
-    if (!/^\S+@\S+\.\S+$/.test(v.email)) return setGalat("Format email belum benar.");
-    onSimpan({ nama: v.nama.trim(), singkatan: v.singkatan.trim(), namaOperator: v.namaOperator.trim(), email: v.email.trim() });
+    const wajib: (keyof IsianOpd)[] = denganPegawai
+      ? ["nama", "singkatan", "namaPegawai", "email"]
+      : ["nama", "singkatan"];
+    if (wajib.some((k) => !v[k].trim())) return setGalat("Semua kolom wajib diisi.");
+    if (denganPegawai) {
+      if (!/^\S+@\S+\.\S+$/.test(v.email.trim())) return setGalat("Format email belum benar.");
+      if (emailDipakai(v.email.trim())) return setGalat("Email ini sudah dipakai pegawai lain.");
+    }
+    onSimpan({
+      nama: v.nama.trim(),
+      singkatan: v.singkatan.trim(),
+      namaPegawai: v.namaPegawai.trim(),
+      email: v.email.trim(),
+    });
   }
-
-  const kolom: { kunci: keyof Isian; label: string; tipe?: string }[] = [
-    { kunci: "nama", label: "Nama OPD" },
-    { kunci: "singkatan", label: "Singkatan" },
-    { kunci: "namaOperator", label: "Nama operator" },
-    { kunci: "email", label: "Email operator", tipe: "email" },
-  ];
 
   return (
     <div className="space-y-4">
-      {kolom.map((k) => (
-        <div key={k.kunci} className="space-y-1.5">
-          <label htmlFor={`f-${k.kunci}`} className="text-sm font-medium">
-            {k.label}
-          </label>
-          <input
-            id={`f-${k.kunci}`}
-            type={k.tipe ?? "text"}
-            value={v[k.kunci]}
-            onChange={(e) => setV({ ...v, [k.kunci]: e.target.value })}
-            className={kolomInput}
+      <Isian id="f-nama" label="Nama OPD" nilai={v.nama} onUbah={(x) => setV({ ...v, nama: x })} />
+      <Isian
+        id="f-singkatan"
+        label="Singkatan"
+        nilai={v.singkatan}
+        onUbah={(x) => setV({ ...v, singkatan: x })}
+      />
+      {denganPegawai && (
+        <>
+          <Isian
+            id="f-nama-pegawai"
+            label="Nama pegawai pertama"
+            nilai={v.namaPegawai}
+            onUbah={(x) => setV({ ...v, namaPegawai: x })}
           />
-        </div>
-      ))}
-      {galat && (
-        <p role="alert" className="text-sm text-status-revisi-fg">
-          {galat}
-        </p>
+          <Isian
+            id="f-email"
+            label="Email pegawai"
+            tipe="email"
+            nilai={v.email}
+            onUbah={(x) => setV({ ...v, email: x })}
+          />
+        </>
       )}
+      <Galat pesan={galat} />
       <div className="flex justify-end gap-2 pt-2">
         <button onClick={onBatal} className={tombolSekunder}>
           Batal
@@ -98,8 +145,56 @@ function FormOpd({ awal, onSimpan, onBatal }: { awal: Isian; onSimpan: (v: Isian
   );
 }
 
-function KolomSertifikat({ opd }: { opd: Opd }) {
-  if (!linkHttps(opd.linkSertifikat)) return <span className="text-ink-muted">Belum diisi</span>;
+type IsianPegawai = { nama: string; email: string };
+
+function FormPegawai({
+  awal,
+  emailDipakai,
+  onSimpan,
+  onBatal,
+}: {
+  awal: IsianPegawai;
+  emailDipakai: (email: string) => boolean;
+  onSimpan: (v: IsianPegawai) => void;
+  onBatal: () => void;
+}) {
+  const [v, setV] = useState(awal);
+  const [galat, setGalat] = useState("");
+
+  function kirim() {
+    const nama = v.nama.trim();
+    const email = v.email.trim();
+    if (!nama || !email) return setGalat("Semua kolom wajib diisi.");
+    if (!/^\S+@\S+\.\S+$/.test(email)) return setGalat("Format email belum benar.");
+    if (emailDipakai(email)) return setGalat("Email ini sudah dipakai pegawai lain.");
+    onSimpan({ nama, email });
+  }
+
+  return (
+    <div className="space-y-4">
+      <Isian id="p-nama" label="Nama pegawai" nilai={v.nama} onUbah={(x) => setV({ ...v, nama: x })} />
+      <Isian
+        id="p-email"
+        label="Email pegawai"
+        tipe="email"
+        nilai={v.email}
+        onUbah={(x) => setV({ ...v, email: x })}
+      />
+      <Galat pesan={galat} />
+      <div className="flex justify-end gap-2 pt-2">
+        <button onClick={onBatal} className={tombolSekunder}>
+          Batal
+        </button>
+        <button onClick={kirim} className={tombolUtama}>
+          Simpan
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function KolomSertifikat({ pegawai }: { pegawai: Pengguna }) {
+  if (!linkHttps(pegawai.linkSertifikat)) return <span className="text-ink-muted">Belum diisi</span>;
   return (
     <span className="rounded-full bg-status-disetujui-bg px-2 py-0.5 text-xs font-medium text-status-disetujui-fg">
       Terisi
@@ -107,7 +202,15 @@ function KolomSertifikat({ opd }: { opd: Opd }) {
   );
 }
 
-function FormLink({ awal, onSimpan, onBatal }: { awal: string; onSimpan: (link: string) => void; onBatal: () => void }) {
+function FormLink({
+  awal,
+  onSimpan,
+  onBatal,
+}: {
+  awal: string;
+  onSimpan: (link: string) => void;
+  onBatal: () => void;
+}) {
   const [v, setV] = useState(awal);
   const [galat, setGalat] = useState("");
   const aman = linkHttps(v.trim());
@@ -137,11 +240,7 @@ function FormLink({ awal, onSimpan, onBatal }: { awal: string; onSimpan: (link: 
         />
         <p className="text-sm text-ink-muted">Kosongkan kolom lalu simpan untuk menghapus link.</p>
       </div>
-      {galat && (
-        <p role="alert" className="text-sm text-status-revisi-fg">
-          {galat}
-        </p>
-      )}
+      <Galat pesan={galat} />
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
         {aman ? (
           <a href={aman} target="_blank" rel="noopener noreferrer" className={tombolSekunder}>
@@ -167,60 +266,95 @@ function FormLink({ awal, onSimpan, onBatal }: { awal: string; onSimpan: (link: 
   );
 }
 
-export default function OpdClient({ awal }: { awal: BarisOpd[] }) {
-  const [baris, setBaris] = useState(awal);
+interface Props {
+  opdAwal: Opd[];
+  pegawaiAwal: Pengguna[];
+}
+
+export default function OpdClient({ opdAwal, pegawaiAwal }: Props) {
+  const [opdList, setOpdList] = useState(opdAwal);
+  const [pegawai, setPegawai] = useState(pegawaiAwal);
   const [cari, setCari] = useState("");
-  const [form, setForm] = useState<{ id: string | null } | null>(null);
+  const [pesan, setPesan] = useState("");
+
+  const [idOpd, setIdOpd] = useState<string | null>(null); // popup daftar pegawai
+  const [formOpd, setFormOpd] = useState<{ id: string | null } | null>(null);
+  const [formPegawai, setFormPegawai] = useState<{ id: string | null; opdId: string } | null>(null);
+  const [idLink, setIdLink] = useState<string | null>(null); // id pegawai
+  const [reset, setReset] = useState<{ p: Pengguna; sandi: string | null } | null>(null);
   const [impor, setImpor] = useState(false);
   const [fileImpor, setFileImpor] = useState<File | null>(null);
-  const [reset, setReset] = useState<{ b: BarisOpd; sandi: string | null } | null>(null);
-  const [pesan, setPesan] = useState("");
-  const [idLink, setIdLink] = useState<string | null>(null);
 
-  const tampil = baris.filter(({ opd, operator }) =>
-    `${opd.nama} ${opd.singkatan} ${operator.nama} ${operator.email}`.toLowerCase().includes(cari.toLowerCase()),
-  );
+  const pegawaiOpd = (opdId: string) => pegawai.filter((p) => p.opdId === opdId);
 
-  const diedit = form?.id ? baris.find((b) => b.opd.id === form.id) : undefined;
-  const linkOpd = idLink ? baris.find((b) => b.opd.id === idLink) : undefined;
+  // OPD tanpa pegawai tidak ditampilkan
+  const tampil = opdList.filter((opd) => {
+    const milik = pegawaiOpd(opd.id);
+    if (milik.length === 0) return false;
+    const q = cari.trim().toLowerCase();
+    if (!q) return true;
+    const teks = `${opd.nama} ${opd.singkatan} ${milik.map((p) => `${p.nama} ${p.email}`).join(" ")}`;
+    return teks.toLowerCase().includes(q);
+  });
 
-  function simpan(v: Isian) {
-    if (diedit) {
-      setBaris((prev) =>
-        prev.map((b) =>
-          b.opd.id === diedit.opd.id
-            ? {
-                opd: { ...b.opd, nama: v.nama, singkatan: v.singkatan },
-                operator: { ...b.operator, nama: v.namaOperator, email: v.email },
-              }
-            : b,
-        ),
+  const opdPopup = idOpd ? opdList.find((o) => o.id === idOpd) : undefined;
+  const pegawaiPopup = opdPopup ? pegawaiOpd(opdPopup.id) : [];
+  const opdDiedit = formOpd?.id ? opdList.find((o) => o.id === formOpd.id) : undefined;
+  const pegawaiDiedit = formPegawai?.id ? pegawai.find((p) => p.id === formPegawai.id) : undefined;
+  const opdFormPegawai = formPegawai ? opdList.find((o) => o.id === formPegawai.opdId) : undefined;
+  const pegawaiLink = idLink ? pegawai.find((p) => p.id === idLink) : undefined;
+
+  const emailDipakai = (email: string, kecuali?: string) =>
+    pegawai.some((p) => p.email.toLowerCase() === email.toLowerCase() && p.id !== kecuali);
+
+  function idPegawaiBaru() {
+    return `usr-op-${dua(pegawai.reduce((m, p) => Math.max(m, angkaId(p.id)), 0) + 1)}`;
+  }
+
+  function simpanOpd(v: IsianOpd) {
+    if (opdDiedit) {
+      setOpdList((prev) =>
+        prev.map((o) => (o.id === opdDiedit.id ? { ...o, nama: v.nama, singkatan: v.singkatan } : o)),
       );
       setPesan(`Data ${v.singkatan} diperbarui.`);
     } else {
-      const no = baris.reduce((m, b) => Math.max(m, Number(b.opd.id.replace(/\D/g, ""))), 0) + 1;
-      const id = `opd-${String(no).padStart(2, "0")}`;
-      const opd: Opd = { id, nama: v.nama, singkatan: v.singkatan };
-      const operator: Pengguna = {
-        id: `usr-op-${String(no).padStart(2, "0")}`,
-        nama: v.namaOperator,
+      const id = `opd-${dua(opdList.reduce((m, o) => Math.max(m, angkaId(o.id)), 0) + 1)}`;
+      const pertama: Pengguna = {
+        id: idPegawaiBaru(),
+        nama: v.namaPegawai,
         email: v.email,
         peran: "operator",
         opdId: id,
       };
-      setBaris((prev) => [...prev, { opd, operator }]);
-      setPesan(`${v.singkatan} ditambahkan.`);
+      setOpdList((prev) => [...prev, { id, nama: v.nama, singkatan: v.singkatan }]);
+      setPegawai((prev) => [...prev, pertama]);
+      setPesan(`${v.singkatan} ditambahkan dengan satu pegawai.`);
     }
-    setForm(null);
+    setFormOpd(null);
+  }
+
+  function simpanPegawai(v: IsianPegawai) {
+    if (!formPegawai) return;
+    if (pegawaiDiedit) {
+      setPegawai((prev) =>
+        prev.map((p) => (p.id === pegawaiDiedit.id ? { ...p, nama: v.nama, email: v.email } : p)),
+      );
+      setPesan(`Data ${v.nama} diperbarui.`);
+    } else {
+      setPegawai((prev) => [
+        ...prev,
+        { id: idPegawaiBaru(), nama: v.nama, email: v.email, peran: "operator", opdId: formPegawai.opdId },
+      ]);
+      setPesan(`${v.nama} ditambahkan.`);
+    }
+    setFormPegawai(null);
   }
 
   function simpanLink(link: string) {
-    if (!linkOpd) return;
-    const { id, singkatan } = linkOpd.opd;
-    setBaris((prev) =>
-      prev.map((b) => (b.opd.id === id ? { ...b, opd: { ...b.opd, linkSertifikat: link || undefined } } : b)),
-    );
-    setPesan(link ? `Link sertifikat ${singkatan} disimpan.` : `Link sertifikat ${singkatan} dihapus.`);
+    if (!pegawaiLink) return;
+    const { id, nama } = pegawaiLink;
+    setPegawai((prev) => prev.map((p) => (p.id === id ? { ...p, linkSertifikat: link || undefined } : p)));
+    setPesan(link ? `Link sertifikat ${nama} disimpan.` : `Link sertifikat ${nama} dihapus.`);
     setIdLink(null);
   }
 
@@ -229,7 +363,9 @@ export default function OpdClient({ awal }: { awal: BarisOpd[] }) {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold text-ink">OPD dan akun</h1>
-          <p className="tabular text-sm text-ink-muted">{baris.length} OPD terdaftar</p>
+          <p className="tabular text-sm text-ink-muted">
+            {tampil.length} OPD · {pegawai.length} pegawai terdaftar · klik baris OPD untuk melihat pegawai
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
@@ -242,7 +378,7 @@ export default function OpdClient({ awal }: { awal: BarisOpd[] }) {
             <FileSpreadsheet className="size-4" aria-hidden />
             Impor dari Excel
           </button>
-          <button onClick={() => setForm({ id: null })} className={tombolUtama}>
+          <button onClick={() => setFormOpd({ id: null })} className={tombolUtama}>
             <Plus className="size-4" aria-hidden />
             Tambah OPD
           </button>
@@ -250,13 +386,16 @@ export default function OpdClient({ awal }: { awal: BarisOpd[] }) {
       </header>
 
       <div className="relative max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-muted" aria-hidden />
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-muted"
+          aria-hidden
+        />
         <input
           type="search"
           value={cari}
           onChange={(e) => setCari(e.target.value)}
-          placeholder="Cari OPD atau operator"
-          aria-label="Cari OPD atau operator"
+          placeholder="Cari OPD atau pegawai"
+          aria-label="Cari OPD atau pegawai"
           className={`${kolomInput} pl-9`}
         />
       </div>
@@ -266,50 +405,56 @@ export default function OpdClient({ awal }: { awal: BarisOpd[] }) {
       </p>
 
       <div className="overflow-x-auto rounded-card border border-line bg-surface shadow-card">
-        <table className="w-full min-w-200 text-left text-sm">
+        <table className="w-full min-w-160 text-left text-sm">
           <thead className="bg-surface-muted text-ink-muted">
             <tr>
               <th className="px-4 py-3 font-medium">OPD</th>
-              <th className="px-4 py-3 font-medium">Operator</th>
-              <th className="px-4 py-3 font-medium">Sertifikat</th>
-              <th className="px-4 py-3 text-center font-medium">Aksi</th>
+              <th className="px-4 py-3 font-medium">Pegawai</th>
+              <th className="px-4 py-3 text-right font-medium">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {tampil.map((b) => (
-              <tr key={b.opd.id}>
+            {tampil.map((opd) => (
+              <tr
+                key={opd.id}
+                onClick={() => setIdOpd(opd.id)}
+                className="cursor-pointer hover:bg-surface-muted"
+              >
                 <td className="px-4 py-3">
-                  <p className="font-medium text-ink">{b.opd.nama}</p>
-                  <p className="text-ink-muted">{b.opd.singkatan}</p>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIdOpd(opd.id);
+                    }}
+                    aria-haspopup="dialog"
+                    className="text-left focus-visible:outline-2 focus-visible:outline-primary"
+                  >
+                    <span className="block font-medium text-ink">{opd.nama}</span>
+                    <span className="block text-ink-muted">{opd.singkatan}</span>
+                  </button>
                 </td>
+                <td className="tabular px-4 py-3 text-ink">{pegawaiOpd(opd.id).length} pegawai</td>
                 <td className="px-4 py-3">
-                  <p className="text-ink">{b.operator.nama}</p>
-                  <p className="text-ink-muted">{b.operator.email}</p>
-                </td>
-                <td className="px-4 py-3">
-                  <KolomSertifikat opd={b.opd} />
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex justify-end gap-2">
-                    <button onClick={() => setIdLink(b.opd.id)} className={tombolSekunder}>
-                      <Link2 className="size-4" aria-hidden />
-                      Link sertifikat
-                    </button>
-                    <button onClick={() => setForm({ id: b.opd.id })} className={tombolSekunder}>
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFormOpd({ id: opd.id });
+                      }}
+                      className={tombolSekunder}
+                    >
                       <Pencil className="size-4" aria-hidden />
-                      Ubah
+                      Ubah OPD
                     </button>
-                    <button onClick={() => setReset({ b, sandi: null })} className={tombolSekunder}>
-                      <KeyRound className="size-4" aria-hidden />
-                      Reset sandi
-                    </button>
+                    <ChevronRight className="size-4 text-ink-muted" aria-hidden />
                   </div>
                 </td>
               </tr>
             ))}
             {tampil.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-10 text-center text-ink-muted">
+                <td colSpan={3} className="px-4 py-10 text-center text-ink-muted">
                   Tidak ada OPD yang cocok dengan pencarian.
                 </td>
               </tr>
@@ -318,27 +463,125 @@ export default function OpdClient({ awal }: { awal: BarisOpd[] }) {
         </table>
       </div>
 
-      <Dialog buka={!!form} onTutup={() => setForm(null)} judul={diedit ? "Ubah OPD" : "Tambah OPD"}>
+      {/* Popup daftar pegawai satu OPD */}
+      <Dialog
+        buka={!!opdPopup}
+        onTutup={() => setIdOpd(null)}
+        judul={`Pegawai ${opdPopup?.nama ?? ""}`}
+        lebar="w-[min(52rem,calc(100%-2rem))]"
+      >
+        {opdPopup && (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="tabular text-sm text-ink-muted">{pegawaiPopup.length} pegawai</p>
+              <button onClick={() => setFormPegawai({ id: null, opdId: opdPopup.id })} className={tombolUtama}>
+                <Plus className="size-4" aria-hidden />
+                Tambah pegawai
+              </button>
+            </div>
+
+            <div className="overflow-x-auto rounded-card border border-line">
+              <table className="w-full min-w-170 text-left text-sm">
+                <thead className="bg-surface-muted text-ink-muted">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Pegawai</th>
+                    <th className="px-4 py-3 font-medium">Sertifikat</th>
+                    <th className="px-4 py-3 text-right font-medium">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {pegawaiPopup.map((p) => (
+                    <tr key={p.id}>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-ink">{p.nama}</p>
+                        <p className="text-ink-muted">{p.email}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <KolomSertifikat pegawai={p} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
+                          <button onClick={() => setIdLink(p.id)} className={tombolSekunder}>
+                            <Link2 className="size-4" aria-hidden />
+                            Link sertifikat
+                          </button>
+                          <button
+                            onClick={() => setFormPegawai({ id: p.id, opdId: opdPopup.id })}
+                            className={tombolSekunder}
+                          >
+                            <Pencil className="size-4" aria-hidden />
+                            Ubah
+                          </button>
+                          <button onClick={() => setReset({ p, sandi: null })} className={tombolSekunder}>
+                            <KeyRound className="size-4" aria-hidden />
+                            Reset sandi
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button onClick={() => setIdOpd(null)} className={tombolSekunder}>
+                Tutup
+              </button>
+            </div>
+          </>
+        )}
+      </Dialog>
+
+      <Dialog buka={!!formOpd} onTutup={() => setFormOpd(null)} judul={opdDiedit ? "Ubah OPD" : "Tambah OPD"}>
         <FormOpd
           awal={
-            diedit
-              ? { nama: diedit.opd.nama, singkatan: diedit.opd.singkatan, namaOperator: diedit.operator.nama, email: diedit.operator.email }
-              : { nama: "", singkatan: "", namaOperator: "", email: "" }
+            opdDiedit
+              ? { nama: opdDiedit.nama, singkatan: opdDiedit.singkatan, namaPegawai: "", email: "" }
+              : { nama: "", singkatan: "", namaPegawai: "", email: "" }
           }
-          onSimpan={simpan}
-          onBatal={() => setForm(null)}
+          denganPegawai={!opdDiedit}
+          emailDipakai={(e) => emailDipakai(e)}
+          onSimpan={simpanOpd}
+          onBatal={() => setFormOpd(null)}
         />
       </Dialog>
 
-      <Dialog buka={!!linkOpd} onTutup={() => setIdLink(null)} judul={`Link sertifikat ${linkOpd?.opd.singkatan ?? ""}`}>
-        {linkOpd && (
-          <FormLink awal={linkOpd.opd.linkSertifikat ?? ""} onSimpan={simpanLink} onBatal={() => setIdLink(null)} />
+      <Dialog
+        buka={!!formPegawai}
+        onTutup={() => setFormPegawai(null)}
+        judul={`${pegawaiDiedit ? "Ubah pegawai" : "Tambah pegawai"} ${opdFormPegawai?.singkatan ?? ""}`}
+      >
+        <FormPegawai
+          awal={
+            pegawaiDiedit
+              ? { nama: pegawaiDiedit.nama, email: pegawaiDiedit.email }
+              : { nama: "", email: "" }
+          }
+          emailDipakai={(e) => emailDipakai(e, pegawaiDiedit?.id)}
+          onSimpan={simpanPegawai}
+          onBatal={() => setFormPegawai(null)}
+        />
+      </Dialog>
+
+      <Dialog
+        buka={!!pegawaiLink}
+        onTutup={() => setIdLink(null)}
+        judul={`Link sertifikat ${pegawaiLink?.nama ?? ""}`}
+      >
+        {pegawaiLink && (
+          <FormLink
+            awal={pegawaiLink.linkSertifikat ?? ""}
+            onSimpan={simpanLink}
+            onBatal={() => setIdLink(null)}
+          />
         )}
       </Dialog>
 
       <Dialog buka={impor} onTutup={() => setImpor(false)} judul="Impor OPD dari Excel">
         <p className="text-sm text-ink-muted">
-          Siapkan file .xlsx atau .csv dengan kolom: Nama OPD, Singkatan, Nama operator, Email operator. Satu baris untuk satu OPD.
+          Siapkan file .xlsx atau .csv dengan kolom: Nama OPD, Singkatan, Nama pegawai, Email pegawai. Satu
+          baris untuk satu pegawai; baris dengan OPD yang sama digabung menjadi satu OPD.
         </p>
         <input
           type="file"
@@ -369,7 +612,9 @@ export default function OpdClient({ awal }: { awal: BarisOpd[] }) {
         {reset && !reset.sandi && (
           <>
             <p className="text-sm text-ink-muted">
-              Buat kata sandi sementara untuk {reset.b.operator.nama} ({reset.b.opd.singkatan})? Kata sandi lama tidak berlaku lagi.
+              Buat kata sandi sementara untuk {reset.p.nama}
+              {reset.p.opdId ? ` (${opdList.find((o) => o.id === reset.p.opdId)?.singkatan ?? ""})` : ""}?
+              Kata sandi lama tidak berlaku lagi.
             </p>
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setReset(null)} className={tombolSekunder}>
@@ -383,7 +628,9 @@ export default function OpdClient({ awal }: { awal: BarisOpd[] }) {
         )}
         {reset?.sandi && (
           <>
-            <p className="text-sm text-ink-muted">Sampaikan kata sandi ini ke operator. Kata sandi hanya tampil sekali.</p>
+            <p className="text-sm text-ink-muted">
+              Sampaikan kata sandi ini ke pegawai. Kata sandi hanya tampil sekali.
+            </p>
             <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-muted px-4 py-3">
               <code className="tabular text-base font-semibold text-ink">{reset.sandi}</code>
               <button

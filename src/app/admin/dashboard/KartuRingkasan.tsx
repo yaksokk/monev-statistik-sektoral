@@ -58,9 +58,9 @@ export function susunKartu(kegiatan: Kegiatan, r: RingkasanKegiatan): DefKartu[]
     {
       id: "lulus",
       ikon: Award,
-      label: "OPD lulus",
-      nilai: `${r.lulus} dari ${r.totalOpd}`,
-      keterangan: syarat.join(", "),
+      label: "Pegawai lulus",
+      nilai: `${r.lulus} dari ${r.totalPegawai}`,
+      keterangan: `${syarat.join(", ")} · ${r.totalOpd} OPD`,
       warna: "hijau",
     },
     {
@@ -79,7 +79,7 @@ export function susunKartu(kegiatan: Kegiatan, r: RingkasanKegiatan): DefKartu[]
       ikon: ClipboardList,
       label: "Rata-rata Pre-Test",
       nilai: nilaiAtauStrip(r.preTest.rata),
-      keterangan: `${r.preTest.jumlah} dari ${r.preTest.total} OPD sudah mengerjakan`,
+      keterangan: `${r.preTest.jumlah} dari ${r.preTest.total} pegawai sudah mengerjakan`,
       warna: "netral",
     });
   }
@@ -89,7 +89,7 @@ export function susunKartu(kegiatan: Kegiatan, r: RingkasanKegiatan): DefKartu[]
       ikon: ClipboardCheck,
       label: "Rata-rata Post-Test",
       nilai: nilaiAtauStrip(r.postTest.rata),
-      keterangan: `${r.postTest.jumlah} dari ${r.postTest.total} OPD sudah mengerjakan`,
+      keterangan: `${r.postTest.jumlah} dari ${r.postTest.total} pegawai sudah mengerjakan`,
       warna: "navy",
     });
   }
@@ -99,7 +99,7 @@ export function susunKartu(kegiatan: Kegiatan, r: RingkasanKegiatan): DefKartu[]
       ikon: TrendingUp,
       label: "Rata-rata N-Gain",
       nilai: r.nGain.rata === null ? "-" : formatNGain(r.nGain.rata),
-      keterangan: `${r.nGain.jumlah} OPD punya nilai Pre-Test dan Post-Test`,
+      keterangan: `${r.nGain.jumlah} pegawai punya nilai Pre-Test dan Post-Test`,
       warna: "netral",
     });
   }
@@ -109,7 +109,7 @@ export function susunKartu(kegiatan: Kegiatan, r: RingkasanKegiatan): DefKartu[]
     ikon: FileCheck,
     label: "Kelengkapan dokumen",
     nilai: `${formatNilai(r.dokumen.rataKelengkapan)}%`,
-    keterangan: `${r.dokumen.totalDokumen} dokumen dari seluruh OPD`,
+    keterangan: `${r.dokumen.totalDokumen} dokumen dari seluruh pegawai`,
     warna: "amber",
   });
 

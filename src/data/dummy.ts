@@ -21,7 +21,7 @@ import type {
 
 // Dummy: satu link contoh untuk semua OPD. Nanti admin mengisi link per OPD
 const LINK_SERTIFIKAT_CONTOH =
-  "https://drive.google.com/drive/folders/1vMYIiLaKdp15EMe6HEJ6YAXpd-PzGTo0";
+  "https://drive.google.com/file/d/12NR2g3GQLZfzVq1vDEfx8k_vqYQbslOd/view?usp=sharing";
 
 export const OPD_LIST: Opd[] = [
   { id: "opd-01", nama: "Dinas Pendidikan dan Kebudayaan", singkatan: "Disdikbud" },

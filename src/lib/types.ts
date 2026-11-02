@@ -137,7 +137,7 @@ export interface HasilQuiz {
 export interface IzinKerjaUlang {
   kegiatanId: string;
   quizId: JenisQuiz;
-  opdId: string;
+  penggunaId: string;
   diberikanPada: string; // yyyy-mm-ddTHH:mm
   admin: string;
 }

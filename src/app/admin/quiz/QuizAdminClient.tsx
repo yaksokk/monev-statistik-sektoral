@@ -21,6 +21,7 @@ import type {
   LogPerubahanQuiz,
   Opd,
   PengaturanQuiz,
+  Pengguna,
   SoalQuiz,
 } from "@/lib/types";
 import TabQuiz, { type AksiTabQuiz, type DataSoal } from "./TabQuiz";
@@ -37,6 +38,7 @@ type Props = {
   kegiatanId: string;
   kegiatanAwal: Kegiatan[];
   opdList: Opd[];
+  penggunaList: Pengguna[];
   soalAwal: SoalQuiz[];
   pengaturanAwal: PengaturanQuiz[];
   hasilAwal: HasilQuiz[];
@@ -48,6 +50,7 @@ export default function QuizAdminClient({
   kegiatanId,
   kegiatanAwal,
   opdList,
+  penggunaList,
   soalAwal,
   pengaturanAwal,
   hasilAwal,
@@ -106,7 +109,7 @@ export default function QuizAdminClient({
   function simpanPengaturan(jenis: JenisQuiz, m: MasukanPengaturan) {
     if (arsip || sekarang === null) return;
     const lama = cariPengaturan(pengaturanList, kg.id, jenis);
-    // batas akhir pertama sudah lewat: sejak itu hanya OPD berizin yang boleh mulai
+    // batas akhir pertama sudah lewat: sejak itu hanya pegawai berizin yang boleh mulai
     const sudahTutup = !!lama && statusWaktuQuiz(lama, sekarang) === "ditutup";
     const baru: PengaturanQuiz = {
       id: jenis,
@@ -194,21 +197,21 @@ export default function QuizAdminClient({
 
   function berikanIzin(target: TargetIzin[]) {
     if (arsip || sekarang === null || target.length === 0) return;
-    const kunci = new Set(target.map((t) => `${t.opdId}:${t.jenis}`));
-    const cocok = (opdId: string, quizId: string) => kunci.has(`${opdId}:${quizId}`);
+    const kunci = new Set(target.map((t) => `${t.penggunaId}:${t.jenis}`));
+    const cocok = (penggunaId: string, quizId: string) => kunci.has(`${penggunaId}:${quizId}`);
 
-    setHasilList((prev) => prev.filter((h) => !(h.kegiatanId === kg.id && cocok(h.opdId, h.quizId))));
+    setHasilList((prev) => prev.filter((h) => !(h.kegiatanId === kg.id && cocok(h.penggunaId ?? "", h.quizId))));
     setIzinList((prev) => [
-      ...prev.filter((i) => !(i.kegiatanId === kg.id && cocok(i.opdId, i.quizId))),
+      ...prev.filter((i) => !(i.kegiatanId === kg.id && cocok(i.penggunaId, i.quizId))),
       ...target.map((t) => ({
         kegiatanId: kg.id,
         quizId: t.jenis,
-        opdId: t.opdId,
+        penggunaId: t.penggunaId,
         diberikanPada: sekarang,
         admin: NAMA_ADMIN,
       })),
     ]);
-    catatLog(target.map((t) => ({ quizId: t.jenis, jenis: "izin_ulang" as const, opdId: t.opdId })));
+    catatLog(target.map((t) => ({ quizId: t.jenis, jenis: "izin_ulang" as const, penggunaId: t.penggunaId })));
 
     const ditutup = new Set(
       target
@@ -220,7 +223,7 @@ export default function QuizAdminClient({
         prev.map((p) => (p.kegiatanId === kg.id && ditutup.has(p.id) ? { ...p, hanyaBerizin: true } : p)),
       );
     }
-    setPesan(`${target.length} OPD diizinkan mengerjakan ulang.`);
+    setPesan(`${target.length} pegawai diizinkan mengerjakan ulang.`);
   }
 
   function aksiUntuk(jenis: JenisQuiz): AksiTabQuiz {
@@ -275,6 +278,7 @@ export default function QuizAdminClient({
             kegiatan={kg}
             arsip={arsip}
             opdList={opdList}
+            penggunaList={penggunaList}
             soalList={soalKegiatan}
             pengaturanList={pengaturanKegiatan}
             hasil={hasilKegiatan}
@@ -288,7 +292,7 @@ export default function QuizAdminClient({
             jenis={tab}
             kegiatan={kg}
             arsip={arsip}
-            totalOpd={opdList.length}
+            totalPegawai={penggunaList.length}
             pengaturan={cariPengaturan(pengaturanList, kg.id, tab)}
             soal={soalQuiz(soalList, kg.id, tab)}
             hasil={hasilKegiatan.filter((h) => h.quizId === tab)}

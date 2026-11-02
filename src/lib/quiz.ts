@@ -91,7 +91,7 @@ export function statusWaktuQuiz(
   return "dibuka";
 }
 
-// diizinkan = OPD ini punya izin kerjakan ulang; hanya berpengaruh bila pengaturan.hanyaBerizin
+// diizinkan = pegawai ini punya izin kerjakan ulang; hanya berpengaruh bila pengaturan.hanyaBerizin
 export function statusQuiz(
   pengaturan: PengaturanQuiz,
   sudahSelesai: boolean,
@@ -109,10 +109,10 @@ export function punyaIzin(
   izin: IzinKerjaUlang[],
   kegiatanId: string,
   quizId: JenisQuiz,
-  opdId: string,
+  penggunaId: string,
 ) {
   return izin.some(
-    (i) => i.kegiatanId === kegiatanId && i.quizId === quizId && i.opdId === opdId,
+    (i) => i.kegiatanId === kegiatanId && i.quizId === quizId && i.penggunaId === penggunaId,
   );
 }
 
@@ -148,7 +148,7 @@ export function hitungHasil(soal: SoalQuiz[], jawaban: Record<string, number>) {
   };
 }
 
-// Berapa OPD yang nilainya (dan statusnya, bila lulus diberikan) berubah bila daftar soal diganti
+// Berapa pegawai yang nilainya (dan statusnya, bila lulus diberikan) berubah bila daftar soal diganti
 export function dampakPerubahan(
   sebelum: SoalQuiz[],
   sesudah: SoalQuiz[],

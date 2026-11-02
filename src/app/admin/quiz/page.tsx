@@ -5,9 +5,13 @@ import {
   LOG_PERUBAHAN_QUIZ_LIST,
   OPD_LIST,
   PENGATURAN_QUIZ_LIST,
+  PENGGUNA_LIST,
   SOAL_QUIZ_LIST,
 } from "@/data/dummy";
 import QuizAdminClient from "./QuizAdminClient";
+
+// Pegawai OPD (operator); izin kerjakan ulang dan rekap hasil per pegawai
+const PEGAWAI_LIST = PENGGUNA_LIST.filter((p) => p.peran === "operator" && p.opdId);
 
 export default function KelolaQuizPage() {
   // kegiatan aktif, kalau tidak ada pakai yang pertama
@@ -18,7 +22,7 @@ export default function KelolaQuizPage() {
       <header>
         <h1 className="text-2xl font-semibold text-ink">Kelola Quiz</h1>
         <p className="mt-1 text-sm text-ink-muted">
-          Atur soal, waktu, dan durasi Pre-Test dan Post-Test, lalu pantau hasil OPD.
+          Atur soal, waktu, dan durasi Pre-Test dan Post-Test, lalu pantau hasil tiap pegawai.
         </p>
       </header>
 
@@ -27,6 +31,7 @@ export default function KelolaQuizPage() {
           kegiatanId={kegiatan.id}
           kegiatanAwal={KEGIATAN_LIST}
           opdList={OPD_LIST}
+          penggunaList={PEGAWAI_LIST}
           soalAwal={SOAL_QUIZ_LIST}
           pengaturanAwal={PENGATURAN_QUIZ_LIST}
           hasilAwal={HASIL_QUIZ_LIST}

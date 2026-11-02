@@ -65,7 +65,7 @@ function BagianPengaturan({
   pengaturan,
   jumlahSoalAktif,
   jumlahHasil,
-  totalOpd,
+  totalPegawai,
   sekarang,
   arsip,
   onSimpan,
@@ -74,7 +74,7 @@ function BagianPengaturan({
   pengaturan: PengaturanQuiz | undefined;
   jumlahSoalAktif: number;
   jumlahHasil: number;
-  totalOpd: number;
+  totalPegawai: number;
   sekarang: string | null;
   arsip: boolean;
   onSimpan: (m: MasukanPengaturan) => void;
@@ -111,7 +111,7 @@ function BagianPengaturan({
         <div className="flex items-center gap-3 text-sm">
           {status && <Lencana kelas={GAYA_STATUS_WAKTU[status]}>{LABEL_STATUS_WAKTU[status]}</Lencana>}
           <span className="tabular text-ink-muted">
-            {jumlahHasil} dari {totalOpd} OPD sudah mengerjakan
+            {jumlahHasil} dari {totalPegawai} pegawai sudah mengerjakan
           </span>
         </div>
       </div>
@@ -190,7 +190,7 @@ function BagianPengaturan({
         </p>
         {terbatas && (
           <p className="text-xs text-ink-muted">
-            Setelah batas akhir pertama lewat, hanya OPD yang diizinkan lewat tab Rekap Hasil yang bisa
+            Setelah batas akhir pertama lewat, hanya pegawai yang diizinkan lewat tab Rekap Hasil yang bisa
             mengerjakan lagi. Atur batas akhir baru agar izin itu berlaku.
           </p>
         )}
@@ -346,7 +346,7 @@ type Props = {
   jenis: JenisQuiz;
   kegiatan: Kegiatan;
   arsip: boolean;
-  totalOpd: number;
+  totalPegawai: number;
   pengaturan: PengaturanQuiz | undefined;
   soal: SoalQuiz[]; // soal quiz ini, sudah urut
   hasil: HasilQuiz[]; // hasil quiz ini pada kegiatan ini
@@ -359,7 +359,7 @@ export default function TabQuiz({
   jenis,
   kegiatan,
   arsip,
-  totalOpd,
+  totalPegawai,
   pengaturan,
   soal,
   hasil,
@@ -452,7 +452,7 @@ export default function TabQuiz({
         pengaturan={pengaturan}
         jumlahSoalAktif={soalAktif(soal).length}
         jumlahHasil={hasil.length}
-        totalOpd={totalOpd}
+        totalPegawai={totalPegawai}
         sekarang={sekarang}
         arsip={arsip}
         onSimpan={aksi.simpanPengaturan}
@@ -476,7 +476,7 @@ export default function TabQuiz({
 
         {modeKoreksi && (
           <p className="mt-3 text-sm text-ink-muted">
-            Soal terkunci karena quiz sudah dibuka atau sudah ada OPD yang mengerjakan. Yang masih bisa:
+            Soal terkunci karena quiz sudah dibuka atau sudah ada pegawai yang mengerjakan. Yang masih bisa:
             koreksi kunci dan nonaktifkan soal.
           </p>
         )}
@@ -658,10 +658,10 @@ export default function TabQuiz({
               {koreksi.kunci === dikoreksi.kunci
                 ? "Pilih opsi lain untuk melihat dampaknya."
                 : dampakKoreksi.nilaiBerubah === 0
-                  ? "Tidak ada OPD yang nilainya berubah."
-                  : `${dampakKoreksi.nilaiBerubah} OPD nilainya berubah.`}
+                  ? "Tidak ada pegawai yang nilainya berubah."
+                  : `${dampakKoreksi.nilaiBerubah} pegawai nilainya berubah.`}
               {dampakKoreksi.statusBerubah !== null &&
-                ` ${dampakKoreksi.statusBerubah} OPD statusnya berubah (lulus atau tidak lulus).`}
+                ` ${dampakKoreksi.statusBerubah} pegawai statusnya berubah (lulus atau tidak lulus).`}
             </p>
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={() => setKoreksi(null)} className={tombolSekunder}>
@@ -695,10 +695,10 @@ export default function TabQuiz({
             </p>
             <p role="status" className="text-sm text-ink-muted">
               {dampakToggle.nilaiBerubah === 0
-                ? "Tidak ada OPD yang nilainya berubah."
-                : `${dampakToggle.nilaiBerubah} OPD nilainya berubah.`}
+                ? "Tidak ada pegawai yang nilainya berubah."
+                : `${dampakToggle.nilaiBerubah} pegawai nilainya berubah.`}
               {dampakToggle.statusBerubah !== null &&
-                ` ${dampakToggle.statusBerubah} OPD statusnya berubah (lulus atau tidak lulus).`}
+                ` ${dampakToggle.statusBerubah} pegawai statusnya berubah (lulus atau tidak lulus).`}
             </p>
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={() => setToggleId(null)} className={tombolSekunder}>

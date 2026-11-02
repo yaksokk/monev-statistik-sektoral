@@ -33,6 +33,6 @@ export function ambilQuizOpd(
           h.kegiatanId === kegiatan.id &&
           h.quizId === jenis,
       ) ?? null,
-    diizinkan: punyaIzin(IZIN_KERJA_ULANG_LIST, kegiatan.id, jenis, opdId),
+    diizinkan: punyaIzin(IZIN_KERJA_ULANG_LIST, kegiatan.id, jenis, penggunaId ?? ""),
   };
 }

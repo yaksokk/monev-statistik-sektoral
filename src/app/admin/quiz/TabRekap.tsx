@@ -22,6 +22,7 @@ import type {
   Kegiatan,
   Opd,
   PengaturanQuiz,
+  Pengguna,
   SoalQuiz,
 } from "@/lib/types";
 import {
@@ -36,14 +37,15 @@ import {
   tombolUtama,
 } from "./ui";
 
-export type TargetIzin = { opdId: string; jenis: JenisQuiz };
+export type TargetIzin = { penggunaId: string; jenis: JenisQuiz };
 
-const kunciSel = (t: TargetIzin) => `${t.opdId}:${t.jenis}`;
+const kunciSel = (t: TargetIzin) => `${t.penggunaId}:${t.jenis}`;
 
 type Props = {
   kegiatan: Kegiatan;
   arsip: boolean;
   opdList: Opd[];
+  penggunaList: Pengguna[]; // pegawai OPD (operator)
   soalList: SoalQuiz[]; // soal kegiatan ini
   pengaturanList: PengaturanQuiz[]; // pengaturan kegiatan ini
   hasil: HasilQuiz[]; // hasil kegiatan ini
@@ -56,6 +58,7 @@ export default function TabRekap({
   kegiatan,
   arsip,
   opdList,
+  penggunaList,
   soalList,
   pengaturanList,
   hasil,
@@ -75,14 +78,17 @@ export default function TabRekap({
     pengaturan: cariPengaturan(pengaturanList, kegiatan.id, jenis),
   }));
   const dataDari = (jenis: JenisQuiz) => dataJenis.find((d) => d.jenis === jenis)!;
-  const namaOpd = (id: string) => opdList.find((o) => o.id === id)?.nama ?? id;
-  const hasilDari = (opdId: string, jenis: JenisQuiz) =>
-    hasil.find((h) => h.opdId === opdId && h.quizId === jenis);
+  const namaOpd = (id: string | undefined) => opdList.find((o) => o.id === id)?.nama ?? "–";
+  const namaPegawai = (id: string) => penggunaList.find((p) => p.id === id)?.nama ?? id;
+  const hasilDari = (penggunaId: string, jenis: JenisQuiz) =>
+    hasil.find((h) => h.penggunaId === penggunaId && h.quizId === jenis);
 
   const kata = cari.trim().toLowerCase();
-  const opdTampil = opdList.filter((o) => `${o.nama} ${o.singkatan}`.toLowerCase().includes(kata));
+  const pegawaiTampil = penggunaList.filter((p) =>
+    `${p.nama} ${namaOpd(p.opdId)}`.toLowerCase().includes(kata),
+  );
 
-  const hasilDetail = detail ? hasilDari(detail.opdId, detail.jenis) : undefined;
+  const hasilDetail = detail ? hasilDari(detail.penggunaId, detail.jenis) : undefined;
   const soalDetail = detail ? dataDari(detail.jenis).soal : [];
   const barisDetail = hasilDetail
     ? hasilDetail.urutanSoal
@@ -98,8 +104,8 @@ export default function TabRekap({
 
   function targetDariPilihan(): TargetIzin[] {
     return pilihan.map((k) => {
-      const [opdId, jenis] = k.split(":") as [string, JenisQuiz];
-      return { opdId, jenis };
+      const [penggunaId, jenis] = k.split(":") as [string, JenisQuiz];
+      return { penggunaId, jenis };
     });
   }
 
@@ -117,35 +123,35 @@ export default function TabRekap({
         (j) => sekarang && statusWaktuQuiz(dataDari(j).pengaturan, sekarang) === "ditutup",
       )
     : [];
-  const opdNGainKosong = konfirmasi
+  const pegawaiNGainKosong = konfirmasi
     ? konfirmasi
         .filter(
           (t) =>
-            t.jenis === "pretest" && dataDari("posttest").aktif && !!hasilDari(t.opdId, "posttest"),
+            t.jenis === "pretest" && dataDari("posttest").aktif && !!hasilDari(t.penggunaId, "posttest"),
         )
-        .map((t) => namaOpd(t.opdId))
+        .map((t) => namaPegawai(t.penggunaId))
     : [];
 
   const nGainBerlaku = nGainTersedia(kegiatan);
 
   // N-Gain kosong ("–") bila salah satu quiz belum dikerjakan atau dimatikan
-  function teksNGain(opdId: string) {
+  function teksNGain(penggunaId: string) {
     if (!nGainBerlaku) return "–";
     const nilai = (jenis: JenisQuiz) => {
-      const h = hasilDari(opdId, jenis);
+      const h = hasilDari(penggunaId, jenis);
       return h ? hitungHasil(dataDari(jenis).soal, h.jawaban).nilai : null;
     };
     const n = hitungNGain(nilai("pretest"), nilai("posttest"));
     return n === null ? "–" : formatNGain(n);
   }
 
-  function sel(opdId: string, jenis: JenisQuiz) {
+  function sel(penggunaId: string, jenis: JenisQuiz) {
     const d = dataDari(jenis);
     if (!d.aktif) return <span className="text-ink-muted">–</span>;
-    const h = hasilDari(opdId, jenis);
+    const h = hasilDari(penggunaId, jenis);
     if (h) {
       const r = hitungHasil(d.soal, h.jawaban);
-      const t = { opdId, jenis };
+      const t = { penggunaId, jenis };
       return (
         <div className="flex items-center gap-2">
           {!arsip && (
@@ -153,7 +159,7 @@ export default function TabRekap({
               type="checkbox"
               checked={pilihan.includes(kunciSel(t))}
               onChange={(e) => pilih(t, e.target.checked)}
-              aria-label={`Pilih ${namaOpd(opdId)} untuk ${LABEL_QUIZ[jenis]}`}
+              aria-label={`Pilih ${namaPegawai(penggunaId)} untuk ${LABEL_QUIZ[jenis]}`}
               className="size-4 shrink-0 accent-(--color-primary)"
             />
           )}
@@ -171,7 +177,7 @@ export default function TabRekap({
         </div>
       );
     }
-    const diizinkan = izin.some((i) => i.opdId === opdId && i.quizId === jenis);
+    const diizinkan = izin.some((i) => i.penggunaId === penggunaId && i.quizId === jenis);
     return diizinkan ? (
       <Lencana kelas={LENCANA.kuning}>Diizinkan mengerjakan ulang</Lencana>
     ) : (
@@ -183,7 +189,7 @@ export default function TabRekap({
     <section aria-labelledby="judul-rekap-quiz" className={kartu}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="judul-rekap-quiz" className="font-semibold text-ink">
-          Rekap hasil OPD
+          Rekap hasil pegawai
         </h2>
         <div className="relative w-full sm:w-64">
           <Search
@@ -194,8 +200,8 @@ export default function TabRekap({
             type="search"
             value={cari}
             onChange={(e) => setCari(e.target.value)}
-            placeholder="Cari OPD…"
-            aria-label="Cari OPD"
+            placeholder="Cari pegawai atau OPD…"
+            aria-label="Cari pegawai atau OPD"
             className={`${kolomInput} pl-9`}
           />
         </div>
@@ -220,14 +226,14 @@ export default function TabRekap({
         </div>
       )}
 
-      {opdTampil.length === 0 ? (
-        <p className="py-8 text-center text-sm text-ink-muted">Tidak ada OPD yang cocok.</p>
+      {pegawaiTampil.length === 0 ? (
+        <p className="py-8 text-center text-sm text-ink-muted">Tidak ada pegawai yang cocok.</p>
       ) : (
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-208 text-left text-sm">
             <thead>
               <tr className="bg-surface-muted text-xs uppercase text-ink-muted">
-                <th scope="col" className="rounded-l-lg px-3 py-2.5 font-semibold">OPD</th>
+                <th scope="col" className="rounded-l-lg px-3 py-2.5 font-semibold">Pegawai</th>
                 {JENIS_QUIZ.map((j) => (
                   <th key={j} scope="col" className="px-3 py-2.5 font-semibold">
                     {LABEL_QUIZ[j]}
@@ -245,15 +251,18 @@ export default function TabRekap({
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {opdTampil.map((opd) => (
-                <tr key={opd.id}>
-                  <td className="px-3 py-3 font-medium text-ink">{opd.nama}</td>
+              {pegawaiTampil.map((p) => (
+                <tr key={p.id}>
+                  <td className="px-3 py-3">
+                    <span className="block font-medium text-ink">{p.nama}</span>
+                    <span className="block text-xs text-ink-muted">{namaOpd(p.opdId)}</span>
+                  </td>
                   {JENIS_QUIZ.map((j) => (
                     <td key={j} className="px-3 py-3">
-                      {sel(opd.id, j)}
+                      {sel(p.id, j)}
                     </td>
                   ))}
-                  <td className="tabular px-3 py-3 text-ink">{teksNGain(opd.id)}</td>
+                  <td className="tabular px-3 py-3 text-ink">{teksNGain(p.id)}</td>
                 </tr>
               ))}
             </tbody>
@@ -261,8 +270,8 @@ export default function TabRekap({
         </div>
       )}
       <p className="mt-3 text-xs text-ink-muted">
-        Klik nilai untuk melihat jawaban OPD. Izin kerjakan ulang menghapus hasil lama OPD itu; setelah batas
-        akhir pertama lewat, hanya OPD yang diizinkan yang bisa mengerjakan lagi.
+        Klik nilai untuk melihat jawaban pegawai. Izin kerjakan ulang menghapus hasil lama pegawai itu; setelah batas
+        akhir pertama lewat, hanya pegawai yang diizinkan yang bisa mengerjakan lagi.
       </p>
 
       <Dialog buka={!!hasilDetail} onTutup={() => setDetail(null)} judul="Detail pengerjaan" lebar={LEBAR_DIALOG}>
@@ -270,8 +279,14 @@ export default function TabRekap({
           <>
             <dl className="grid gap-3 text-sm sm:grid-cols-2">
               <div>
+                <dt className="text-ink-muted">Pegawai</dt>
+                <dd className="font-medium text-ink">{namaPegawai(detail.penggunaId)}</dd>
+              </div>
+              <div>
                 <dt className="text-ink-muted">OPD</dt>
-                <dd className="font-medium text-ink">{namaOpd(detail.opdId)}</dd>
+                <dd className="font-medium text-ink">
+                  {namaOpd(penggunaList.find((p) => p.id === detail.penggunaId)?.opdId)}
+                </dd>
               </div>
               <div>
                 <dt className="text-ink-muted">Quiz</dt>
@@ -317,7 +332,7 @@ export default function TabRekap({
                       )}
                     </div>
                     <p className="text-ink-muted">
-                      Jawaban OPD:{" "}
+                      Jawaban pegawai:{" "}
                       {jawab === undefined ? "Tidak dijawab" : `${hurufOpsi(jawab)}. ${s.opsi[jawab] ?? ""}`}
                     </p>
                     <p className="text-ink-muted">
@@ -353,24 +368,24 @@ export default function TabRekap({
             <ul className="max-h-48 list-disc space-y-1 overflow-y-auto pl-5 text-sm text-ink">
               {konfirmasi.map((t) => (
                 <li key={kunciSel(t)}>
-                  {namaOpd(t.opdId)}, {LABEL_QUIZ[t.jenis]}
+                  {namaPegawai(t.penggunaId)}, {LABEL_QUIZ[t.jenis]}
                 </li>
               ))}
             </ul>
             {jenisDitutup.length > 0 ? (
               <p role="note" className="text-sm text-status-menunggu-fg">
                 Batas akhir {jenisDitutup.map((j) => LABEL_QUIZ[j]).join(" dan ")} sudah lewat. Izin baru
-                berlaku setelah Anda mengatur batas akhir baru di tab quiz itu, dan hanya OPD yang diizinkan yang
+                berlaku setelah Anda mengatur batas akhir baru di tab quiz itu, dan hanya pegawai yang diizinkan yang
                 bisa mengerjakan.
               </p>
             ) : (
               <p className="text-sm text-ink-muted">
-                OPD bisa mengerjakan lagi selama quiz masih terbuka.
+                Pegawai bisa mengerjakan lagi selama quiz masih terbuka.
               </p>
             )}
-            {opdNGainKosong.length > 0 && (
+            {pegawaiNGainKosong.length > 0 && (
               <p role="note" className="text-sm text-status-menunggu-fg">
-                N-Gain {opdNGainKosong.join(", ")} kosong sampai Pre-Test dikerjakan lagi.
+                N-Gain {pegawaiNGainKosong.join(", ")} kosong sampai Pre-Test dikerjakan lagi.
               </p>
             )}
             <div className="flex justify-end gap-2 pt-2">

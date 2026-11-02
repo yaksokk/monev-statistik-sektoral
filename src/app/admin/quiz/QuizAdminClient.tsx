@@ -24,7 +24,7 @@ import type {
   Pengguna,
   SoalQuiz,
 } from "@/lib/types";
-import TabQuiz, { type AksiTabQuiz, type DataSoal } from "./TabQuiz";
+import TabQuiz, { type AksiTabQuiz, type DataSoal, type EditTerkunci } from "./TabQuiz";
 import TabRekap, { type TargetIzin } from "./TabRekap";
 
 // Dummy, belum ada login. Ganti dengan nama admin dari sesi nanti
@@ -179,13 +179,22 @@ export default function QuizAdminClient({
     );
   }
 
-  function ubahKunci(jenis: JenisQuiz, id: string, kunci: number) {
+  // Setelah quiz dibuka: hanya teks soal, pembahasan, dan kunci yang boleh berubah
+  function editTerkunci(jenis: JenisQuiz, id: string, d: EditTerkunci) {
     if (arsip) return;
     const s = soalList.find((x) => x.id === id);
-    if (!s || s.kunci === kunci) return;
-    setSoalList((prev) => prev.map((x) => (x.id === id ? { ...x, kunci } : x)));
-    catatLog([{ quizId: jenis, jenis: "kunci", soalId: id, kunciLama: s.kunci, kunciBaru: kunci }]);
-    setPesan("Kunci dikoreksi, nilai OPD dihitung ulang.");
+    if (!s) return;
+    const kunciBerubah = s.kunci !== d.kunci;
+    const teksBerubah = s.pertanyaan !== d.pertanyaan || s.pembahasan !== d.pembahasan;
+    if (!kunciBerubah && !teksBerubah) return;
+    setSoalList((prev) => prev.map((x) => (x.id === id ? { ...x, ...d } : x)));
+    catatLog([
+      ...(kunciBerubah
+        ? [{ quizId: jenis, jenis: "kunci" as const, soalId: id, kunciLama: s.kunci, kunciBaru: d.kunci }]
+        : []),
+      ...(teksBerubah ? [{ quizId: jenis, jenis: "edit" as const, soalId: id }] : []),
+    ]);
+    setPesan(kunciBerubah ? "Soal diperbarui, nilai OPD dihitung ulang." : "Soal diperbarui.");
   }
 
   function ubahAktif(jenis: JenisQuiz, id: string, aktif: boolean) {
@@ -233,7 +242,7 @@ export default function QuizAdminClient({
       ubahSoal: (id, d) => ubahSoal(jenis, id, d),
       hapusSoal: (id) => hapusSoal(jenis, id),
       geser: (id, arah) => geser(jenis, id, arah),
-      ubahKunci: (id, kunci) => ubahKunci(jenis, id, kunci),
+      editTerkunci: (id, d) => editTerkunci(jenis, id, d),
       ubahAktif: (id, aktif) => ubahAktif(jenis, id, aktif),
     };
   }

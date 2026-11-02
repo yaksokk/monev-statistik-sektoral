@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { ArrowDown, ArrowUp, Eye, EyeOff, KeyRound, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Eye, EyeOff, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
 import { AMBANG_POSTTEST } from "@/lib/dashboard";
 import {
@@ -41,18 +41,22 @@ import {
 
 export type DataSoal = { pertanyaan: string; opsi: string[]; kunci: number; pembahasan: string };
 
+// Yang boleh diubah setelah quiz dibuka: teks soal, kunci, pembahasan
+export type EditTerkunci = { pertanyaan: string; kunci: number; pembahasan: string };
+
 export type AksiTabQuiz = {
   simpanPengaturan: (m: MasukanPengaturan) => void;
   tambahSoal: (d: DataSoal) => void;
   ubahSoal: (id: string, d: DataSoal) => void;
   hapusSoal: (id: string) => void;
   geser: (id: string, arah: -1 | 1) => void;
-  ubahKunci: (id: string, kunci: number) => void;
+  editTerkunci: (id: string, d: EditTerkunci) => void;
   ubahAktif: (id: string, aktif: boolean) => void;
 };
 
 const LABEL_LOG = {
   kunci: "mengoreksi kunci",
+  edit: "mengedit soal",
   nonaktif: "menonaktifkan soal",
   aktifkan: "mengaktifkan soal",
   izin_ulang: "mengizinkan kerjakan ulang",
@@ -369,7 +373,7 @@ export default function TabQuiz({
 }: Props) {
   const [form, setForm] = useState<{ id: string | null } | null>(null);
   const [hapusId, setHapusId] = useState<string | null>(null);
-  const [koreksi, setKoreksi] = useState<{ id: string; kunci: number } | null>(null);
+  const [edit, setEdit] = useState<({ id: string } & EditTerkunci) | null>(null);
   const [toggleId, setToggleId] = useState<string | null>(null);
   const [tertunda, setTertunda] = useState<DataSoal | null>(null);
 
@@ -395,18 +399,26 @@ export default function TabQuiz({
 
   const diedit = form?.id ? soal.find((s) => s.id === form.id) : undefined;
   const dihapus = hapusId ? soal.find((s) => s.id === hapusId) : undefined;
-  const dikoreksi = koreksi ? soal.find((s) => s.id === koreksi.id) : undefined;
+  const disunting = edit ? soal.find((s) => s.id === edit.id) : undefined;
   const ditoggle = toggleId ? soal.find((s) => s.id === toggleId) : undefined;
 
-  const dampakKoreksi =
-    dikoreksi && koreksi
+  const dampakEdit =
+    disunting && edit
       ? dampakPerubahan(
           soal,
-          soal.map((s) => (s.id === dikoreksi.id ? { ...s, kunci: koreksi.kunci } : s)),
+          soal.map((s) => (s.id === disunting.id ? { ...s, kunci: edit.kunci } : s)),
           hasil,
           lulus,
         )
       : null;
+  const teksKosong = !!edit && edit.pertanyaan.trim() === "";
+  const tidakBerubah =
+    !!edit &&
+    !!disunting &&
+    edit.kunci === disunting.kunci &&
+    edit.pertanyaan.trim() === disunting.pertanyaan &&
+    edit.pembahasan.trim() === disunting.pembahasan;
+
   const dampakToggle = ditoggle
     ? dampakPerubahan(
         soal,
@@ -451,10 +463,14 @@ export default function TabQuiz({
     setTertunda(null);
   }
 
-  function terapkanKoreksi() {
-    if (!koreksi || !dikoreksi || koreksi.kunci === dikoreksi.kunci) return setKoreksi(null);
-    aksi.ubahKunci(dikoreksi.id, koreksi.kunci);
-    setKoreksi(null);
+  function terapkanEdit() {
+    if (!edit || !disunting || teksKosong || tidakBerubah) return setEdit(null);
+    aksi.editTerkunci(disunting.id, {
+      pertanyaan: edit.pertanyaan.trim(),
+      kunci: edit.kunci,
+      pembahasan: edit.pembahasan.trim(),
+    });
+    setEdit(null);
   }
 
   function terapkanToggle() {
@@ -507,7 +523,7 @@ export default function TabQuiz({
         {modeKoreksi && (
           <p className="mt-3 text-sm text-ink-muted">
             Soal terkunci karena quiz sudah dibuka atau sudah ada pegawai yang mengerjakan. Yang masih bisa:
-            tambah soal, koreksi kunci, dan nonaktifkan soal.
+            tambah soal, edit teks soal, pembahasan, dan kunci, serta nonaktifkan soal.
           </p>
         )}
 
@@ -570,11 +586,18 @@ export default function TabQuiz({
                       <>
                         <button
                           type="button"
-                          onClick={() => setKoreksi({ id: s.id, kunci: s.kunci })}
+                          onClick={() =>
+                            setEdit({
+                              id: s.id,
+                              kunci: s.kunci,
+                              pertanyaan: s.pertanyaan,
+                              pembahasan: s.pembahasan,
+                            })
+                          }
                           className={tombolSekunder}
                         >
-                          <KeyRound className="size-4" aria-hidden />
-                          Koreksi kunci
+                          <Pencil className="size-4" aria-hidden />
+                          Edit soal
                         </button>
                         <button type="button" onClick={() => setToggleId(s.id)} className={tombolSekunder}>
                           {s.aktif ? (
@@ -688,48 +711,81 @@ export default function TabQuiz({
         </div>
       </Dialog>
 
-      <Dialog buka={!!dikoreksi} onTutup={() => setKoreksi(null)} judul="Koreksi kunci" lebar={LEBAR_DIALOG}>
-        {dikoreksi && koreksi && dampakKoreksi && (
+      <Dialog buka={!!disunting} onTutup={() => setEdit(null)} judul="Edit soal" lebar={LEBAR_DIALOG}>
+        {disunting && edit && dampakEdit && (
           <>
-            <p className="text-sm font-medium text-ink">{dikoreksi.pertanyaan}</p>
+            <div className="space-y-1.5">
+              <label htmlFor="edit-teks" className="text-sm font-medium text-ink">
+                Teks soal
+              </label>
+              <textarea
+                id="edit-teks"
+                rows={3}
+                value={edit.pertanyaan}
+                onChange={(e) => setEdit({ ...edit, pertanyaan: e.target.value })}
+                aria-invalid={teksKosong}
+                className={kolomInput}
+              />
+              {teksKosong && (
+                <p role="alert" className="text-xs text-status-revisi-fg">
+                  Teks soal wajib diisi.
+                </p>
+              )}
+            </div>
+
             <fieldset className="space-y-2">
-              <legend className="sr-only">Kunci jawaban baru</legend>
-              {dikoreksi.opsi.map((o, j) => (
+              <legend className="text-sm font-medium text-ink">Kunci jawaban</legend>
+              {disunting.opsi.map((o, j) => (
                 <label key={j} className="flex items-center gap-2 text-sm text-ink">
                   <input
                     type="radio"
-                    name="kunci-baru"
-                    checked={koreksi.kunci === j}
-                    onChange={() => setKoreksi({ ...koreksi, kunci: j })}
+                    name="kunci-edit"
+                    checked={edit.kunci === j}
+                    onChange={() => setEdit({ ...edit, kunci: j })}
                     className="size-4 shrink-0 accent-(--color-primary)"
                   />
                   <span>
                     {hurufOpsi(j)}. {o}
-                    {j === dikoreksi.kunci && <span className="text-ink-muted"> (kunci sekarang)</span>}
+                    {j === disunting.kunci && <span className="text-ink-muted"> (kunci sekarang)</span>}
                   </span>
                 </label>
               ))}
+              <p className="text-xs text-ink-muted">Teks, jumlah, dan urutan opsi tidak bisa diubah.</p>
             </fieldset>
-            <p role="status" className="text-sm text-ink-muted">
-              {koreksi.kunci === dikoreksi.kunci
-                ? "Pilih opsi lain untuk melihat dampaknya."
-                : dampakKoreksi.nilaiBerubah === 0
+
+            <div className="space-y-1.5">
+              <label htmlFor="edit-bahas" className="text-sm font-medium text-ink">
+                Pembahasan <span className="font-normal text-ink-muted">(opsional)</span>
+              </label>
+              <textarea
+                id="edit-bahas"
+                rows={3}
+                value={edit.pembahasan}
+                onChange={(e) => setEdit({ ...edit, pembahasan: e.target.value })}
+                className={kolomInput}
+              />
+            </div>
+
+            {edit.kunci !== disunting.kunci && (
+              <p role="status" className="text-sm text-ink-muted">
+                {dampakEdit.nilaiBerubah === 0
                   ? "Tidak ada pegawai yang nilainya berubah."
-                  : `${dampakKoreksi.nilaiBerubah} pegawai nilainya berubah.`}
-              {dampakKoreksi.statusBerubah !== null &&
-                ` ${dampakKoreksi.statusBerubah} pegawai statusnya berubah (lulus atau tidak lulus).`}
-            </p>
+                  : `${dampakEdit.nilaiBerubah} pegawai nilainya berubah.`}
+                {dampakEdit.statusBerubah !== null &&
+                  ` ${dampakEdit.statusBerubah} pegawai statusnya berubah (lulus atau tidak lulus).`}
+              </p>
+            )}
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setKoreksi(null)} className={tombolSekunder}>
+              <button type="button" onClick={() => setEdit(null)} className={tombolSekunder}>
                 Batal
               </button>
               <button
                 type="button"
-                onClick={terapkanKoreksi}
-                disabled={koreksi.kunci === dikoreksi.kunci}
+                onClick={terapkanEdit}
+                disabled={teksKosong || tidakBerubah}
                 className={tombolUtama}
               >
-                Terapkan koreksi
+                Simpan perubahan
               </button>
             </div>
           </>

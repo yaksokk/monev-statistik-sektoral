@@ -142,7 +142,7 @@ export interface IzinKerjaUlang {
   admin: string;
 }
 
-export type JenisLogQuiz = "kunci" | "nonaktif" | "aktifkan" | "izin_ulang";
+export type JenisLogQuiz = "kunci" | "nonaktif" | "aktifkan" | "izin_ulang" | "edit";
 
 export interface LogPerubahanQuiz {
   id: string;

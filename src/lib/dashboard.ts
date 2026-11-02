@@ -1,7 +1,8 @@
 import { hitungHasil, quizAktif } from "@/lib/quiz";
 import type { HasilQuiz, Kegiatan, SoalQuiz } from "@/lib/types";
 
-export const AMBANG_POSTTEST = 75; // nilai
+export const AMBANG_PRETEST = 70; // nilai
+export const AMBANG_POSTTEST = 70; 
 
 
 // hasil sudah difilter per OPD; null bila quiz belum dikerjakan

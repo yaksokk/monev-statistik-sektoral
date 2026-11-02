@@ -1,15 +1,15 @@
 import { Award, Check, Download, X } from "lucide-react";
-import { AMBANG_POSTTEST } from "@/lib/dashboard";
+import { AMBANG_POSTTEST, AMBANG_PRETEST } from "@/lib/dashboard";
 
 interface Props {
   persenKehadiran: number;
-  ambangKehadiran: number | null; // null bila tidak ada kegiatan aktif
-  teksNilaiPost: string; // nilai atau "Belum"
-  preTestAktif: boolean;
+  ambangKehadiran: number | null;
+  teksNilaiPre: string;
+  teksNilaiPost: string;
   // null = quiz dimatikan di kegiatan ini, syarat gugur
-  syarat: { presensi: boolean; postTest: boolean | null };
+  syarat: { presensi: boolean; preTest: boolean | null; postTest: boolean | null };
   lulus: boolean;
-  linkSertifikat: string | null; // null bila syarat belum terpenuhi atau link belum ada
+  linkSertifikat: string | null;
 }
 
 function BarisSyarat({
@@ -46,8 +46,8 @@ function BarisSyarat({
 export default function PanelKelulusan({
   persenKehadiran,
   ambangKehadiran,
+  teksNilaiPre,
   teksNilaiPost,
-  preTestAktif,
   syarat,
   lulus,
   linkSertifikat,
@@ -57,12 +57,12 @@ export default function PanelKelulusan({
 
   // syarat quiz yang dimatikan tidak disebut
   const daftarSyarat = [`Kehadiran minimal ${teksAmbang}`];
-  if (syarat.postTest !== null) {
-    daftarSyarat.push(
-      `${preTestAktif ? "Menyelesaikan Pre-Test & Post-Test" : "Menyelesaikan Post-Test"} dengan Nilai Post-Test ≥ ${AMBANG_POSTTEST}`,
-    );
+  if (syarat.preTest !== null) {
+    daftarSyarat.push(`Nilai Pre-Test ≥ ${AMBANG_PRETEST}`);
   }
-  
+  if (syarat.postTest !== null) {
+    daftarSyarat.push(`Nilai Post-Test ≥ ${AMBANG_POSTTEST}`);
+  }
   const teksSyarat =
     daftarSyarat.length > 1
       ? `${daftarSyarat.slice(0, -1).join(", ")}, serta ${daftarSyarat[daftarSyarat.length - 1]}`
@@ -88,6 +88,13 @@ export default function PanelKelulusan({
           nilai={`${Math.round(persenKehadiran)}%`}
           terpenuhi={syarat.presensi}
         />
+        {syarat.preTest !== null && (
+          <BarisSyarat
+            label={`Pre-Test (≥ ${AMBANG_PRETEST})`}
+            nilai={teksNilaiPre}
+            terpenuhi={syarat.preTest}
+          />
+        )}
         {syarat.postTest !== null && (
           <BarisSyarat
             label={`Post-Test (≥ ${AMBANG_POSTTEST})`}

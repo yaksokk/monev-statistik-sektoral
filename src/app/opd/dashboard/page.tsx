@@ -2,6 +2,7 @@ import { CalendarCheck, ClipboardList, GraduationCap, LayoutDashboard, TrendingU
 import { BAB_LIST, BAB_SELESAI_LIST, MODUL_LIST } from "@/data/modul";
 import { DOKUMEN_LIST, ITEM_LIST, KEGIATAN_LIST, PRESENSI_LIST, SESI_LIST } from "@/data/dummy";
 import {
+  AMBANG_PRETEST,
   AMBANG_POSTTEST,
   formatNGain,
   hitungNGain,
@@ -36,11 +37,13 @@ export default async function DashboardOpdPage() {
   const nGain = nGainBerlaku ? hitungNGain(nilaiPre, nilaiPost) : null;
 
   // syarat kelulusan (kelengkapan dokumen bukan syarat); syarat quiz yang dimatikan gugur (null)
-   const syarat = {
+  const syarat = {
     presensi: kegiatan ? apakahLulusKehadiran(kehadiran.persen, kegiatan) : false,
+    preTest: pre.aktif ? nilaiPre !== null && nilaiPre >= AMBANG_PRETEST : null,
     postTest: post.aktif ? nilaiPost !== null && nilaiPost >= AMBANG_POSTTEST : null,
   };
-  const lulus = syarat.presensi && syarat.postTest !== false;
+  const lulus =
+    syarat.presensi && syarat.preTest !== false && syarat.postTest !== false;
   // link baru dikirim ke komponen bila semua syarat terpenuhi
   const linkSertifikat = lulus ? linkHttps(pengguna.linkSertifikat) : null;
 
@@ -141,7 +144,7 @@ export default async function DashboardOpdPage() {
           persenKehadiran={kehadiran.persen}
           ambangKehadiran={kegiatan?.ambangKehadiran ?? null}
           teksNilaiPost={nilaiPost === null ? "Belum" : formatNilai(nilaiPost)}
-          preTestAktif={pre.aktif}
+          teksNilaiPre={nilaiPre === null ? "Belum" : formatNilai(nilaiPre)}
           syarat={syarat}
           lulus={lulus}
           linkSertifikat={linkSertifikat}

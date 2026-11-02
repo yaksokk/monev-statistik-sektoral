@@ -565,8 +565,8 @@ export default function DaftarHadirAdminClient({
           </div>
         )}
         <p className="mt-3 text-xs text-ink-muted">
-          Persentase dihitung dari semua sesi kegiatan. Hadir tepat waktu dan terlambat dihitung
-          hadir; izin tugas dinas dan tidak mengisi tidak. Warna hijau berarti sudah mencapai ambang{" "}
+          Persentase dihitung dari semua sesi kegiatan. Hadir tepat waktu, hadir terlambat, dan izin
+          tugas dinas dihitung hadir; tidak mengisi tidak. Warna hijau berarti sudah mencapai ambang{" "}
           {kegiatan.ambangKehadiran}%.
         </p>
       </section>

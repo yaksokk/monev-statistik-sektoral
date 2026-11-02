@@ -62,16 +62,16 @@ export function statusSesiOpd(
   return status === "ditutup" ? "terkunci" : "terbuka";
 }
 
-// Penyebut = semua sesi kegiatan. Hanya hadir tepat waktu dan terlambat yang dihitung hadir.
+// Semua status presensi dihitung hadir (termasuk izin tugas dinas).
+// Hanya sesi yang tidak diisi yang tidak dihitung.
+export const dihitungHadir = (status: StatusKehadiran) =>
+  status === "tepat_waktu" || status === "terlambat" || status === "izin";
+
+// Penyebut = semua sesi kegiatan.
 // sesiList = sesi satu kegiatan; presensi boleh berisi data semua OPD dan kegiatan.
 export function hitungKehadiran(opdId: string, sesiList: SesiPembinaan[], presensi: Presensi[]) {
   const hadir = sesiList.filter((s) =>
-    presensi.some(
-      (p) =>
-        p.opdId === opdId &&
-        p.sesiId === s.id &&
-        (p.status === "tepat_waktu" || p.status === "terlambat"),
-    ),
+    presensi.some((p) => p.opdId === opdId && p.sesiId === s.id && dihitungHadir(p.status)),
   ).length;
   const total = sesiList.length;
   return { hadir, total, persen: total === 0 ? 0 : (hadir * 100) / total };
@@ -85,10 +85,7 @@ export function hitungKehadiranPegawai(
 ) {
   const hadir = sesiList.filter((s) =>
     presensi.some(
-      (p) =>
-        p.penggunaId === penggunaId &&
-        p.sesiId === s.id &&
-        (p.status === "tepat_waktu" || p.status === "terlambat"),
+      (p) => p.penggunaId === penggunaId && p.sesiId === s.id && dihitungHadir(p.status),
     ),
   ).length;
   const total = sesiList.length;

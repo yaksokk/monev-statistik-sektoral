@@ -2,7 +2,7 @@
 
 import { useActionState, useRef, useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { AKUN_DUMMY } from "@/data/akun-dummy";
+import { AKUN_CONTOH } from "@/data/akun-dummy";
 import { masuk, type StateLogin } from "./actions";
 
 const AWAL: StateLogin = { pesan: null, email: "" };
@@ -89,7 +89,7 @@ export function LoginForm() {
           Akun contoh
         </p>
         <ul className="mt-2 divide-y divide-line">
-          {AKUN_DUMMY.map((a) => (
+          {AKUN_CONTOH.map((a) => (
             <li key={a.penggunaId}>
               <button
                 type="button"

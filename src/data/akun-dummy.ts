@@ -21,3 +21,14 @@ export const AKUN_DUMMY: AkunDummy[] = [
   { penggunaId: "usr-op-09", email: "samuel.diskominfo@monev.test", sandi: "operator123", peran: "operator" },
   { penggunaId: "usr-op-10", email: "dina.diskominfo@monev.test", sandi: "operator123", peran: "operator" },
 ];
+
+// Email akun yang ditampilkan di blok "Akun contoh" pada halaman login.
+// Ganti email di sini untuk mengubah akun yang tampil.
+export const EMAIL_AKUN_CONTOH: string[] = [
+  "admin@monev.test",
+  "dina.diskominfo@monev.test",
+];
+
+export const AKUN_CONTOH: AkunDummy[] = AKUN_DUMMY.filter((a) =>
+  EMAIL_AKUN_CONTOH.includes(a.email),
+);

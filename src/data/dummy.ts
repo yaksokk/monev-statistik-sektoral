@@ -23,6 +23,9 @@ import type {
 const LINK_SERTIFIKAT_CONTOH =
   "https://drive.google.com/file/d/12NR2g3GQLZfzVq1vDEfx8k_vqYQbslOd/view?usp=sharing";
 
+  const LINK_UNDANGAN_CONTOH =
+  "https://drive.google.com/file/d/1s1MgN8CtZg3qmq7fN-AReRAV12uD8jsq/view?usp=sharing";
+
 export const OPD_LIST: Opd[] = [
   { id: "opd-01", nama: "Dinas Pendidikan dan Kebudayaan", singkatan: "Disdikbud" },
   { id: "opd-02", nama: "Dinas Kesehatan", singkatan: "Dinkes" },
@@ -54,7 +57,7 @@ export const KEGIATAN_LIST: Kegiatan[] = [
     ambangKehadiran: 75,
     judulUndangan: "Undangan Pembinaan Statistik Sektoral",
     tanggalUndangan: "2026-10-01",
-    linkUndangan: LINK_SERTIFIKAT_CONTOH, // hanya data dummy
+    linkUndangan: LINK_UNDANGAN_CONTOH, // hanya data dummy
   },
 ];
 

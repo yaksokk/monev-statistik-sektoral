@@ -204,12 +204,15 @@ function hadir(
 
 export const PRESENSI_LIST: Presensi[] = [
   hadir("usr-op-01", "opd-01", "sesi-1", "tepat_waktu", "2026-10-08T08:30", "Mengikuti via Zoom"),
-  hadir("usr-op-01", "opd-01", "sesi-1", "tepat_waktu", "2026-10-08T08:30", "Mengikuti via Zoom"),
-  hadir("usr-op-01", "opd-01", "sesi-2", "tepat_waktu", "2026-10-15T08:20"),
+  hadir("usr-op-01", "opd-01", "sesi-2", "tepat_waktu", "2026-10-08T08:30", "Mengikuti via Zoom"),
+  hadir("usr-op-01", "opd-01", "sesi-3", "tepat_waktu", "2026-10-15T08:20"),
   hadir("usr-op-02", "opd-01", "sesi-1", "terlambat", "2026-10-08T09:15", "Bergabung terlambat karena rapat internal"),
   hadir("usr-op-02", "opd-01", "sesi-2", "terlambat", "2026-10-15T09:15", "Bergabung terlambat karena rapat internal"),
+  hadir("usr-op-02", "opd-01", "sesi-3", "terlambat", "2026-10-15T09:15", "Bergabung terlambat karena rapat internal"),
+  hadir("usr-op-02", "opd-01", "sesi-4", "tepat_waktu", "2026-10-15T09:15", "Bergabung terlambat karena rapat internal"),
   hadir("usr-op-03", "opd-02", "sesi-1", "terlambat", "2026-10-08T09:05", "Kendala jaringan"),
   hadir("usr-op-03", "opd-02", "sesi-2", "izin", "2026-10-15T07:50", "Tugas dinas ke luar kota"),
+  hadir("usr-op-03", "opd-02", "sesi-3", "tepat_waktu", "2026-10-27T09:05", "Kendala jaringan"),
   hadir("usr-op-04", "opd-02", "sesi-1", "tepat_waktu", "2026-10-08T08:41"),
   hadir("usr-op-04", "opd-02", "sesi-2", "tepat_waktu", "2026-10-15T08:35"),
   hadir("usr-op-04", "opd-02", "sesi-3", "terlambat", "2026-10-27T09:30", "Jaringan tidak stabil"),
@@ -423,15 +426,15 @@ function buatHasil(
 // [pegawai, jumlah benar Pre-Test, jumlah benar Post-Test dari 8 soal]; null = belum mengerjakan
 const SKOR_DUMMY: [string, number | null, number | null][] = [
   ["usr-op-01", 3, null],
-  ["usr-op-02", null, null],
+  ["usr-op-02", null, 6],
   ["usr-op-03", 4, 5],
   ["usr-op-04", 5, 6],
-  ["usr-op-05", 3, 4],
-  ["usr-op-06", 4, 5],
-  ["usr-op-07", 4, 6],
-  ["usr-op-08", 5, 6],
+  ["usr-op-05", 5, 6],
+  ["usr-op-06", 6, 6],
+  ["usr-op-07", 5, 6],
+  ["usr-op-08", 6, 7],
   ["usr-op-09", 6, 8],
-  ["usr-op-10", 5, 8],
+  ["usr-op-10", 7, 8],
 ];
 
 export const HASIL_QUIZ_LIST: HasilQuiz[] = SKOR_DUMMY.flatMap(([penggunaId, pre, post], i) => {

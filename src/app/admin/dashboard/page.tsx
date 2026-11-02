@@ -40,8 +40,6 @@ export default function DashboardAdmin() {
       <h1 className="text-2xl font-semibold text-primary">Dashboard</h1>
       <p className="mt-1 text-ink-muted">Ringkasan pembinaan dan kelengkapan dokumen seluruh pegawai OPD.</p>
 
-      <HeaderKegiatan kegiatan={kegiatan} />
-
       {kegiatan && ringkasan && (
         <RekapDashboardClient kegiatan={kegiatan} ringkasan={ringkasan} baris={baris} />
       )}

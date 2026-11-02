@@ -371,6 +371,7 @@ export default function TabQuiz({
   const [hapusId, setHapusId] = useState<string | null>(null);
   const [koreksi, setKoreksi] = useState<{ id: string; kunci: number } | null>(null);
   const [toggleId, setToggleId] = useState<string | null>(null);
+  const [tertunda, setTertunda] = useState<DataSoal | null>(null);
 
   const label = LABEL_QUIZ[jenis];
 
@@ -414,11 +415,40 @@ export default function TabQuiz({
         lulus,
       )
     : null;
+  // soal baru aktif, dan dihitung salah bagi pegawai yang belum menjawabnya
+  const dampakTambah =
+    tertunda && hasil.length > 0 && soal.length > 0
+      ? dampakPerubahan(
+          soal,
+          [
+            ...soal,
+            {
+              ...soal[0],
+              id: "__baru__",
+              urutan: soal.length + 1,
+              aktif: true,
+              pertanyaan: tertunda.pertanyaan,
+              opsi: tertunda.opsi,
+              kunci: tertunda.kunci,
+              pembahasan: tertunda.pembahasan,
+            },
+          ],
+          hasil,
+          lulus,
+        )
+      : null;
 
   function simpanSoal(d: DataSoal) {
-    if (diedit) aksi.ubahSoal(diedit.id, d);
-    else aksi.tambahSoal(d);
     setForm(null);
+    if (diedit) return aksi.ubahSoal(diedit.id, d);
+    // sudah ada hasil: minta konfirmasi dulu
+    if (hasil.length > 0) return setTertunda(d);
+    aksi.tambahSoal(d);
+  }
+
+  function terapkanTambah() {
+    if (tertunda) aksi.tambahSoal(tertunda);
+    setTertunda(null);
   }
 
   function terapkanKoreksi() {
@@ -466,7 +496,7 @@ export default function TabQuiz({
           <button
             type="button"
             onClick={() => setForm({ id: null })}
-            disabled={!bisaUbah}
+            disabled={arsip}
             className={tombolUtama}
           >
             <Plus className="size-4" aria-hidden />
@@ -477,7 +507,7 @@ export default function TabQuiz({
         {modeKoreksi && (
           <p className="mt-3 text-sm text-ink-muted">
             Soal terkunci karena quiz sudah dibuka atau sudah ada pegawai yang mengerjakan. Yang masih bisa:
-            koreksi kunci dan nonaktifkan soal.
+            tambah soal, koreksi kunci, dan nonaktifkan soal.
           </p>
         )}
 
@@ -608,6 +638,32 @@ export default function TabQuiz({
           onSimpan={simpanSoal}
           onBatal={() => setForm(null)}
         />
+      </Dialog>
+
+      <Dialog buka={!!tertunda} onTutup={() => setTertunda(null)} judul="Tambah soal">
+        {tertunda && (
+          <>
+            <p className="text-sm text-ink-muted">
+              Pegawai yang sudah mengerjakan belum menjawab soal ini, jadi soal baru dihitung salah bagi mereka.{" "}
+              <span className="font-medium text-ink">{ringkas(tertunda.pertanyaan)}</span>
+            </p>
+            <p role="status" className="text-sm text-ink-muted">
+              {dampakTambah && dampakTambah.nilaiBerubah > 0
+                ? `${dampakTambah.nilaiBerubah} pegawai nilainya berubah.`
+                : "Tidak ada pegawai yang nilainya berubah."}
+              {dampakTambah?.statusBerubah != null &&
+                ` ${dampakTambah.statusBerubah} pegawai statusnya berubah (lulus atau tidak lulus).`}
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button type="button" onClick={() => setTertunda(null)} className={tombolSekunder}>
+                Batal
+              </button>
+              <button type="button" onClick={terapkanTambah} className={tombolUtama}>
+                Tambahkan soal
+              </button>
+            </div>
+          </>
+        )}
       </Dialog>
 
       <Dialog buka={!!dihapus} onTutup={() => setHapusId(null)} judul="Hapus soal">

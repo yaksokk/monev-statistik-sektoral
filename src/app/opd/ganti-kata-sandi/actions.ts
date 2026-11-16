@@ -1,7 +1,8 @@
 "use server";
 
-import { AKUN_DUMMY } from "@/data/akun-dummy";
+import { redirect } from "next/navigation";
 import { ambilOperator } from "@/lib/operator";
+import { buatKlienServer } from "@/lib/supabase/server";
 
 export type StateGantiSandi = {
   status: "diam" | "gagal" | "berhasil";
@@ -23,18 +24,38 @@ export async function gantiKataSandi(
   const konfirmasi = String(data.get("konfirmasi") ?? "");
 
   if (!lama || !baru || !konfirmasi) return gagal("Semua kolom wajib diisi.");
-
-  const akun = AKUN_DUMMY.find((a) => a.penggunaId === pengguna.id);
-  if (!akun) return gagal("Akun tidak ditemukan. Silakan masuk kembali.");
-
-  if (akun.sandi !== lama) return gagal("Kata sandi lama salah.");
   if (baru.length < MIN_PANJANG) return gagal(`Kata sandi baru minimal ${MIN_PANJANG} karakter.`);
   if (baru === lama) return gagal("Kata sandi baru harus berbeda dari yang lama.");
   if (baru !== konfirmasi) return gagal("Konfirmasi kata sandi tidak cocok.");
 
-  // DUMMY: hanya mengubah data di memori server (hilang saat server restart).
-  // Ganti dengan update ke database saat backend siap.
-  akun.sandi = baru;
+  const supabase = await buatKlienServer();
+
+  // Supabase tidak memeriksa sandi lama saat updateUser, jadi diverifikasi dengan login ulang
+  const { data: claims } = await supabase.auth.getClaims();
+  const email = (claims?.claims?.email as string | undefined) ?? pengguna.email;
+  const { error: eLama } = await supabase.auth.signInWithPassword({ email, password: lama });
+  if (eLama) {
+    return gagal(
+      eLama.status === 429
+        ? "Terlalu banyak percobaan. Coba lagi beberapa saat lagi."
+        : "Kata sandi lama salah.",
+    );
+  }
+
+  const { error: eBaru } = await supabase.auth.updateUser({ password: baru });
+  if (eBaru) {
+    if (eBaru.code === "weak_password") return gagal("Kata sandi baru terlalu lemah.");
+    if (eBaru.code === "same_password") return gagal("Kata sandi baru harus berbeda dari yang lama.");
+    return gagal("Gagal menyimpan kata sandi. Coba lagi.");
+  }
+
+  if (pengguna.wajibGantiSandi) {
+    const { error: eTandai } = await supabase.rpc("tandai_sandi_diganti");
+    if (eTandai) {
+      return gagal("Kata sandi sudah diganti, tetapi status akun belum diperbarui. Coba simpan sekali lagi.");
+    }
+    redirect("/opd/dashboard");
+  }
 
   return { status: "berhasil", pesan: "Kata sandi berhasil diganti." };
 }

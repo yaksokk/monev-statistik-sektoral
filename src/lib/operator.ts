@@ -1,20 +1,13 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { NAMA_COOKIE } from "@/lib/akses";
-import { OPD_LIST, PENGGUNA_LIST } from "@/data/dummy";
+import { ambilPengguna } from "@/lib/pengguna";
 
 // ambil operator yang sedang login beserta OPD-nya
 export async function ambilOperator() {
-  const jar = await cookies();
-  const id = jar.get(NAMA_COOKIE)?.value;
-  const pengguna = PENGGUNA_LIST.find((p) => p.id === id);
+  const data = await ambilPengguna();
 
-  if (!pengguna || pengguna.peran !== "operator" || !pengguna.opdId) {
+  if (!data || data.pengguna.peran !== "operator" || !data.opd) {
     redirect("/login");
   }
 
-  const opd = OPD_LIST.find((o) => o.id === pengguna.opdId);
-  if (!opd) redirect("/login");
-
-  return { pengguna, opd };
+  return { pengguna: data.pengguna, opd: data.opd };
 }

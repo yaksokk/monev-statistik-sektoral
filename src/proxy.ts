@@ -1,27 +1,35 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { AKUN_DUMMY } from "@/data/akun-dummy";
-import { AWALAN_RUTE, BERANDA, NAMA_COOKIE } from "@/lib/akses";
+import { AWALAN_RUTE, BERANDA, RUTE_GANTI_SANDI } from "@/lib/akses";
+import { segarkanSesi } from "@/lib/supabase/proxy";
 
-export function proxy(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const id = req.cookies.get(NAMA_COOKIE)?.value;
-  const akun = AKUN_DUMMY.find((a) => a.penggunaId === id);
+  const sesi = await segarkanSesi(req);
+  const peran = sesi.profil?.peran;
+  const wajibGanti = peran === "operator" && sesi.profil?.wajib_ganti_sandi === true;
+
+  const alihkan = (tujuan: string) =>
+    sesi.salin(NextResponse.redirect(new URL(tujuan, req.url)));
 
   // Sudah login tidak perlu ke halaman login
   if (pathname === "/login") {
-    if (akun) return NextResponse.redirect(new URL(BERANDA[akun.peran], req.url));
-    return NextResponse.next();
+    if (peran) return alihkan(wajibGanti ? RUTE_GANTI_SANDI : BERANDA[peran]);
+    return sesi.lanjut();
   }
 
-  if (!akun) return NextResponse.redirect(new URL("/login", req.url));
+  // Belum login, atau akun Auth tanpa baris profil
+  if (!peran) return alihkan("/login");
+
+  // Sandi awal wajib diganti dulu
+  if (wajibGanti && pathname !== RUTE_GANTI_SANDI) return alihkan(RUTE_GANTI_SANDI);
 
   // Peran hanya boleh masuk ke area miliknya
-  const awalan = AWALAN_RUTE[akun.peran];
+  const awalan = AWALAN_RUTE[peran];
   if (pathname !== awalan && !pathname.startsWith(`${awalan}/`)) {
-    return NextResponse.redirect(new URL(BERANDA[akun.peran], req.url));
+    return alihkan(BERANDA[peran]);
   }
 
-  return NextResponse.next();
+  return sesi.lanjut();
 }
 
 export const config = {

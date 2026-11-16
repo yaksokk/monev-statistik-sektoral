@@ -20,6 +20,7 @@ export interface Pengguna {
   peran: Peran;
   opdId?: string; // hanya untuk peran "operator"
   linkSertifikat?: string;
+  wajibGantiSandi?: boolean; // true = sandi awal dari admin belum diganti
 }
 
 // Dokumen yang harus diunggah OPD pada setiap kegiatan

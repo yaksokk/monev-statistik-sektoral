@@ -1,9 +1,11 @@
-import { OPD_LIST, PENGGUNA_LIST } from "@/data/dummy";
+import { ambilDaftarOpd, ambilPegawaiOpd } from "@/lib/data/opd";
+import { ambilAdmin } from "@/lib/pengguna";
 import OpdClient from "./OpdClient";
 
-export default function KelolaOpdPage() {
-  const pegawai = PENGGUNA_LIST.filter((p) => p.peran === "operator" && p.opdId);
+export default async function KelolaOpdPage() {
+  await ambilAdmin();
+  const [opd, pegawai] = await Promise.all([ambilDaftarOpd(), ambilPegawaiOpd()]);
 
-  // Semua OPD dikirim (termasuk yang belum punya pegawai) supaya id OPD baru tidak bentrok
-  return <OpdClient opdAwal={OPD_LIST} pegawaiAwal={pegawai} />;
+  // Semua OPD dikirim, termasuk yang belum punya pegawai
+  return <OpdClient opdAwal={opd} pegawaiAwal={pegawai} />;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ChevronRight,
   Copy,
@@ -11,10 +12,13 @@ import {
   Pencil,
   Plus,
   Search,
+  Trash2,
+  UserPlus,
 } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
 import { linkHttps } from "@/lib/dashboard";
 import type { Opd, Pengguna } from "@/lib/types";
+import { hapusOpd, simpanLinkSertifikat, tambahOpd, ubahOpd } from "./actions";
 
 const tombolUtama =
   "inline-flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
@@ -22,14 +26,37 @@ const tombolSekunder =
   "inline-flex items-center gap-2 rounded-lg border border-line bg-surface px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
 const kolomInput =
   "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-primary";
+const nonaktif = "disabled:cursor-not-allowed disabled:opacity-50";
 
-const dua = (n: number) => String(n).padStart(2, "0");
-const angkaId = (id: string) => Number(id.replace(/\D/g, "")) || 0;
+const EMAIL = /^\S+@\S+\.\S+$/;
+const SANDI_MIN = 8;
 
 function buatSandi() {
   const huruf = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
   const acak = crypto.getRandomValues(new Uint32Array(10));
   return Array.from(acak, (n) => huruf[n % huruf.length]).join("");
+}
+
+type Balasan = { ok: true } | { ok: false; pesan: string };
+
+// Panggilan ke route handler /api/admin/... (akun pegawai)
+async function panggil(
+  url: string,
+  metode: "POST" | "PATCH" | "DELETE",
+  badan?: unknown,
+): Promise<Balasan> {
+  try {
+    const res = await fetch(url, {
+      method: metode,
+      headers: badan === undefined ? undefined : { "Content-Type": "application/json" },
+      body: badan === undefined ? undefined : JSON.stringify(badan),
+    });
+    if (res.ok) return { ok: true };
+    const data = (await res.json().catch(() => null)) as { pesan?: string } | null;
+    return { ok: false, pesan: data?.pesan ?? "Terjadi kesalahan. Coba lagi." };
+  } catch {
+    return { ok: false, pesan: "Tidak bisa terhubung ke server." };
+  }
 }
 
 function Isian({
@@ -61,6 +88,42 @@ function Isian({
   );
 }
 
+// Sandi diketik admin; tombol "Buat kata sandi" hanya mengisikan saran acak ke kolom
+function IsianSandi({
+  id,
+  label,
+  nilai,
+  onUbah,
+}: {
+  id: string;
+  label: string;
+  nilai: string;
+  onUbah: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="text-sm font-medium">
+        {label}
+      </label>
+      <div className="flex gap-2">
+        <input
+          id={id}
+          type="text"
+          autoComplete="off"
+          value={nilai}
+          onChange={(e) => onUbah(e.target.value)}
+          className={kolomInput}
+        />
+        <button type="button" onClick={() => onUbah(buatSandi())} className={`${tombolSekunder} shrink-0`}>
+          <KeyRound className="size-4" aria-hidden />
+          Buat kata sandi
+        </button>
+      </div>
+      <p className="text-sm text-ink-muted">Minimal {SANDI_MIN} karakter.</p>
+    </div>
+  );
+}
+
 function Galat({ pesan }: { pesan: string }) {
   if (!pesan) return null;
   return (
@@ -70,41 +133,36 @@ function Galat({ pesan }: { pesan: string }) {
   );
 }
 
-type IsianOpd = { nama: string; singkatan: string; namaPegawai: string; email: string };
+type IsianOpd = { nama: string; singkatan: string };
 
-// denganPegawai = true saat tambah OPD: pegawai pertama diisi sekaligus
+// onSimpan mengembalikan pesan galat dari server, atau null bila berhasil
 function FormOpd({
   awal,
-  denganPegawai,
-  emailDipakai,
+  jumlahPegawai,
   onSimpan,
+  onHapus,
   onBatal,
 }: {
   awal: IsianOpd;
-  denganPegawai: boolean;
-  emailDipakai: (email: string) => boolean;
-  onSimpan: (v: IsianOpd) => void;
+  jumlahPegawai?: number; // hanya saat ubah OPD
+  onSimpan: (v: IsianOpd) => Promise<string | null>;
+  onHapus?: () => void; // hanya saat ubah OPD
   onBatal: () => void;
 }) {
   const [v, setV] = useState(awal);
   const [galat, setGalat] = useState("");
+  const [proses, setProses] = useState(false);
 
-  function kirim() {
-    const wajib: (keyof IsianOpd)[] = denganPegawai
-      ? ["nama", "singkatan", "namaPegawai", "email"]
-      : ["nama", "singkatan"];
-    if (wajib.some((k) => !v[k].trim())) return setGalat("Semua kolom wajib diisi.");
-    if (denganPegawai) {
-      if (!/^\S+@\S+\.\S+$/.test(v.email.trim())) return setGalat("Format email belum benar.");
-      if (emailDipakai(v.email.trim())) return setGalat("Email ini sudah dipakai pegawai lain.");
-    }
-    onSimpan({
-      nama: v.nama.trim(),
-      singkatan: v.singkatan.trim(),
-      namaPegawai: v.namaPegawai.trim(),
-      email: v.email.trim(),
-    });
+  async function kirim() {
+    if (!v.nama.trim() || !v.singkatan.trim()) return setGalat("Semua kolom wajib diisi.");
+    setGalat("");
+    setProses(true);
+    const g = await onSimpan({ nama: v.nama.trim(), singkatan: v.singkatan.trim() });
+    setProses(false);
+    if (g) setGalat(g);
   }
+
+  const punyaPegawai = (jumlahPegawai ?? 0) > 0;
 
   return (
     <div className="space-y-4">
@@ -115,63 +173,107 @@ function FormOpd({
         nilai={v.singkatan}
         onUbah={(x) => setV({ ...v, singkatan: x })}
       />
-      {denganPegawai && (
-        <>
-          <Isian
-            id="f-nama-pegawai"
-            label="Nama pegawai pertama"
-            nilai={v.namaPegawai}
-            onUbah={(x) => setV({ ...v, namaPegawai: x })}
-          />
-          <Isian
-            id="f-email"
-            label="Email pegawai"
-            tipe="email"
-            nilai={v.email}
-            onUbah={(x) => setV({ ...v, email: x })}
-          />
-        </>
+      {onHapus && punyaPegawai && (
+        <p className="text-sm text-ink-muted">
+          OPD ini masih punya {jumlahPegawai} pegawai. Hapus dulu semua pegawainya sebelum menghapus OPD.
+        </p>
       )}
       <Galat pesan={galat} />
-      <div className="flex justify-end gap-2 pt-2">
-        <button onClick={onBatal} className={tombolSekunder}>
-          Batal
-        </button>
-        <button onClick={kirim} className={tombolUtama}>
-          Simpan
-        </button>
+      <div className={`flex flex-wrap items-center gap-2 pt-2 ${onHapus ? "justify-between" : "justify-end"}`}>
+        {onHapus && (
+          <button
+            type="button"
+            onClick={onHapus}
+            disabled={punyaPegawai || proses}
+            className={`${tombolSekunder} text-status-revisi-fg ${nonaktif}`}
+          >
+            <Trash2 className="size-4" aria-hidden />
+            Hapus OPD
+          </button>
+        )}
+        <div className="flex gap-2">
+          <button onClick={onBatal} disabled={proses} className={`${tombolSekunder} ${nonaktif}`}>
+            Batal
+          </button>
+          <button onClick={kirim} disabled={proses} className={`${tombolUtama} ${nonaktif}`}>
+            {proses ? "Menyimpan..." : "Simpan"}
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-type IsianPegawai = { nama: string; email: string };
+type IsianPegawai = { nama: string; email: string; sandi: string };
 
 function FormPegawai({
+  tambah,
   awal,
+  opdList,
+  opdId,
+  onPilihOpd,
+  onOpdBaru,
   emailDipakai,
   onSimpan,
   onBatal,
 }: {
+  tambah: boolean; // false = ubah pegawai (OPD dan sandi tidak diubah di sini)
   awal: IsianPegawai;
+  opdList: Opd[];
+  opdId: string;
+  onPilihOpd: (id: string) => void;
+  onOpdBaru: () => void;
   emailDipakai: (email: string) => boolean;
-  onSimpan: (v: IsianPegawai) => void;
+  onSimpan: (v: IsianPegawai) => Promise<string | null>;
   onBatal: () => void;
 }) {
   const [v, setV] = useState(awal);
   const [galat, setGalat] = useState("");
+  const [proses, setProses] = useState(false);
 
-  function kirim() {
+  async function kirim() {
     const nama = v.nama.trim();
     const email = v.email.trim();
-    if (!nama || !email) return setGalat("Semua kolom wajib diisi.");
-    if (!/^\S+@\S+\.\S+$/.test(email)) return setGalat("Format email belum benar.");
+    if (tambah && !opdId) return setGalat("Pilih OPD dulu.");
+    if (!nama || !email || (tambah && !v.sandi)) return setGalat("Semua kolom wajib diisi.");
+    if (!EMAIL.test(email)) return setGalat("Format email belum benar.");
     if (emailDipakai(email)) return setGalat("Email ini sudah dipakai pegawai lain.");
-    onSimpan({ nama, email });
+    if (tambah && v.sandi.length < SANDI_MIN) return setGalat(`Kata sandi minimal ${SANDI_MIN} karakter.`);
+    setGalat("");
+    setProses(true);
+    const g = await onSimpan({ nama, email, sandi: v.sandi });
+    setProses(false);
+    if (g) setGalat(g);
   }
 
   return (
     <div className="space-y-4">
+      {tambah && (
+        <div className="space-y-1.5">
+          <label htmlFor="p-opd" className="text-sm font-medium">
+            OPD
+          </label>
+          <div className="flex gap-2">
+            <select
+              id="p-opd"
+              value={opdId}
+              onChange={(e) => onPilihOpd(e.target.value)}
+              className={kolomInput}
+            >
+              <option value="">Pilih OPD</option>
+              {opdList.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.nama} ({o.singkatan})
+                </option>
+              ))}
+            </select>
+            <button type="button" onClick={onOpdBaru} className={`${tombolSekunder} shrink-0`}>
+              <Plus className="size-4" aria-hidden />
+              OPD baru
+            </button>
+          </div>
+        </div>
+      )}
       <Isian id="p-nama" label="Nama pegawai" nilai={v.nama} onUbah={(x) => setV({ ...v, nama: x })} />
       <Isian
         id="p-email"
@@ -180,13 +282,21 @@ function FormPegawai({
         nilai={v.email}
         onUbah={(x) => setV({ ...v, email: x })}
       />
+      {tambah && (
+        <IsianSandi
+          id="p-sandi"
+          label="Kata sandi awal"
+          nilai={v.sandi}
+          onUbah={(x) => setV({ ...v, sandi: x })}
+        />
+      )}
       <Galat pesan={galat} />
       <div className="flex justify-end gap-2 pt-2">
-        <button onClick={onBatal} className={tombolSekunder}>
+        <button onClick={onBatal} disabled={proses} className={`${tombolSekunder} ${nonaktif}`}>
           Batal
         </button>
-        <button onClick={kirim} className={tombolUtama}>
-          Simpan
+        <button onClick={kirim} disabled={proses} className={`${tombolUtama} ${nonaktif}`}>
+          {proses ? "Menyimpan..." : "Simpan"}
         </button>
       </div>
     </div>
@@ -208,17 +318,22 @@ function FormLink({
   onBatal,
 }: {
   awal: string;
-  onSimpan: (link: string) => void;
+  onSimpan: (link: string) => Promise<string | null>;
   onBatal: () => void;
 }) {
   const [v, setV] = useState(awal);
   const [galat, setGalat] = useState("");
+  const [proses, setProses] = useState(false);
   const aman = linkHttps(v.trim());
 
-  function kirim() {
+  async function kirim() {
     const teks = v.trim();
     if (teks && !linkHttps(teks)) return setGalat("Link harus diawali https://");
-    onSimpan(teks);
+    setGalat("");
+    setProses(true);
+    const g = await onSimpan(teks);
+    setProses(false);
+    if (g) setGalat(g);
   }
 
   return (
@@ -248,21 +363,100 @@ function FormLink({
             Buka link
           </a>
         ) : (
-          <button disabled className={`${tombolSekunder} disabled:cursor-not-allowed disabled:opacity-50`}>
+          <button disabled className={`${tombolSekunder} ${nonaktif}`}>
             <ExternalLink className="size-4" aria-hidden />
             Buka link
           </button>
         )}
         <div className="flex gap-2">
-          <button onClick={onBatal} className={tombolSekunder}>
+          <button onClick={onBatal} disabled={proses} className={`${tombolSekunder} ${nonaktif}`}>
             Batal
           </button>
-          <button onClick={kirim} className={tombolUtama}>
-            Simpan
+          <button onClick={kirim} disabled={proses} className={`${tombolUtama} ${nonaktif}`}>
+            {proses ? "Menyimpan..." : "Simpan"}
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+function FormReset({
+  teksTujuan,
+  onSimpan,
+  onBatal,
+}: {
+  teksTujuan: string;
+  onSimpan: (sandi: string) => Promise<string | null>;
+  onBatal: () => void;
+}) {
+  const [sandi, setSandi] = useState("");
+  const [galat, setGalat] = useState("");
+  const [proses, setProses] = useState(false);
+
+  async function kirim() {
+    if (sandi.length < SANDI_MIN) return setGalat(`Kata sandi minimal ${SANDI_MIN} karakter.`);
+    setGalat("");
+    setProses(true);
+    const g = await onSimpan(sandi);
+    setProses(false);
+    if (g) setGalat(g);
+  }
+
+  return (
+    <>
+      <p className="text-sm text-ink-muted">
+        Ketik kata sandi sementara untuk {teksTujuan}. Kata sandi lama tidak berlaku lagi dan pegawai wajib
+        menggantinya saat masuk.
+      </p>
+      <IsianSandi id="r-sandi" label="Kata sandi sementara" nilai={sandi} onUbah={setSandi} />
+      <Galat pesan={galat} />
+      <div className="flex justify-end gap-2 pt-2">
+        <button onClick={onBatal} disabled={proses} className={`${tombolSekunder} ${nonaktif}`}>
+          Batal
+        </button>
+        <button onClick={kirim} disabled={proses} className={`${tombolUtama} ${nonaktif}`}>
+          {proses ? "Menyimpan..." : "Simpan kata sandi"}
+        </button>
+      </div>
+    </>
+  );
+}
+
+function KonfirmasiHapus({
+  teks,
+  onYa,
+  onBatal,
+}: {
+  teks: string;
+  onYa: () => Promise<string | null>;
+  onBatal: () => void;
+}) {
+  const [galat, setGalat] = useState("");
+  const [proses, setProses] = useState(false);
+
+  async function ya() {
+    setGalat("");
+    setProses(true);
+    const g = await onYa();
+    setProses(false);
+    if (g) setGalat(g);
+  }
+
+  return (
+    <>
+      <p className="text-sm text-ink-muted">{teks}</p>
+      <Galat pesan={galat} />
+      <div className="flex justify-end gap-2 pt-2">
+        <button onClick={onBatal} disabled={proses} className={`${tombolSekunder} ${nonaktif}`}>
+          Batal
+        </button>
+        <button onClick={ya} disabled={proses} className={`${tombolSekunder} text-status-revisi-fg ${nonaktif}`}>
+          <Trash2 className="size-4" aria-hidden />
+          {proses ? "Menghapus..." : "Hapus"}
+        </button>
+      </div>
+    </>
   );
 }
 
@@ -271,28 +465,27 @@ interface Props {
   pegawaiAwal: Pengguna[];
 }
 
-export default function OpdClient({ opdAwal, pegawaiAwal }: Props) {
-  const [opdList, setOpdList] = useState(opdAwal);
-  const [pegawai, setPegawai] = useState(pegawaiAwal);
+// Data berasal dari server (props); setelah aksi berhasil, halaman disegarkan
+export default function OpdClient({ opdAwal: opdList, pegawaiAwal: pegawai }: Props) {
+  const router = useRouter();
   const [cari, setCari] = useState("");
   const [pesan, setPesan] = useState("");
 
   const [idOpd, setIdOpd] = useState<string | null>(null); // popup daftar pegawai
-  const [formOpd, setFormOpd] = useState<{ id: string | null } | null>(null);
+  const [formOpd, setFormOpd] = useState<{ id: string | null; dariPegawai?: boolean } | null>(null);
   const [formPegawai, setFormPegawai] = useState<{ id: string | null; opdId: string } | null>(null);
   const [idLink, setIdLink] = useState<string | null>(null); // id pegawai
-  const [reset, setReset] = useState<{ p: Pengguna; sandi: string | null } | null>(null);
-  const [impor, setImpor] = useState(false);
-  const [fileImpor, setFileImpor] = useState<File | null>(null);
+  const [reset, setReset] = useState<{ p: Pengguna; hasil: string | null } | null>(null);
+  const [hapusP, setHapusP] = useState<Pengguna | null>(null);
+  const [hapusO, setHapusO] = useState<Opd | null>(null);
 
   const pegawaiOpd = (opdId: string) => pegawai.filter((p) => p.opdId === opdId);
 
-  // OPD tanpa pegawai tidak ditampilkan
+  // Semua OPD ditampilkan, termasuk yang belum punya pegawai
   const tampil = opdList.filter((opd) => {
-    const milik = pegawaiOpd(opd.id);
-    if (milik.length === 0) return false;
     const q = cari.trim().toLowerCase();
     if (!q) return true;
+    const milik = pegawaiOpd(opd.id);
     const teks = `${opd.nama} ${opd.singkatan} ${milik.map((p) => `${p.nama} ${p.email}`).join(" ")}`;
     return teks.toLowerCase().includes(q);
   });
@@ -307,55 +500,85 @@ export default function OpdClient({ opdAwal, pegawaiAwal }: Props) {
   const emailDipakai = (email: string, kecuali?: string) =>
     pegawai.some((p) => p.email.toLowerCase() === email.toLowerCase() && p.id !== kecuali);
 
-  function idPegawaiBaru() {
-    return `usr-op-${dua(pegawai.reduce((m, p) => Math.max(m, angkaId(p.id)), 0) + 1)}`;
-  }
-
-  function simpanOpd(v: IsianOpd) {
+  async function simpanOpd(v: IsianOpd): Promise<string | null> {
     if (opdDiedit) {
-      setOpdList((prev) =>
-        prev.map((o) => (o.id === opdDiedit.id ? { ...o, nama: v.nama, singkatan: v.singkatan } : o)),
-      );
+      const r = await ubahOpd(opdDiedit.id, v);
+      if (!r.ok) return r.pesan;
       setPesan(`Data ${v.singkatan} diperbarui.`);
     } else {
-      const id = `opd-${dua(opdList.reduce((m, o) => Math.max(m, angkaId(o.id)), 0) + 1)}`;
-      const pertama: Pengguna = {
-        id: idPegawaiBaru(),
-        nama: v.namaPegawai,
-        email: v.email,
-        peran: "operator",
-        opdId: id,
-      };
-      setOpdList((prev) => [...prev, { id, nama: v.nama, singkatan: v.singkatan }]);
-      setPegawai((prev) => [...prev, pertama]);
-      setPesan(`${v.singkatan} ditambahkan dengan satu pegawai.`);
+      const r = await tambahOpd(v);
+      if (!r.ok) return r.pesan;
+      setPesan(`${v.singkatan} ditambahkan.`);
+      // Dibuka dari form pegawai: OPD baru langsung terpilih di dropdown
+      if (formOpd?.dariPegawai) {
+        const idBaru = r.opd.id;
+        setFormPegawai((f) => (f ? { ...f, opdId: idBaru } : f));
+      }
     }
     setFormOpd(null);
+    return null;
   }
 
-  function simpanPegawai(v: IsianPegawai) {
-    if (!formPegawai) return;
+  async function simpanPegawai(v: IsianPegawai): Promise<string | null> {
+    if (!formPegawai) return null;
     if (pegawaiDiedit) {
-      setPegawai((prev) =>
-        prev.map((p) => (p.id === pegawaiDiedit.id ? { ...p, nama: v.nama, email: v.email } : p)),
-      );
+      const r = await panggil(`/api/admin/pegawai/${pegawaiDiedit.id}`, "PATCH", {
+        nama: v.nama,
+        email: v.email,
+      });
+      if (!r.ok) return r.pesan;
       setPesan(`Data ${v.nama} diperbarui.`);
     } else {
-      setPegawai((prev) => [
-        ...prev,
-        { id: idPegawaiBaru(), nama: v.nama, email: v.email, peran: "operator", opdId: formPegawai.opdId },
-      ]);
-      setPesan(`${v.nama} ditambahkan.`);
+      const r = await panggil("/api/admin/pegawai", "POST", {
+        nama: v.nama,
+        email: v.email,
+        sandi: v.sandi,
+        opdId: formPegawai.opdId,
+      });
+      if (!r.ok) return r.pesan;
+      setPesan(`${v.nama} ditambahkan. Sampaikan kata sandi awalnya ke pegawai.`);
     }
+    router.refresh();
     setFormPegawai(null);
+    return null;
   }
 
-  function simpanLink(link: string) {
-    if (!pegawaiLink) return;
+  async function simpanLink(link: string): Promise<string | null> {
+    if (!pegawaiLink) return null;
     const { id, nama } = pegawaiLink;
-    setPegawai((prev) => prev.map((p) => (p.id === id ? { ...p, linkSertifikat: link || undefined } : p)));
+    const r = await simpanLinkSertifikat(id, link);
+    if (!r.ok) return r.pesan;
     setPesan(link ? `Link sertifikat ${nama} disimpan.` : `Link sertifikat ${nama} dihapus.`);
     setIdLink(null);
+    return null;
+  }
+
+  async function simpanReset(sandi: string): Promise<string | null> {
+    if (!reset) return null;
+    const r = await panggil(`/api/admin/pegawai/${reset.p.id}/reset-sandi`, "POST", { sandi });
+    if (!r.ok) return r.pesan;
+    setReset({ p: reset.p, hasil: sandi });
+    return null;
+  }
+
+  async function jalankanHapusPegawai(): Promise<string | null> {
+    if (!hapusP) return null;
+    const r = await panggil(`/api/admin/pegawai/${hapusP.id}`, "DELETE");
+    if (!r.ok) return r.pesan;
+    setPesan(`Akun ${hapusP.nama} dihapus.`);
+    setHapusP(null);
+    router.refresh();
+    return null;
+  }
+
+  async function jalankanHapusOpd(): Promise<string | null> {
+    if (!hapusO) return null;
+    const r = await hapusOpd(hapusO.id);
+    if (!r.ok) return r.pesan;
+    setPesan(`${hapusO.singkatan} dihapus.`);
+    setHapusO(null);
+    setFormOpd(null);
+    return null;
   }
 
   return (
@@ -364,19 +587,20 @@ export default function OpdClient({ opdAwal, pegawaiAwal }: Props) {
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold text-ink">OPD dan akun</h1>
           <p className="tabular text-sm text-ink-muted">
-            {tampil.length} OPD · {pegawai.length} pegawai terdaftar · klik baris OPD untuk melihat pegawai
+            {opdList.length} OPD · {pegawai.length} pegawai terdaftar · klik baris OPD untuk melihat pegawai
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => {
-              setFileImpor(null);
-              setImpor(true);
-            }}
-            className={tombolSekunder}
-          >
+          <button disabled className={`${tombolSekunder} ${nonaktif}`}>
             <FileSpreadsheet className="size-4" aria-hidden />
             Impor dari Excel
+            <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs font-medium text-ink-muted">
+              Segera hadir
+            </span>
+          </button>
+          <button onClick={() => setFormPegawai({ id: null, opdId: "" })} className={tombolSekunder}>
+            <UserPlus className="size-4" aria-hidden />
+            Tambah pegawai
           </button>
           <button onClick={() => setFormOpd({ id: null })} className={tombolUtama}>
             <Plus className="size-4" aria-hidden />
@@ -455,7 +679,7 @@ export default function OpdClient({ opdAwal, pegawaiAwal }: Props) {
             {tampil.length === 0 && (
               <tr>
                 <td colSpan={3} className="px-4 py-10 text-center text-ink-muted">
-                  Tidak ada OPD yang cocok dengan pencarian.
+                  {cari.trim() ? "Tidak ada OPD yang cocok dengan pencarian." : "Belum ada OPD."}
                 </td>
               </tr>
             )}
@@ -512,14 +736,29 @@ export default function OpdClient({ opdAwal, pegawaiAwal }: Props) {
                             <Pencil className="size-4" aria-hidden />
                             Ubah
                           </button>
-                          <button onClick={() => setReset({ p, sandi: null })} className={tombolSekunder}>
+                          <button onClick={() => setReset({ p, hasil: null })} className={tombolSekunder}>
                             <KeyRound className="size-4" aria-hidden />
                             Reset sandi
+                          </button>
+                          <button
+                            onClick={() => setHapusP(p)}
+                            aria-label={`Hapus akun ${p.nama}`}
+                            className={`${tombolSekunder} text-status-revisi-fg`}
+                          >
+                            <Trash2 className="size-4" aria-hidden />
+                            Hapus
                           </button>
                         </div>
                       </td>
                     </tr>
                   ))}
+                  {pegawaiPopup.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-8 text-center text-ink-muted">
+                        Belum ada pegawai di OPD ini.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -537,12 +776,12 @@ export default function OpdClient({ opdAwal, pegawaiAwal }: Props) {
         <FormOpd
           awal={
             opdDiedit
-              ? { nama: opdDiedit.nama, singkatan: opdDiedit.singkatan, namaPegawai: "", email: "" }
-              : { nama: "", singkatan: "", namaPegawai: "", email: "" }
+              ? { nama: opdDiedit.nama, singkatan: opdDiedit.singkatan }
+              : { nama: "", singkatan: "" }
           }
-          denganPegawai={!opdDiedit}
-          emailDipakai={(e) => emailDipakai(e)}
+          jumlahPegawai={opdDiedit ? pegawaiOpd(opdDiedit.id).length : undefined}
           onSimpan={simpanOpd}
+          onHapus={opdDiedit ? () => setHapusO(opdDiedit) : undefined}
           onBatal={() => setFormOpd(null)}
         />
       </Dialog>
@@ -550,18 +789,25 @@ export default function OpdClient({ opdAwal, pegawaiAwal }: Props) {
       <Dialog
         buka={!!formPegawai}
         onTutup={() => setFormPegawai(null)}
-        judul={`${pegawaiDiedit ? "Ubah pegawai" : "Tambah pegawai"} ${opdFormPegawai?.singkatan ?? ""}`}
+        judul={pegawaiDiedit ? `Ubah pegawai ${opdFormPegawai?.singkatan ?? ""}` : "Tambah pegawai"}
       >
-        <FormPegawai
-          awal={
-            pegawaiDiedit
-              ? { nama: pegawaiDiedit.nama, email: pegawaiDiedit.email }
-              : { nama: "", email: "" }
-          }
-          emailDipakai={(e) => emailDipakai(e, pegawaiDiedit?.id)}
-          onSimpan={simpanPegawai}
-          onBatal={() => setFormPegawai(null)}
-        />
+        {formPegawai && (
+          <FormPegawai
+            tambah={!pegawaiDiedit}
+            awal={
+              pegawaiDiedit
+                ? { nama: pegawaiDiedit.nama, email: pegawaiDiedit.email, sandi: "" }
+                : { nama: "", email: "", sandi: "" }
+            }
+            opdList={opdList}
+            opdId={formPegawai.opdId}
+            onPilihOpd={(id) => setFormPegawai((f) => (f ? { ...f, opdId: id } : f))}
+            onOpdBaru={() => setFormOpd({ id: null, dariPegawai: true })}
+            emailDipakai={(e) => emailDipakai(e, pegawaiDiedit?.id)}
+            onSimpan={simpanPegawai}
+            onBatal={() => setFormPegawai(null)}
+          />
+        )}
       </Dialog>
 
       <Dialog
@@ -578,63 +824,25 @@ export default function OpdClient({ opdAwal, pegawaiAwal }: Props) {
         )}
       </Dialog>
 
-      <Dialog buka={impor} onTutup={() => setImpor(false)} judul="Impor OPD dari Excel">
-        <p className="text-sm text-ink-muted">
-          Siapkan file .xlsx atau .csv dengan kolom: Nama OPD, Singkatan, Nama pegawai, Email pegawai. Satu
-          baris untuk satu pegawai; baris dengan OPD yang sama digabung menjadi satu OPD.
-        </p>
-        <input
-          type="file"
-          accept=".xlsx,.csv"
-          onChange={(e) => setFileImpor(e.target.files?.[0] ?? null)}
-          aria-label="Pilih file impor"
-          className="block w-full text-sm text-ink file:mr-3 file:rounded-lg file:border file:border-line file:bg-surface file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-surface-muted"
-        />
-        <div className="flex justify-end gap-2 pt-2">
-          <button onClick={() => setImpor(false)} className={tombolSekunder}>
-            Batal
-          </button>
-          <button
-            disabled={!fileImpor}
-            onClick={() => {
-              // pembacaan isi file menunggu backend
-              setPesan(`File ${fileImpor!.name} diterima. Isinya belum diproses karena backend belum tersambung.`);
-              setImpor(false);
-            }}
-            className={`${tombolUtama} disabled:cursor-not-allowed disabled:opacity-50`}
-          >
-            Impor
-          </button>
-        </div>
-      </Dialog>
-
       <Dialog buka={!!reset} onTutup={() => setReset(null)} judul="Reset kata sandi">
-        {reset && !reset.sandi && (
-          <>
-            <p className="text-sm text-ink-muted">
-              Buat kata sandi sementara untuk {reset.p.nama}
-              {reset.p.opdId ? ` (${opdList.find((o) => o.id === reset.p.opdId)?.singkatan ?? ""})` : ""}?
-              Kata sandi lama tidak berlaku lagi.
-            </p>
-            <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setReset(null)} className={tombolSekunder}>
-                Batal
-              </button>
-              <button onClick={() => setReset({ ...reset, sandi: buatSandi() })} className={tombolUtama}>
-                Buat kata sandi
-              </button>
-            </div>
-          </>
+        {reset && !reset.hasil && (
+          <FormReset
+            teksTujuan={`${reset.p.nama}${
+              reset.p.opdId ? ` (${opdList.find((o) => o.id === reset.p.opdId)?.singkatan ?? ""})` : ""
+            }`}
+            onSimpan={simpanReset}
+            onBatal={() => setReset(null)}
+          />
         )}
-        {reset?.sandi && (
+        {reset?.hasil && (
           <>
             <p className="text-sm text-ink-muted">
               Sampaikan kata sandi ini ke pegawai. Kata sandi hanya tampil sekali.
             </p>
             <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-muted px-4 py-3">
-              <code className="tabular text-base font-semibold text-ink">{reset.sandi}</code>
+              <code className="tabular text-base font-semibold text-ink">{reset.hasil}</code>
               <button
-                onClick={() => navigator.clipboard.writeText(reset.sandi!)}
+                onClick={() => navigator.clipboard.writeText(reset.hasil!)}
                 aria-label="Salin kata sandi"
                 className={tombolSekunder}
               >
@@ -648,6 +856,26 @@ export default function OpdClient({ opdAwal, pegawaiAwal }: Props) {
               </button>
             </div>
           </>
+        )}
+      </Dialog>
+
+      <Dialog buka={!!hapusP} onTutup={() => setHapusP(null)} judul="Hapus akun pegawai">
+        {hapusP && (
+          <KonfirmasiHapus
+            teks={`Hapus akun ${hapusP.nama} (${hapusP.email})? Semua data milik pegawai ini (dokumen dan file unggahan, kehadiran, hasil quiz, progres modul) ikut terhapus permanen dan tidak bisa dikembalikan.`}
+            onYa={jalankanHapusPegawai}
+            onBatal={() => setHapusP(null)}
+          />
+        )}
+      </Dialog>
+
+      <Dialog buka={!!hapusO} onTutup={() => setHapusO(null)} judul="Hapus OPD">
+        {hapusO && (
+          <KonfirmasiHapus
+            teks={`Hapus ${hapusO.nama} (${hapusO.singkatan})? OPD ini tidak punya pegawai. Penghapusan tidak bisa dikembalikan.`}
+            onYa={jalankanHapusOpd}
+            onBatal={() => setHapusO(null)}
+          />
         )}
       </Dialog>
     </div>

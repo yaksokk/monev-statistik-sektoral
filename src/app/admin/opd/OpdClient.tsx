@@ -16,6 +16,8 @@ import {
   UserPlus,
 } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
+import { Galat } from "@/components/ui/Galat";
+import { KonfirmasiHapus } from "@/components/ui/KonfirmasiHapus";
 import { linkHttps } from "@/lib/dashboard";
 import type { Opd, Pengguna } from "@/lib/types";
 import { hapusOpd, simpanLinkSertifikat, tambahOpd, ubahOpd } from "./actions";
@@ -121,15 +123,6 @@ function IsianSandi({
       </div>
       <p className="text-sm text-ink-muted">Minimal {SANDI_MIN} karakter.</p>
     </div>
-  );
-}
-
-function Galat({ pesan }: { pesan: string }) {
-  if (!pesan) return null;
-  return (
-    <p role="alert" className="text-sm text-status-revisi-fg">
-      {pesan}
-    </p>
   );
 }
 
@@ -417,43 +410,6 @@ function FormReset({
         </button>
         <button onClick={kirim} disabled={proses} className={`${tombolUtama} ${nonaktif}`}>
           {proses ? "Menyimpan..." : "Simpan kata sandi"}
-        </button>
-      </div>
-    </>
-  );
-}
-
-function KonfirmasiHapus({
-  teks,
-  onYa,
-  onBatal,
-}: {
-  teks: string;
-  onYa: () => Promise<string | null>;
-  onBatal: () => void;
-}) {
-  const [galat, setGalat] = useState("");
-  const [proses, setProses] = useState(false);
-
-  async function ya() {
-    setGalat("");
-    setProses(true);
-    const g = await onYa();
-    setProses(false);
-    if (g) setGalat(g);
-  }
-
-  return (
-    <>
-      <p className="text-sm text-ink-muted">{teks}</p>
-      <Galat pesan={galat} />
-      <div className="flex justify-end gap-2 pt-2">
-        <button onClick={onBatal} disabled={proses} className={`${tombolSekunder} ${nonaktif}`}>
-          Batal
-        </button>
-        <button onClick={ya} disabled={proses} className={`${tombolSekunder} text-status-revisi-fg ${nonaktif}`}>
-          <Trash2 className="size-4" aria-hidden />
-          {proses ? "Menghapus..." : "Hapus"}
         </button>
       </div>
     </>

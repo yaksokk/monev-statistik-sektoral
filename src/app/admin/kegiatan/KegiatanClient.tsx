@@ -5,6 +5,7 @@ import {
   Archive,
   ArchiveRestore,
   CalendarClock,
+  ListChecks,
   Pencil,
   Plus,
   Power,
@@ -12,9 +13,24 @@ import {
   Trash2,
 } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
-import { AMBANG_KEHADIRAN_AWAL } from "@/lib/presensi";
-import { JENIS_QUIZ, LABEL_QUIZ, aturSaklarQuiz, quizAktif } from "@/lib/quiz";
-import type { JenisQuiz, Kegiatan } from "@/lib/types";
+import { Galat } from "@/components/ui/Galat";
+import { KonfirmasiHapus } from "@/components/ui/KonfirmasiHapus";
+import { FITUR_TAMBAH_KEGIATAN } from "@/lib/fitur";
+import { JENIS_QUIZ, LABEL_QUIZ, quizAktif } from "@/lib/quiz";
+import type { ItemDokumen, JenisQuiz, Kegiatan } from "@/lib/types";
+import {
+  aktifkanKegiatan,
+  arsipkanKegiatan,
+  hapusItem,
+  hapusKegiatan,
+  keluarkanDariArsip,
+  nonaktifkanKegiatan,
+  tambahItem,
+  tambahKegiatan,
+  ubahItem,
+  ubahKegiatan,
+  ubahSaklarQuiz,
+} from "./actions";
 
 const dasarTombol =
   "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50";
@@ -23,6 +39,9 @@ const tombolSekunder = `${dasarTombol} border border-line bg-surface text-ink ho
 const tombolBahaya = `${dasarTombol} bg-status-revisi-fg text-white hover:opacity-90`;
 const kolomInput =
   "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-primary";
+
+type Balasan = { ok: true } | { ok: false; pesan: string };
+type Isi = { item: number; sesi: number; soal: number };
 
 type StatusKegiatan = "aktif" | "nonaktif" | "arsip";
 
@@ -56,28 +75,34 @@ type Isian = { nama: string; mulai: string; selesai: string; tenggat: string; bo
 
 const ISIAN_KOSONG: Isian = { nama: "", mulai: "", selesai: "", tenggat: "", bobot: "" };
 
+// onSimpan mengembalikan pesan galat dari server, atau null bila berhasil
 function FormKegiatan({
   awal,
   onSimpan,
   onBatal,
 }: {
   awal: Isian;
-  onSimpan: (v: Isian) => void;
+  onSimpan: (v: Isian) => Promise<string | null>;
   onBatal: () => void;
 }) {
   const [v, setV] = useState(awal);
   const [galat, setGalat] = useState("");
+  const [proses, setProses] = useState(false);
 
-  function kirim() {
+  async function kirim() {
     if (!v.nama.trim() || !v.mulai || !v.selesai || !v.tenggat || v.bobot === "") {
       return setGalat("Semua kolom wajib diisi.");
     }
     if (v.selesai < v.mulai) return setGalat("Tanggal selesai tidak boleh sebelum tanggal mulai.");
     const bobot = Number(v.bobot);
-    if (Number.isNaN(bobot) || bobot < 0 || bobot > 100) {
-      return setGalat("Bobot harus berupa angka 0 sampai 100.");
+    if (!Number.isInteger(bobot) || bobot < 0 || bobot > 100) {
+      return setGalat("Bobot harus bilangan bulat 0 sampai 100.");
     }
-    onSimpan({ ...v, nama: v.nama.trim() });
+    setGalat("");
+    setProses(true);
+    const g = await onSimpan({ ...v, nama: v.nama.trim() });
+    setProses(false);
+    if (g) setGalat(g);
   }
 
   return (
@@ -130,10 +155,10 @@ function FormKegiatan({
           <input
             id="k-bobot"
             type="number"
-            inputMode="decimal"
+            inputMode="numeric"
             min={0}
             max={100}
-            step="any"
+            step={1}
             value={v.bobot}
             onChange={(e) => setV({ ...v, bobot: e.target.value })}
             className={kolomInput}
@@ -141,20 +166,98 @@ function FormKegiatan({
         </div>
       </div>
 
-      {galat && (
-        <p role="alert" className="text-sm text-status-revisi-fg">
-          {galat}
-        </p>
-      )}
+      <Galat pesan={galat} />
       <div className="flex justify-end gap-2 pt-2">
-        <button onClick={onBatal} className={tombolSekunder}>
+        <button onClick={onBatal} disabled={proses} className={tombolSekunder}>
           Batal
         </button>
-        <button onClick={kirim} className={tombolUtama}>
-          Simpan
+        <button onClick={kirim} disabled={proses} className={tombolUtama}>
+          {proses ? "Menyimpan..." : "Simpan"}
         </button>
       </div>
     </div>
+  );
+}
+
+function FormItem({
+  awal,
+  onSimpan,
+  onBatal,
+}: {
+  awal: string;
+  onSimpan: (nama: string) => Promise<string | null>;
+  onBatal: () => void;
+}) {
+  const [nama, setNama] = useState(awal);
+  const [galat, setGalat] = useState("");
+  const [proses, setProses] = useState(false);
+
+  async function kirim() {
+    const n = nama.trim();
+    if (!n) return setGalat("Nama item wajib diisi.");
+    if (n.length > 200) return setGalat("Nama item terlalu panjang.");
+    setGalat("");
+    setProses(true);
+    const g = await onSimpan(n);
+    setProses(false);
+    if (g) setGalat(g);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <label htmlFor="i-nama" className="text-sm font-medium">
+          Nama item dokumen
+        </label>
+        <input id="i-nama" value={nama} onChange={(e) => setNama(e.target.value)} className={kolomInput} />
+      </div>
+      <Galat pesan={galat} />
+      <div className="flex justify-end gap-2 pt-2">
+        <button onClick={onBatal} disabled={proses} className={tombolSekunder}>
+          Batal
+        </button>
+        <button onClick={kirim} disabled={proses} className={tombolUtama}>
+          {proses ? "Menyimpan..." : "Simpan"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function KonfirmasiAktif({
+  teks,
+  onYa,
+  onBatal,
+}: {
+  teks: string;
+  onYa: () => Promise<string | null>;
+  onBatal: () => void;
+}) {
+  const [galat, setGalat] = useState("");
+  const [proses, setProses] = useState(false);
+
+  async function ya() {
+    setGalat("");
+    setProses(true);
+    const g = await onYa();
+    setProses(false);
+    if (g) setGalat(g);
+  }
+
+  return (
+    <>
+      <p className="text-sm text-ink-muted">{teks}</p>
+      <Galat pesan={galat} />
+      <div className="flex justify-end gap-2 pt-2">
+        <button onClick={onBatal} disabled={proses} className={tombolSekunder}>
+          Batal
+        </button>
+        <button onClick={ya} disabled={proses} className={tombolUtama}>
+          <Power className="size-4" aria-hidden />
+          {proses ? "Memproses..." : "Jadikan aktif"}
+        </button>
+      </div>
+    </>
   );
 }
 
@@ -198,14 +301,17 @@ function SaklarQuiz({
 }
 
 type AksiKartu = {
-  adaAktifLain: boolean;
+  sibuk: boolean;
   berdata: boolean;
+  jumlahItem: number;
   jumlahHasil: Record<JenisQuiz, number>;
   onSaklar: (jenis: JenisQuiz, nilai: boolean) => void;
   onUbah: () => void;
+  onItem: () => void;
   onAktifkan: () => void;
   onNonaktifkan: () => void;
   onArsipkan: () => void;
+  onKeluarArsip: () => void;
   onHapus: () => void;
 };
 
@@ -217,9 +323,6 @@ function KartuKegiatan({ k, ...aksi }: { k: Kegiatan } & AksiKartu) {
   const petunjuk: string[] = [];
   if (dikunci) petunjuk.push("Nonaktifkan dulu untuk mengarsipkan atau menghapus.");
   else if (aksi.berdata) petunjuk.push("Sudah punya data, tidak bisa dihapus.");
-  if (!dikunci && aksi.adaAktifLain) {
-    petunjuk.push("Nonaktifkan kegiatan aktif lebih dulu untuk mengaktifkan kegiatan ini.");
-  }
 
   return (
     <section className="rounded-card border border-line bg-surface shadow-card">
@@ -247,6 +350,15 @@ function KartuKegiatan({ k, ...aksi }: { k: Kegiatan } & AksiKartu) {
           <span className="text-ink">Bobot nilai</span>
           <span className="tabular font-semibold text-ink">{k.bobot}%</span>
         </li>
+        <li className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5">
+          <span className="text-ink">Item dokumen</span>
+          <button onClick={aksi.onItem} className={tombolSekunder}>
+            <ListChecks className="size-4" aria-hidden />
+            <span className="tabular">{aksi.jumlahItem} item</span>
+            <span aria-hidden>·</span>
+            Kelola
+          </button>
+        </li>
       </ul>
 
       <div className="space-y-3 border-t border-line px-4 py-3 sm:px-5">
@@ -262,7 +374,7 @@ function KartuKegiatan({ k, ...aksi }: { k: Kegiatan } & AksiKartu) {
               key={jenis}
               label={LABEL_QUIZ[jenis]}
               aktif={quizAktif(k, jenis)}
-              terkunci={s === "arsip"}
+              terkunci={s === "arsip" || aksi.sibuk}
               jumlahHasil={aksi.jumlahHasil[jenis]}
               onUbah={(nilai) => aksi.onSaklar(jenis, nilai)}
             />
@@ -277,32 +389,35 @@ function KartuKegiatan({ k, ...aksi }: { k: Kegiatan } & AksiKartu) {
           </p>
         ))}
         <div className="flex flex-wrap justify-end gap-2">
-          {s === "aktif" ? (
-            <button onClick={aksi.onNonaktifkan} className={tombolSekunder}>
+          {s === "aktif" && (
+            <button onClick={aksi.onNonaktifkan} disabled={aksi.sibuk} className={tombolSekunder}>
               <PowerOff className="size-4" aria-hidden />
               Nonaktifkan
             </button>
-          ) : (
-            <button onClick={aksi.onAktifkan} disabled={aksi.adaAktifLain} className={tombolSekunder}>
-              {s === "arsip" ? (
-                <ArchiveRestore className="size-4" aria-hidden />
-              ) : (
-                <Power className="size-4" aria-hidden />
-              )}
-              {s === "arsip" ? "Aktifkan kembali" : "Jadikan aktif"}
+          )}
+          {s === "nonaktif" && (
+            <button onClick={aksi.onAktifkan} disabled={aksi.sibuk} className={tombolSekunder}>
+              <Power className="size-4" aria-hidden />
+              Jadikan aktif
+            </button>
+          )}
+          {s === "arsip" && (
+            <button onClick={aksi.onKeluarArsip} disabled={aksi.sibuk} className={tombolSekunder}>
+              <ArchiveRestore className="size-4" aria-hidden />
+              Keluarkan dari arsip
             </button>
           )}
           {s !== "arsip" && (
-            <button onClick={aksi.onArsipkan} disabled={dikunci} className={tombolSekunder}>
+            <button onClick={aksi.onArsipkan} disabled={aksi.sibuk || dikunci} className={tombolSekunder}>
               <Archive className="size-4" aria-hidden />
               Arsipkan
             </button>
           )}
-          <button onClick={aksi.onHapus} disabled={tidakBisaHapus} className={tombolSekunder}>
+          <button onClick={aksi.onHapus} disabled={aksi.sibuk || tidakBisaHapus} className={tombolSekunder}>
             <Trash2 className="size-4" aria-hidden />
             Hapus
           </button>
-          <button onClick={aksi.onUbah} className={tombolSekunder}>
+          <button onClick={aksi.onUbah} disabled={aksi.sibuk} className={tombolSekunder}>
             <Pencil className="size-4" aria-hidden />
             Ubah
           </button>
@@ -312,62 +427,82 @@ function KartuKegiatan({ k, ...aksi }: { k: Kegiatan } & AksiKartu) {
   );
 }
 
-export default function KegiatanClient({
-  awal,
-  idBerdata,
-  hasilQuiz,
-}: {
-  awal: Kegiatan[];
+interface Props {
+  daftar: Kegiatan[];
   idBerdata: string[];
   hasilQuiz: Record<string, number>;
-}) {
-  const [daftar, setDaftar] = useState(awal);
+  isi: Record<string, Isi>;
+  item: Record<string, ItemDokumen[]>;
+  idItemBerdata: string[];
+}
+
+// Data berasal dari server (props); setelah aksi berhasil, halaman disegarkan lewat revalidatePath
+export default function KegiatanClient({ daftar, idBerdata, hasilQuiz, isi, item, idItemBerdata }: Props) {
   const [form, setForm] = useState<{ id: string | null } | null>(null);
   const [hapusId, setHapusId] = useState<string | null>(null);
+  const [aktifId, setAktifId] = useState<string | null>(null);
   const [matikan, setMatikan] = useState<{ id: string; jenis: JenisQuiz } | null>(null);
+  const [idItem, setIdItem] = useState<string | null>(null); // popup item dokumen: id kegiatan
+  const [formItem, setFormItem] = useState<{ id: string | null } | null>(null);
+  const [hapusItemId, setHapusItemId] = useState<string | null>(null);
   const [pesan, setPesan] = useState("");
+  const [galatUmum, setGalatUmum] = useState("");
+  const [sibuk, setSibuk] = useState(false);
 
   const berdata = new Set(idBerdata);
+  const itemBerdata = new Set(idItemBerdata);
   const diedit = form?.id ? daftar.find((k) => k.id === form.id) : undefined;
   const dihapus = hapusId ? daftar.find((k) => k.id === hapusId) : undefined;
+  const diaktifkan = aktifId ? daftar.find((k) => k.id === aktifId) : undefined;
+  const aktifLain = diaktifkan ? daftar.find((x) => x.aktif && x.id !== diaktifkan.id) : undefined;
   const kegiatanMatikan = matikan ? daftar.find((k) => k.id === matikan.id) : undefined;
   const jumlahMatikan = matikan ? (hasilQuiz[`${matikan.id}:${matikan.jenis}`] ?? 0) : 0;
+  const kegiatanItem = idItem ? daftar.find((k) => k.id === idItem) : undefined;
+  const daftarItem = idItem ? (item[idItem] ?? []) : [];
+  const itemDiedit = formItem?.id ? daftarItem.find((i) => i.id === formItem.id) : undefined;
+  const itemDihapus = hapusItemId ? daftarItem.find((i) => i.id === hapusItemId) : undefined;
   const totalBobot = daftar.reduce((s, k) => s + k.bobot, 0);
   const berjalan = daftar.filter((k) => !k.arsip);
   const diarsipkan = daftar.filter((k) => k.arsip);
 
+  // Menjalankan aksi server; mengembalikan pesan galat, atau null bila berhasil
+  async function jalankan(aksi: () => Promise<Balasan>, sukses: string): Promise<string | null> {
+    setSibuk(true);
+    setGalatUmum("");
+    const r = await aksi();
+    setSibuk(false);
+    if (!r.ok) return r.pesan;
+    setPesan(sukses);
+    return null;
+  }
+
+  // Untuk tombol tanpa dialog: galat tampil di atas daftar
+  async function langsung(aksi: () => Promise<Balasan>, sukses: string) {
+    const g = await jalankan(aksi, sukses);
+    if (g) {
+      setPesan("");
+      setGalatUmum(g);
+    }
+  }
+
   function aksiUntuk(k: Kegiatan): AksiKartu {
     return {
-      adaAktifLain: daftar.some((x) => x.aktif && x.id !== k.id),
+      sibuk,
       berdata: berdata.has(k.id),
+      jumlahItem: item[k.id]?.length ?? 0,
       jumlahHasil: {
         pretest: hasilQuiz[`${k.id}:pretest`] ?? 0,
         posttest: hasilQuiz[`${k.id}:posttest`] ?? 0,
       },
       onSaklar: (jenis, nilai) => ubahSaklar(k, jenis, nilai),
       onUbah: () => setForm({ id: k.id }),
-      onAktifkan: () => aktifkan(k),
-      onNonaktifkan: () => nonaktifkan(k),
-      onArsipkan: () => arsipkan(k),
+      onItem: () => setIdItem(k.id),
+      onAktifkan: () => setAktifId(k.id),
+      onNonaktifkan: () => langsung(() => nonaktifkanKegiatan(k.id), `${k.nama} dinonaktifkan.`),
+      onArsipkan: () => langsung(() => arsipkanKegiatan(k.id), `${k.nama} diarsipkan.`),
+      onKeluarArsip: () => langsung(() => keluarkanDariArsip(k.id), `${k.nama} dikeluarkan dari arsip.`),
       onHapus: () => setHapusId(k.id),
     };
-  }
-
-  function aktifkan(k: Kegiatan) {
-    if (daftar.some((x) => x.aktif && x.id !== k.id)) return;
-    setDaftar((prev) => prev.map((x) => (x.id === k.id ? { ...x, aktif: true, arsip: false } : x)));
-    setPesan(`${k.nama} diaktifkan.`);
-  }
-
-  function nonaktifkan(k: Kegiatan) {
-    setDaftar((prev) => prev.map((x) => (x.id === k.id ? { ...x, aktif: false } : x)));
-    setPesan(`${k.nama} dinonaktifkan.`);
-  }
-
-  function arsipkan(k: Kegiatan) {
-    if (k.aktif) return;
-    setDaftar((prev) => prev.map((x) => (x.id === k.id ? { ...x, arsip: true } : x)));
-    setPesan(`${k.nama} diarsipkan.`);
   }
 
   // Mematikan quiz yang sudah punya hasil perlu konfirmasi dulu
@@ -378,53 +513,72 @@ export default function KegiatanClient({
   }
 
   function terapkanSaklar(k: Kegiatan, jenis: JenisQuiz, nilai: boolean) {
-    setDaftar((prev) => prev.map((x) => (x.id === k.id ? aturSaklarQuiz(x, jenis, nilai) : x)));
-    setPesan(`${LABEL_QUIZ[jenis]} ${nilai ? "diaktifkan" : "dimatikan"} di ${k.nama}.`);
+    return langsung(
+      () => ubahSaklarQuiz(k.id, jenis, nilai),
+      `${LABEL_QUIZ[jenis]} ${nilai ? "diaktifkan" : "dimatikan"} di ${k.nama}.`,
+    );
   }
 
-  function konfirmasiMatikan() {
+  async function konfirmasiMatikan() {
     if (matikan && kegiatanMatikan && !kegiatanMatikan.arsip) {
-      terapkanSaklar(kegiatanMatikan, matikan.jenis, false);
+      await terapkanSaklar(kegiatanMatikan, matikan.jenis, false);
     }
     setMatikan(null);
   }
 
-  function hapus() {
-    if (!dihapus || dihapus.aktif || berdata.has(dihapus.id)) return setHapusId(null);
-    setDaftar((prev) => prev.filter((x) => x.id !== dihapus.id));
-    setPesan(`${dihapus.nama} dihapus.`);
-    setHapusId(null);
+  async function konfirmasiAktifkan(): Promise<string | null> {
+    if (!diaktifkan) return null;
+    const g = await jalankan(() => aktifkanKegiatan(diaktifkan.id), `${diaktifkan.nama} diaktifkan.`);
+    if (!g) setAktifId(null);
+    return g;
   }
 
-  function simpan(v: Isian) {
-    const bobot = Number(v.bobot);
-    if (diedit) {
-      setDaftar((prev) =>
-        prev.map((k) =>
-          k.id === diedit.id
-            ? { ...k, nama: v.nama, tanggalMulai: v.mulai, tanggalSelesai: v.selesai, tenggat: v.tenggat, bobot }
-            : k,
-        ),
-      );
-      setPesan(`${v.nama} diperbarui.`);
-    } else {
-      const no = daftar.reduce((m, k) => Math.max(m, Number(k.id.replace(/\D/g, ""))), 0) + 1;
-      setDaftar((prev) => [
-        ...prev,
-        {
-          id: `kegiatan-${no}`,
-          nama: v.nama,
-          tanggalMulai: v.mulai,
-          tanggalSelesai: v.selesai,
-          tenggat: v.tenggat,
-          bobot,
-          ambangKehadiran: AMBANG_KEHADIRAN_AWAL,
-        },
-      ]);
-      setPesan(`${v.nama} ditambahkan.`);
-    }
-    setForm(null);
+  async function jalankanHapus(): Promise<string | null> {
+    if (!dihapus) return null;
+    const g = await jalankan(() => hapusKegiatan(dihapus.id), `${dihapus.nama} dihapus.`);
+    if (!g) setHapusId(null);
+    return g;
   }
+
+  async function simpan(v: Isian): Promise<string | null> {
+    const masuk = {
+      nama: v.nama,
+      tanggalMulai: v.mulai,
+      tanggalSelesai: v.selesai,
+      tenggat: v.tenggat,
+      bobot: Number(v.bobot),
+    };
+    const g = diedit
+      ? await jalankan(() => ubahKegiatan(diedit.id, masuk), `${v.nama} diperbarui.`)
+      : await jalankan(() => tambahKegiatan(masuk), `${v.nama} ditambahkan.`);
+    if (!g) setForm(null);
+    return g;
+  }
+
+  async function simpanItem(nama: string): Promise<string | null> {
+    if (!kegiatanItem) return null;
+    const g = itemDiedit
+      ? await jalankan(() => ubahItem(itemDiedit.id, nama), "Item diperbarui.")
+      : await jalankan(() => tambahItem(kegiatanItem.id, nama), "Item ditambahkan.");
+    if (!g) setFormItem(null);
+    return g;
+  }
+
+  async function jalankanHapusItem(): Promise<string | null> {
+    if (!itemDihapus) return null;
+    const g = await jalankan(() => hapusItem(itemDihapus.id), `${itemDihapus.nama} dihapus.`);
+    if (!g) setHapusItemId(null);
+    return g;
+  }
+
+  const rincianHapus = dihapus ? isi[dihapus.id] : undefined;
+  const teksHapus = dihapus
+    ? `Hapus kegiatan ${dihapus.nama}?${
+        rincianHapus && rincianHapus.item + rincianHapus.sesi + rincianHapus.soal > 0
+          ? ` Ikut terhapus: ${rincianHapus.item} item dokumen, ${rincianHapus.sesi} sesi daftar hadir, ${rincianHapus.soal} soal quiz.`
+          : ""
+      } Tindakan ini tidak bisa dibatalkan.`
+    : "";
 
   return (
     <div className="space-y-6">
@@ -435,15 +589,20 @@ export default function KegiatanClient({
             {daftar.length} kegiatan, {diarsipkan.length} diarsipkan
           </p>
         </div>
-        <button onClick={() => setForm({ id: null })} className={tombolUtama}>
-          <Plus className="size-4" aria-hidden />
-          Tambah kegiatan
-        </button>
+        {FITUR_TAMBAH_KEGIATAN && (
+          <button onClick={() => setForm({ id: null })} className={tombolUtama}>
+            <Plus className="size-4" aria-hidden />
+            Tambah kegiatan
+          </button>
+        )}
       </header>
 
-      <p role="status" className="min-h-5 text-sm text-ink-muted">
-        {pesan}
-      </p>
+      <div className="space-y-1">
+        <p role="status" className="min-h-5 text-sm text-ink-muted">
+          {pesan}
+        </p>
+        <Galat pesan={galatUmum} />
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {berjalan.map((k) => (
@@ -493,6 +652,20 @@ export default function KegiatanClient({
         />
       </Dialog>
 
+      <Dialog buka={!!diaktifkan} onTutup={() => setAktifId(null)} judul="Jadikan kegiatan aktif">
+        {diaktifkan && (
+          <KonfirmasiAktif
+            teks={
+              aktifLain
+                ? `${aktifLain.nama} akan menjadi nonaktif, dan ${diaktifkan.nama} menjadi satu-satunya kegiatan yang dilihat OPD.`
+                : `${diaktifkan.nama} akan menjadi kegiatan yang dilihat OPD.`
+            }
+            onYa={konfirmasiAktifkan}
+            onBatal={() => setAktifId(null)}
+          />
+        )}
+      </Dialog>
+
       <Dialog
         buka={!!matikan}
         onTutup={() => setMatikan(null)}
@@ -506,28 +679,115 @@ export default function KegiatanClient({
           quiz diaktifkan kembali.
         </p>
         <div className="flex justify-end gap-2 pt-2">
-          <button onClick={() => setMatikan(null)} className={tombolSekunder}>
+          <button onClick={() => setMatikan(null)} disabled={sibuk} className={tombolSekunder}>
             Batal
           </button>
-          <button onClick={konfirmasiMatikan} className={tombolBahaya}>
+          <button onClick={konfirmasiMatikan} disabled={sibuk} className={tombolBahaya}>
             Matikan
           </button>
         </div>
       </Dialog>
 
       <Dialog buka={!!dihapus} onTutup={() => setHapusId(null)} judul="Hapus kegiatan">
-        <p className="text-sm text-ink-muted">
-          Hapus kegiatan <span className="font-medium text-ink">{dihapus?.nama}</span>? Tindakan ini tidak bisa
-          dibatalkan.
-        </p>
-        <div className="flex justify-end gap-2 pt-2">
-          <button onClick={() => setHapusId(null)} className={tombolSekunder}>
-            Batal
-          </button>
-          <button onClick={hapus} className={tombolBahaya}>
-            Hapus
-          </button>
-        </div>
+        {dihapus && <KonfirmasiHapus teks={teksHapus} onYa={jalankanHapus} onBatal={() => setHapusId(null)} />}
+      </Dialog>
+
+      {/* Popup item dokumen satu kegiatan */}
+      <Dialog
+        buka={!!kegiatanItem}
+        onTutup={() => setIdItem(null)}
+        judul={`Item dokumen ${kegiatanItem?.nama ?? ""}`}
+        lebar="w-[min(40rem,calc(100%-2rem))]"
+      >
+        {kegiatanItem && (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="tabular text-sm text-ink-muted">{daftarItem.length} item</p>
+              <button onClick={() => setFormItem({ id: null })} className={tombolUtama}>
+                <Plus className="size-4" aria-hidden />
+                Tambah item
+              </button>
+            </div>
+
+            <div className="overflow-x-auto rounded-card border border-line">
+              <table className="w-full min-w-120 text-left text-sm">
+                <thead className="bg-surface-muted text-ink-muted">
+                  <tr>
+                    <th className="w-12 px-4 py-3 font-medium">No</th>
+                    <th className="px-4 py-3 font-medium">Nama item</th>
+                    <th className="px-4 py-3 text-right font-medium">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {daftarItem.map((i, no) => {
+                    const terpakai = itemBerdata.has(i.id);
+                    return (
+                      <tr key={i.id}>
+                        <td className="tabular px-4 py-3 text-ink-muted">{no + 1}</td>
+                        <td className="px-4 py-3">
+                          <p className="text-ink">{i.nama}</p>
+                          {terpakai && (
+                            <p className="text-xs text-ink-muted">
+                              Sudah ada dokumen disetujui, tidak bisa dihapus.
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-end gap-2">
+                            <button onClick={() => setFormItem({ id: i.id })} className={tombolSekunder}>
+                              <Pencil className="size-4" aria-hidden />
+                              Ubah
+                            </button>
+                            <button
+                              onClick={() => setHapusItemId(i.id)}
+                              disabled={terpakai}
+                              aria-label={`Hapus item ${i.nama}`}
+                              className={`${tombolSekunder} text-status-revisi-fg`}
+                            >
+                              <Trash2 className="size-4" aria-hidden />
+                              Hapus
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {daftarItem.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-8 text-center text-ink-muted">
+                        Belum ada item dokumen.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button onClick={() => setIdItem(null)} className={tombolSekunder}>
+                Tutup
+              </button>
+            </div>
+          </>
+        )}
+      </Dialog>
+
+      <Dialog
+        buka={!!formItem}
+        onTutup={() => setFormItem(null)}
+        judul={itemDiedit ? "Ubah item dokumen" : "Tambah item dokumen"}
+      >
+        <FormItem awal={itemDiedit?.nama ?? ""} onSimpan={simpanItem} onBatal={() => setFormItem(null)} />
+      </Dialog>
+
+      <Dialog buka={!!itemDihapus} onTutup={() => setHapusItemId(null)} judul="Hapus item dokumen">
+        {itemDihapus && (
+          <KonfirmasiHapus
+            teks={`Hapus item ${itemDihapus.nama}? Baris dokumen item ini di semua pegawai ikut terhapus. Tindakan ini tidak bisa dibatalkan.`}
+            onYa={jalankanHapusItem}
+            onBatal={() => setHapusItemId(null)}
+          />
+        )}
       </Dialog>
     </div>
   );

@@ -1,32 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { ArrowLeft, ArrowRight, BookOpen, CheckCheck, ExternalLink } from "lucide-react";
 import type { BabModul, ModulPembelajaran } from "@/lib/types";
+import { batalkanSelesai, tandaiSelesai } from "./actions";
 
 interface Props {
   modul: ModulPembelajaran;
   babList: BabModul[];
-  babSelesaiAwal: string[];
+  babSelesai: string[]; // id bab yang sudah ditandai pegawai ini, dari server
   indeksAwal?: number;
 }
 
-export default function ModulClient({ modul, babList, babSelesaiAwal, indeksAwal = 0 }: Props) {
+export default function ModulClient({ modul, babList, babSelesai, indeksAwal = 0 }: Props) {
   const [indeks, setIndeks] = useState(indeksAwal);
-  // Simulasi: hanya di state browser. Nanti disimpan ke server per OPD dan bab
-  const [selesai, setSelesai] = useState<Set<string>>(() => new Set(babSelesaiAwal));
+  const [galat, setGalat] = useState("");
+  const [proses, mulai] = useTransition();
 
-  const bab = babList[indeks];
-  const sudahSelesai = selesai.has(bab.id);
-  const adaSebelumnya = indeks > 0;
-  const adaSelanjutnya = indeks < babList.length - 1;
+  // Tampilan langsung berubah saat tombol ditekan; setelah server menjawab, data asli dari props yang berlaku
+  const [selesai, ubahOptimis] = useOptimistic(
+    babSelesai,
+    (lama: string[], u: { id: string; sudah: boolean }) =>
+      u.sudah ? [...lama.filter((x) => x !== u.id), u.id] : lama.filter((x) => x !== u.id),
+  );
+
+  // Admin bisa menghapus bab saat halaman terbuka; jaga agar indeks tetap di dalam daftar
+  const i = Math.min(indeks, babList.length - 1);
+  const bab = babList[i];
+  const sudahSelesai = selesai.includes(bab.id);
+  const adaSebelumnya = i > 0;
+  const adaSelanjutnya = i < babList.length - 1;
+  const materiAda = bab.linkMateri !== "";
 
   function ubahSelesai() {
-    setSelesai((lama) => {
-      const baru = new Set(lama);
-      if (baru.has(bab.id)) baru.delete(bab.id);
-      else baru.add(bab.id);
-      return baru;
+    const id = bab.id;
+    const sudah = !sudahSelesai;
+    setGalat("");
+    mulai(async () => {
+      ubahOptimis({ id, sudah });
+      const hasil = sudah ? await tandaiSelesai(id) : await batalkanSelesai(id);
+      if (!hasil.ok) setGalat(hasil.pesan);
     });
   }
 
@@ -47,12 +60,15 @@ export default function ModulClient({ modul, babList, babSelesaiAwal, indeksAwal
           </label>
           <select
             id="pilih-bab"
-            value={indeks}
-            onChange={(e) => setIndeks(Number(e.target.value))}
+            value={i}
+            onChange={(e) => {
+              setGalat("");
+              setIndeks(Number(e.target.value));
+            }}
             className="w-full rounded-full border border-line bg-surface px-4 py-2.5 text-sm text-ink focus:border-navy-600 focus:outline-none focus:ring-2 focus:ring-navy-600/30"
           >
-            {babList.map((b, i) => (
-              <option key={b.id} value={i}>
+            {babList.map((b, n) => (
+              <option key={b.id} value={n}>
                 Bab {b.urutan}: {b.judul}
               </option>
             ))}
@@ -64,26 +80,33 @@ export default function ModulClient({ modul, babList, babSelesaiAwal, indeksAwal
         <h2 className="text-xl font-semibold text-navy-800">
           Bab {bab.urutan}: {bab.judul}
         </h2>
-        <p className="mt-2 max-w-prose text-ink-muted">
-          Materi bab ini tersedia di Google Drive. Pelajari sampai selesai, lalu tekan
-          &quot;Sudah selesai&quot; di bawah.
-        </p>
 
-        <a
-          href={bab.linkMateri}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-white hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600"
-        >
-          <ExternalLink className="size-4" aria-hidden />
-          Buka materi di Google Drive
-        </a>
+        {materiAda ? (
+          <>
+            <p className="mt-2 max-w-prose text-ink-muted">
+              Materi bab ini tersedia di Google Drive. Pelajari sampai selesai, lalu tekan
+              &quot;Sudah selesai&quot; di bawah.
+            </p>
+
+            <a
+              href={bab.linkMateri}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-white hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600"
+            >
+              <ExternalLink className="size-4" aria-hidden />
+              Buka materi di Google Drive
+            </a>
+          </>
+        ) : (
+          <p className="mt-2 max-w-prose text-ink-muted">Materi belum tersedia.</p>
+        )}
       </div>
 
       <footer className="flex flex-col gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
         <button
           type="button"
-          onClick={() => setIndeks((i) => i - 1)}
+          onClick={() => setIndeks(i - 1)}
           disabled={!adaSebelumnya}
           className="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-medium text-ink hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-40"
         >
@@ -94,12 +117,14 @@ export default function ModulClient({ modul, babList, babSelesaiAwal, indeksAwal
         <button
           type="button"
           onClick={ubahSelesai}
+          disabled={proses || !materiAda}
           aria-pressed={sudahSelesai}
           title={sudahSelesai ? "Tekan lagi untuk membatalkan" : undefined}
           className={
-            sudahSelesai
+            (sudahSelesai
               ? "inline-flex items-center justify-center gap-2 rounded-lg border border-status-disetujui-fg/30 bg-status-disetujui-bg px-5 py-2.5 text-sm font-semibold text-status-disetujui-fg hover:brightness-95"
-              : "inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-ink hover:bg-surface-muted"
+              : "inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-ink hover:bg-surface-muted") +
+            " disabled:cursor-not-allowed disabled:opacity-60"
           }
         >
           <CheckCheck className="size-4" aria-hidden />
@@ -108,7 +133,7 @@ export default function ModulClient({ modul, babList, babSelesaiAwal, indeksAwal
 
         <button
           type="button"
-          onClick={() => setIndeks((i) => i + 1)}
+          onClick={() => setIndeks(i + 1)}
           disabled={!adaSelanjutnya}
           className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
         >
@@ -116,6 +141,12 @@ export default function ModulClient({ modul, babList, babSelesaiAwal, indeksAwal
           <ArrowRight className="size-4" aria-hidden />
         </button>
       </footer>
+
+      {galat && (
+        <p role="alert" className="mt-3 text-sm text-status-revisi-fg">
+          {galat}
+        </p>
+      )}
     </section>
   );
 }

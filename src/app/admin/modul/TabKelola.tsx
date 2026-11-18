@@ -19,26 +19,37 @@ import type { BabModul, ModulPembelajaran } from "@/lib/types";
 export type DataModul = { judul: string; subjudul: string };
 export type DataBab = { judul: string; linkMateri: string; pembinaan: Pembinaan };
 
+// Setiap aksi mengembalikan pesan galat, atau null bila berhasil
 export type AksiTabKelola = {
-  simpanModul: (d: DataModul) => void;
-  tambahBab: (d: DataBab) => void;
-  ubahBab: (id: string, d: DataBab) => void;
-  hapusBab: (id: string) => void;
-  geser: (id: string, arah: -1 | 1) => void;
+  simpanModul: (d: DataModul) => Promise<string | null>;
+  tambahBab: (d: DataBab) => Promise<string | null>;
+  ubahBab: (id: string, d: DataBab) => Promise<string | null>;
+  hapusBab: (id: string) => Promise<string | null>;
+  geser: (id: string, arah: -1 | 1) => Promise<string | null>;
 };
 
 /* ------------------------------ form modul ------------------------------ */
 
-function FormModul({ modul, onSimpan }: { modul: ModulPembelajaran | undefined; onSimpan: (d: DataModul) => void }) {
+function FormModul({
+  modul,
+  onSimpan,
+}: {
+  modul: ModulPembelajaran | undefined;
+  onSimpan: (d: DataModul) => Promise<string | null>;
+}) {
   const [judul, setJudul] = useState(modul?.judul ?? "");
   const [subjudul, setSubjudul] = useState(modul?.subjudul ?? "");
   const [galat, setGalat] = useState("");
+  const [proses, setProses] = useState(false);
 
-  function kirim(e: FormEvent) {
+  async function kirim(e: FormEvent) {
     e.preventDefault();
     if (!judul.trim()) return setGalat("Judul modul wajib diisi.");
     setGalat("");
-    onSimpan({ judul: judul.trim(), subjudul: subjudul.trim() });
+    setProses(true);
+    const g = await onSimpan({ judul: judul.trim(), subjudul: subjudul.trim() });
+    setProses(false);
+    if (g) setGalat(g);
   }
 
   return (
@@ -81,7 +92,7 @@ function FormModul({ modul, onSimpan }: { modul: ModulPembelajaran | undefined; 
           </p>
         )}
         <div className="flex justify-end">
-          <button type="submit" className={tombolUtama}>
+          <button type="submit" disabled={proses} className={tombolUtama}>
             {modul ? "Simpan modul" : "Buat modul"}
           </button>
         </div>
@@ -98,19 +109,28 @@ function FormBab({
   onBatal,
 }: {
   awal: { judul: string; linkMateri: string; pembinaan: Pembinaan };
-  onSimpan: (d: DataBab) => void;
+  onSimpan: (d: DataBab) => Promise<string | null>;
   onBatal: () => void;
 }) {
   const [v, setV] = useState(awal);
   const [galat, setGalat] = useState("");
+  const [proses, setProses] = useState(false);
 
-  function kirim(e: FormEvent) {
+  async function kirim(e: FormEvent) {
     e.preventDefault();
     const judul = v.judul.trim();
     const linkMateri = v.linkMateri.trim();
     if (!judul) return setGalat("Judul bab wajib diisi.");
     if (!linkMateri) return setGalat("Link materi wajib diisi.");
-    onSimpan({ judul, linkMateri, pembinaan: v.pembinaan });
+    if (!/^https:\/\//i.test(linkMateri)) return setGalat("Link materi harus diawali https://");
+    setGalat("");
+    setProses(true);
+    const g = await onSimpan({ judul, linkMateri, pembinaan: v.pembinaan });
+    // bila berhasil, induk menutup dialog sehingga form ini hilang
+    if (g) {
+      setGalat(g);
+      setProses(false);
+    }
   }
 
   return (
@@ -161,10 +181,10 @@ function FormBab({
         </p>
       )}
       <div className="flex justify-end gap-2 pt-2">
-        <button type="button" onClick={onBatal} className={tombolSekunder}>
+        <button type="button" onClick={onBatal} disabled={proses} className={tombolSekunder}>
           Batal
         </button>
-        <button type="submit" className={tombolUtama}>
+        <button type="submit" disabled={proses} className={tombolUtama}>
           Simpan bab
         </button>
       </div>
@@ -177,22 +197,37 @@ function FormBab({
 type Props = {
   modul: ModulPembelajaran | undefined;
   babList: BabModul[]; // bab modul ini, sudah urut
-  jumlahSelesai: Record<string, number>; // id bab -> jumlah OPD yang sudah selesai
+  jumlahSelesai: Record<string, number>; // id bab -> jumlah pegawai yang sudah selesai
   aksi: AksiTabKelola;
+  sibuk: boolean; // true selama ada aksi berjalan: tombol geser dan hapus dinonaktifkan
 };
 
-export default function TabKelola({ modul, babList, jumlahSelesai, aksi }: Props) {
+export default function TabKelola({ modul, babList, jumlahSelesai, aksi, sibuk }: Props) {
   const [form, setForm] = useState<{ id: string | null } | null>(null);
   const [hapusId, setHapusId] = useState<string | null>(null);
+  const [galatHapus, setGalatHapus] = useState("");
 
   const diedit = form?.id ? babList.find((b) => b.id === form.id) : undefined;
   const dihapus = hapusId ? babList.find((b) => b.id === hapusId) : undefined;
   const terdampak = dihapus ? (jumlahSelesai[dihapus.id] ?? 0) : 0;
 
-  function simpanBab(d: DataBab) {
-    if (diedit) aksi.ubahBab(diedit.id, d);
-    else aksi.tambahBab(d);
-    setForm(null);
+  async function simpanBab(d: DataBab): Promise<string | null> {
+    const g = diedit ? await aksi.ubahBab(diedit.id, d) : await aksi.tambahBab(d);
+    if (!g) setForm(null);
+    return g;
+  }
+
+  async function konfirmasiHapus() {
+    if (!dihapus) return;
+    setGalatHapus("");
+    const g = await aksi.hapusBab(dihapus.id);
+    if (g) setGalatHapus(g);
+    else setHapusId(null);
+  }
+
+  function tutupHapus() {
+    setHapusId(null);
+    setGalatHapus("");
   }
 
   return (
@@ -233,20 +268,24 @@ export default function TabKelola({ modul, babList, jumlahSelesai, aksi }: Props
                               {jumlahSelesai[b.id] ?? 0} pegawai selesai
                             </Lencana>
                           </div>
-                          <a
-                            href={b.linkMateri}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-sm text-primary underline"
-                          >
-                            <ExternalLink className="size-3.5 shrink-0" aria-hidden />
-                            {ringkas(b.linkMateri, 70)}
-                          </a>
+                          {b.linkMateri ? (
+                            <a
+                              href={b.linkMateri}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-sm text-primary underline"
+                            >
+                              <ExternalLink className="size-3.5 shrink-0" aria-hidden />
+                              {ringkas(b.linkMateri, 70)}
+                            </a>
+                          ) : (
+                            <p className="text-sm text-ink-muted">Link materi belum diisi.</p>
+                          )}
                           <div className="flex flex-wrap justify-end gap-2">
                             <button
                               type="button"
-                              onClick={() => aksi.geser(b.id, -1)}
-                              disabled={i === 0}
+                              onClick={() => void aksi.geser(b.id, -1)}
+                              disabled={i === 0 || sibuk}
                               aria-label={`Naikkan bab ${b.urutan}`}
                               className={tombolSekunder}
                             >
@@ -254,18 +293,28 @@ export default function TabKelola({ modul, babList, jumlahSelesai, aksi }: Props
                             </button>
                             <button
                               type="button"
-                              onClick={() => aksi.geser(b.id, 1)}
-                              disabled={i === daftar.length - 1}
+                              onClick={() => void aksi.geser(b.id, 1)}
+                              disabled={i === daftar.length - 1 || sibuk}
                               aria-label={`Turunkan bab ${b.urutan}`}
                               className={tombolSekunder}
                             >
                               <ArrowDown className="size-4" aria-hidden />
                             </button>
-                            <button type="button" onClick={() => setForm({ id: b.id })} className={tombolSekunder}>
+                            <button
+                              type="button"
+                              onClick={() => setForm({ id: b.id })}
+                              disabled={sibuk}
+                              className={tombolSekunder}
+                            >
                               <Pencil className="size-4" aria-hidden />
                               Ubah
                             </button>
-                            <button type="button" onClick={() => setHapusId(b.id)} className={tombolSekunder}>
+                            <button
+                              type="button"
+                              onClick={() => setHapusId(b.id)}
+                              disabled={sibuk}
+                              className={tombolSekunder}
+                            >
                               <Trash2 className="size-4" aria-hidden />
                               Hapus
                             </button>
@@ -300,7 +349,7 @@ export default function TabKelola({ modul, babList, jumlahSelesai, aksi }: Props
         )}
       </Dialog>
 
-      <Dialog buka={!!dihapus} onTutup={() => setHapusId(null)} judul="Hapus bab">
+      <Dialog buka={!!dihapus} onTutup={tutupHapus} judul="Hapus bab">
         {dihapus && (
           <>
             <p className="text-sm text-ink-muted">
@@ -310,18 +359,16 @@ export default function TabKelola({ modul, babList, jumlahSelesai, aksi }: Props
                 : "Belum ada pegawai yang menandai bab ini selesai."}{" "}
               Tindakan ini tidak bisa dibatalkan.
             </p>
+            {galatHapus && (
+              <p role="alert" className="mt-3 text-sm text-status-revisi-fg">
+                {galatHapus}
+              </p>
+            )}
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setHapusId(null)} className={tombolSekunder}>
+              <button type="button" onClick={tutupHapus} disabled={sibuk} className={tombolSekunder}>
                 Batal
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  aksi.hapusBab(dihapus.id);
-                  setHapusId(null);
-                }}
-                className={tombolBahaya}
-              >
+              <button type="button" onClick={konfirmasiHapus} disabled={sibuk} className={tombolBahaya}>
                 Hapus
               </button>
             </div>

@@ -1,15 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import {
-  URUTAN_TERAKHIR,
-  babModul,
-  geserBab,
-  idBabBaru,
-  jumlahSelesaiBab,
-  rapikanBab,
-} from "@/lib/modul-admin";
+import { jumlahSelesaiBab } from "@/lib/modul-admin";
 import type { BabModul, BabSelesai, ModulPembelajaran, Opd, Pengguna } from "@/lib/types";
+import { geserBab, hapusBab, simpanModul, tambahBab, ubahBab } from "./actions";
 import TabKelola, { type AksiTabKelola } from "./TabKelola";
 import TabPantauan from "./TabPantauan";
 
@@ -20,81 +14,53 @@ const DAFTAR_TAB: { id: NamaTab; label: string }[] = [
   { id: "pantauan", label: "Pantauan" },
 ];
 
+type Hasil = { ok: true } | { ok: false; pesan: string };
+
 type Props = {
   opdList: Opd[];
   pegawaiList: Pengguna[];
-  modulAwal: ModulPembelajaran[];
-  babAwal: BabModul[];
-  selesaiAwal: BabSelesai[];
+  modul: ModulPembelajaran | undefined;
+  babList: BabModul[]; // bab modul ini, sudah urut, dari server
+  selesaiList: BabSelesai[];
 };
 
-export default function ModulAdminClient({ opdList, pegawaiList, modulAwal, babAwal, selesaiAwal }: Props) {
-  // Simulasi: hanya di state browser. Nanti disimpan ke server
-  const [modulList, setModulList] = useState(modulAwal);
-  const [babList, setBabList] = useState(babAwal);
-  const [selesaiList, setSelesaiList] = useState(selesaiAwal);
+export default function ModulAdminClient({ opdList, pegawaiList, modul, babList, selesaiList }: Props) {
   const [tab, setTab] = useState<NamaTab>("kelola");
   const [pesan, setPesan] = useState("");
+  const [sibuk, setSibuk] = useState(false);
 
-  // untuk saat ini hanya ada satu modul
-  const modul = modulList[0];
-  const babModulIni = modul ? babModul(babList, modul.id) : [];
+  // Mengembalikan pesan galat, atau null bila berhasil. Data baru datang lewat props setelah revalidatePath.
+  async function jalankan(aksi: () => Promise<Hasil>, pesanSukses: string): Promise<string | null> {
+    setPesan("");
+    setSibuk(true);
+    try {
+      const hasil = await aksi();
+      if (!hasil.ok) return hasil.pesan;
+      setPesan(pesanSukses);
+      return null;
+    } catch {
+      return "Terjadi kesalahan. Coba lagi.";
+    } finally {
+      setSibuk(false);
+    }
+  }
 
   const aksi: AksiTabKelola = {
-    simpanModul(d) {
-      if (modul) {
-        setModulList((prev) => prev.map((m) => (m.id === modul.id ? { ...m, ...d } : m)));
-        setPesan("Modul diperbarui.");
-        return;
-      }
-      const no = modulList.reduce((m, x) => Math.max(m, Number(x.id.replace(/\D/g, ""))), 0) + 1;
-      setModulList((prev) => [...prev, { ...d, id: `modul-${no}`, urutan: 1 }]);
-      setPesan("Modul dibuat.");
+    simpanModul: (d) => jalankan(() => simpanModul(d), modul ? "Modul diperbarui." : "Modul dibuat."),
+    tambahBab: async (d) => {
+      if (!modul) return "Buat modul dulu sebelum menambah bab.";
+      return jalankan(() => tambahBab(modul.id, d), "Bab ditambahkan.");
     },
-    tambahBab(d) {
-      if (!modul) return;
-      const baru: BabModul = {
-        ...d,
-        id: idBabBaru(babList, modul.id),
-        modulId: modul.id,
-        urutan: URUTAN_TERAKHIR,
-      };
-      setBabList((prev) => rapikanBab([...prev, baru], modul.id));
-      setPesan("Bab ditambahkan.");
-    },
-    ubahBab(id, d) {
-      if (!modul) return;
-      setBabList((prev) =>
-        rapikanBab(
-          prev.map((b) =>
-            b.id === id
-              ? { ...b, ...d, urutan: b.pembinaan === d.pembinaan ? b.urutan : URUTAN_TERAKHIR }
-              : b,
-          ),
-          modul.id,
-        ),
-      );
-      setPesan("Bab diperbarui.");
-    },
-    hapusBab(id) {
-      if (!modul) return;
-      setBabList((prev) =>
-        rapikanBab(
-          prev.filter((b) => b.id !== id),
-          modul.id,
-        ),
-      );
-      setSelesaiList((prev) => prev.filter((s) => s.babId !== id));
-      setPesan("Bab dihapus.");
-    },
-    geser(id, arah) {
-      setBabList((prev) => geserBab(prev, id, arah));
+    ubahBab: (id, d) => jalankan(() => ubahBab(id, d), "Bab diperbarui."),
+    hapusBab: (id) => jalankan(() => hapusBab(id), "Bab dihapus."),
+    geser: async (id, arah) => {
+      const galat = await jalankan(() => geserBab(id, arah), "");
+      if (galat) setPesan(galat);
+      return galat;
     },
   };
 
-  const jumlahSelesai = Object.fromEntries(
-    babModulIni.map((b) => [b.id, jumlahSelesaiBab(selesaiList, b.id)]),
-  );
+  const jumlahSelesai = Object.fromEntries(babList.map((b) => [b.id, jumlahSelesaiBab(selesaiList, b.id)]));
 
   return (
     <div className="space-y-6">
@@ -125,11 +91,11 @@ export default function ModulAdminClient({ opdList, pegawaiList, modulAwal, babA
 
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
         {tab === "kelola" ? (
-          <TabKelola modul={modul} babList={babModulIni} jumlahSelesai={jumlahSelesai} aksi={aksi} />
+          <TabKelola modul={modul} babList={babList} jumlahSelesai={jumlahSelesai} aksi={aksi} sibuk={sibuk} />
         ) : (
           <TabPantauan
             modul={modul}
-            babList={babModulIni}
+            babList={babList}
             opdList={opdList}
             pegawaiList={pegawaiList}
             selesaiList={selesaiList}

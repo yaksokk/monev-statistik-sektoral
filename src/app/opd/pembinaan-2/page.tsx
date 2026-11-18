@@ -1,6 +1,6 @@
 import ModulClient from "@/components/modul/ModulClient";
 import KartuQuiz from "@/components/quiz/KartuQuiz";
-import { BAB_LIST, BAB_SELESAI_LIST, MODUL_LIST } from "@/data/modul";
+import { ambilBabModul, ambilIdBabSelesaiSaya, ambilModul } from "@/lib/data/modul";
 import { ambilOperator } from "@/lib/operator";
 import { waktuSekarang } from "@/lib/presensi";
 import { ambilQuizOpd, kegiatanBerjalan } from "@/lib/quiz-opd";
@@ -16,11 +16,10 @@ export default async function Pembinaan2Page({ searchParams }: Props) {
   const { bab } = await searchParams;
   const sekarang = waktuSekarang();
 
-  const modul = MODUL_LIST[0];
-  const babList = BAB_LIST.filter(
-    (b) => b.modulId === modul.id && b.pembinaan === PEMBINAAN,
-  ).sort((a, b) => a.urutan - b.urutan);
-  const babSelesaiAwal = BAB_SELESAI_LIST.filter((s) => s.penggunaId === pengguna.id).map((s) => s.babId);
+  const [modul, babSelesai] = await Promise.all([ambilModul(), ambilIdBabSelesaiSaya(pengguna.id)]);
+  const babList = modul
+    ? (await ambilBabModul(modul.id)).filter((b) => b.pembinaan === PEMBINAAN)
+    : [];
 
   // bab dari tautan dashboard; id tidak dikenal jatuh ke bab pertama
   const indeksAwal = Math.max(
@@ -28,7 +27,7 @@ export default async function Pembinaan2Page({ searchParams }: Props) {
     babList.findIndex((b) => b.id === bab),
   );
 
-  // quiz mengikuti kegiatan berjalan; Post-Test yang dimatikan admin disembunyikan
+  // quiz mengikuti kegiatan berjalan; Post-Test yang dimatikan admin disembunyikan (masih dummy sampai langkah 6)
   const kegiatan = kegiatanBerjalan();
   const pre = ambilQuizOpd(kegiatan, "pretest", opd.id, pengguna.id);
   const post = ambilQuizOpd(kegiatan, "posttest", opd.id, pengguna.id);
@@ -48,11 +47,11 @@ export default async function Pembinaan2Page({ searchParams }: Props) {
         </p>
       </header>
 
-      {babList.length > 0 ? (
+      {modul && babList.length > 0 ? (
         <ModulClient
           modul={modul}
           babList={babList}
-          babSelesaiAwal={babSelesaiAwal}
+          babSelesai={babSelesai}
           indeksAwal={indeksAwal}
         />
       ) : (

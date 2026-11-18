@@ -1,4 +1,5 @@
 import type { Kegiatan, Presensi, SesiPembinaan, StatusKehadiran } from "@/lib/types";
+import { sekarangWita } from "@/lib/waktu"
 
 // Status sesi menurut waktu saja
 export type StatusSesi = "belum_dibuka" | "dibuka" | "ditutup";
@@ -17,10 +18,9 @@ const BULAN = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "O
 
 const dua = (n: number) => String(n).padStart(2, "0");
 
-// Waktu lokal "yyyy-mm-ddTHH:mm". Panggil hanya dari useEffect atau event handler.
+// Waktu WITA tetap (tidak bergantung zona waktu perangkat). Panggil hanya dari useEffect atau event handler.
 export function waktuSekarang(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${dua(d.getMonth() + 1)}-${dua(d.getDate())}T${dua(d.getHours())}:${dua(d.getMinutes())}`;
+  return sekarangWita();
 }
 
 // Diformat dari teksnya, bukan lewat Date, supaya server dan browser menampilkan hal yang sama

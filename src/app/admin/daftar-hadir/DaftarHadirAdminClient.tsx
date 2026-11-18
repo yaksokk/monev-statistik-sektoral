@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useState, type FormEvent } from "react";
 import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
 import {
   apakahLulusKehadiran,
   formatWaktu,
-  hitungKehadiran,
+  hitungKehadiranPegawai,
   labelSesi,
   sesiKegiatan,
   statusSesi,
@@ -18,10 +18,14 @@ import {
   STATUS_KEHADIRAN_LABEL,
   type Kegiatan,
   type Opd,
+  type Pengguna,
   type Presensi,
   type SesiPembinaan,
   type StatusKehadiran,
 } from "@/lib/types";
+import { hapusKehadiran, hapusSesi, tambahSesi, ubahAmbang, ubahSesi } from "./actions";
+
+type Hasil = { ok: true } | { ok: false; pesan: string };
 
 const dasarTombol =
   "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50";
@@ -57,13 +61,7 @@ const GAYA_STATUS_SESI: Record<StatusSesi, string> = {
   ditutup: "bg-status-belum-bg text-status-belum-fg",
 };
 
-function Lencana({
-  kelas,
-  children,
-}: {
-  kelas: string;
-  children: string;
-}) {
+function Lencana({ kelas, children }: { kelas: string; children: string }) {
   return (
     <span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ${kelas}`}>
       {children}
@@ -86,19 +84,23 @@ function BagianAmbang({
 }: {
   ambang: number;
   arsip: boolean;
-  onSimpan: (nilai: number) => void;
+  onSimpan: (nilai: number) => Promise<string | null>;
 }) {
   const [isi, setIsi] = useState(String(ambang));
   const [galat, setGalat] = useState("");
+  const [proses, setProses] = useState(false);
 
-  function simpan(e: FormEvent) {
+  async function simpan(e: FormEvent) {
     e.preventDefault();
     const n = Number(isi);
     if (isi.trim() === "" || !Number.isInteger(n) || n < 1 || n > 100) {
       return setGalat("Ambang harus bilangan bulat 1 sampai 100.");
     }
     setGalat("");
-    onSimpan(n);
+    setProses(true);
+    const err = await onSimpan(n);
+    setProses(false);
+    if (err) setGalat(err);
   }
 
   return (
@@ -107,7 +109,7 @@ function BagianAmbang({
         Ambang kehadiran
       </h2>
       <p className="mt-1 text-sm text-ink-muted">
-        OPD lulus kehadiran bila persentasenya mencapai ambang ini. Persentase dihitung dari semua
+        Pegawai lulus kehadiran bila persentasenya mencapai ambang ini. Persentase dihitung dari semua
         sesi kegiatan.
       </p>
       <form onSubmit={simpan} className="mt-4 flex flex-wrap items-end gap-3">
@@ -124,11 +126,11 @@ function BagianAmbang({
             step={1}
             value={isi}
             onChange={(e) => setIsi(e.target.value)}
-            disabled={arsip}
+            disabled={arsip || proses}
             className={`${kolomInput} w-32`}
           />
         </div>
-        <button type="submit" disabled={arsip || Number(isi) === ambang} className={tombolUtama}>
+        <button type="submit" disabled={arsip || proses || Number(isi) === ambang} className={tombolUtama}>
           Simpan
         </button>
       </form>
@@ -155,14 +157,16 @@ function FormSesi({
   awal: Isian;
   batasLama: string;
   sekarang: string;
-  onSimpan: (v: Isian) => void;
+  onSimpan: (v: Isian) => Promise<string | null>;
   onBatal: () => void;
 }) {
   const [v, setV] = useState(awal);
   const [galat, setGalat] = useState("");
+  const [proses, setProses] = useState(false);
 
-  function kirim(e: FormEvent) {
+  async function kirim(e: FormEvent) {
     e.preventDefault();
+    if (proses) return;
     if (!v.judul.trim()) return setGalat("Judul sesi wajib diisi.");
     if (v.buka && v.batas && v.batas <= v.buka) {
       return setGalat("Batas pengisian harus setelah waktu buka.");
@@ -171,7 +175,11 @@ function FormSesi({
     if (v.batas && v.batas !== batasLama && v.batas <= sekarang) {
       return setGalat("Batas pengisian harus di masa depan.");
     }
-    onSimpan({ ...v, judul: v.judul.trim() });
+    setGalat("");
+    setProses(true);
+    const err = await onSimpan({ ...v, judul: v.judul.trim() });
+    setProses(false);
+    if (err) setGalat(err);
   }
 
   return (
@@ -191,7 +199,7 @@ function FormSesi({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <label htmlFor="s-buka" className="text-sm font-medium text-ink">
-            Waktu buka <span className="font-normal text-ink-muted">(opsional)</span>
+            Waktu buka <span className="font-normal text-ink-muted">(opsional, WITA)</span>
           </label>
           <input
             id="s-buka"
@@ -203,7 +211,7 @@ function FormSesi({
         </div>
         <div className="space-y-1.5">
           <label htmlFor="s-batas" className="text-sm font-medium text-ink">
-            Batas pengisian <span className="font-normal text-ink-muted">(opsional)</span>
+            Batas pengisian <span className="font-normal text-ink-muted">(opsional, WITA)</span>
           </label>
           <input
             id="s-batas"
@@ -225,10 +233,10 @@ function FormSesi({
         </p>
       )}
       <div className="flex justify-end gap-2 pt-2">
-        <button type="button" onClick={onBatal} className={tombolSekunder}>
+        <button type="button" onClick={onBatal} disabled={proses} className={tombolSekunder}>
           Batal
         </button>
-        <button type="submit" className={tombolUtama}>
+        <button type="submit" disabled={proses} className={tombolUtama}>
           Simpan
         </button>
       </div>
@@ -239,128 +247,120 @@ function FormSesi({
 /* ------------------------------ halaman ------------------------------ */
 
 type Props = {
-  kegiatanId: string;
-  kegiatanAwal: Kegiatan[];
+  kegiatan: Kegiatan;
   opdList: Opd[];
-  sesiAwal: SesiPembinaan[];
-  presensiAwal: Presensi[];
+  pegawaiList: Pengguna[];
+  sesiList: SesiPembinaan[];
+  presensi: Presensi[];
 };
 
 export default function DaftarHadirAdminClient({
-  kegiatanId,
-  kegiatanAwal,
+  kegiatan,
   opdList,
-  sesiAwal,
-  presensiAwal,
+  pegawaiList,
+  sesiList,
+  presensi,
 }: Props) {
-  const [kegiatanList, setKegiatanList] = useState(kegiatanAwal);
-  const [sesiList, setSesiList] = useState(sesiAwal);
-  const [presensi, setPresensi] = useState(presensiAwal);
   const [sekarang, setSekarang] = useState<string | null>(null);
   const [form, setForm] = useState<{ id: string | null } | null>(null);
   const [hapusSesiId, setHapusSesiId] = useState<string | null>(null);
-  const [terpilih, setTerpilih] = useState<{ opdId: string; sesiId: string } | null>(null);
+  const [terpilih, setTerpilih] = useState<{ penggunaId: string; sesiId: string } | null>(null);
   const [konfirmasi, setKonfirmasi] = useState(false);
   const [cari, setCari] = useState("");
   const [pesan, setPesan] = useState("");
+  const [proses, setProses] = useState(false);
+  const [galatAksi, setGalatAksi] = useState("");
 
-  // Waktu dihitung di browser, diperbarui tiap 30 detik agar status sesi ikut berubah
+  // Waktu WITA dihitung di browser, diperbarui tiap 30 detik agar status sesi ikut berubah
   useEffect(() => {
     setSekarang(waktuSekarang());
     const timer = setInterval(() => setSekarang(waktuSekarang()), 30_000);
     return () => clearInterval(timer);
   }, []);
 
-  const kegiatan = kegiatanList.find((k) => k.id === kegiatanId);
-  if (!kegiatan) return null;
-
   const arsip = !!kegiatan.arsip;
   const sesi = sesiKegiatan(sesiList, kegiatan.id);
-  const idSesi = new Set(sesi.map((s) => s.id));
   const jumlahIsi = (sesiId: string) => presensi.filter((p) => p.sesiId === sesiId).length;
 
   const diedit = form?.id ? sesiList.find((s) => s.id === form.id) : undefined;
   const dihapus = hapusSesiId ? sesiList.find((s) => s.id === hapusSesiId) : undefined;
 
   const rec = terpilih
-    ? presensi.find((p) => p.opdId === terpilih.opdId && p.sesiId === terpilih.sesiId)
+    ? presensi.find((p) => p.penggunaId === terpilih.penggunaId && p.sesiId === terpilih.sesiId)
     : undefined;
-  const opdRec = rec ? opdList.find((o) => o.id === rec.opdId) : undefined;
+  const pegawaiRec = rec ? pegawaiList.find((p) => p.id === rec.penggunaId) : undefined;
+  const opdRec = pegawaiRec ? opdList.find((o) => o.id === pegawaiRec.opdId) : undefined;
   const sesiRec = rec ? sesiList.find((s) => s.id === rec.sesiId) : undefined;
 
+  // OPD sebagai judul kelompok, pegawai sebagai baris; pencarian cocok ke OPD atau nama pegawai
   const kata = cari.trim().toLowerCase();
-  const opdTampil = opdList.filter((o) => `${o.nama} ${o.singkatan}`.toLowerCase().includes(kata));
+  const kelompok = opdList
+    .map((opd) => {
+      const semua = pegawaiList.filter((p) => p.opdId === opd.id);
+      const cocokOpd = `${opd.nama} ${opd.singkatan}`.toLowerCase().includes(kata);
+      const tampil = cocokOpd ? semua : semua.filter((p) => p.nama.toLowerCase().includes(kata));
+      return { opd, semua, tampil, cocokOpd };
+    })
+    .filter((k) => k.tampil.length > 0 || (k.cocokOpd && k.semua.length === 0));
+
+  async function jalankan(aksi: () => Promise<Hasil>, pesanOk: string): Promise<string | null> {
+    const h = await aksi();
+    if (!h.ok) return h.pesan;
+    setPesan(pesanOk);
+    return null;
+  }
 
   function simpanAmbang(nilai: number) {
-    if (arsip) return;
-    setKegiatanList((prev) =>
-      prev.map((k) => (k.id === kegiatan!.id ? { ...k, ambangKehadiran: nilai } : k)),
-    );
-    setPesan(`Ambang kehadiran diatur ke ${nilai}%.`);
+    return jalankan(() => ubahAmbang(kegiatan.id, nilai), `Ambang kehadiran diatur ke ${nilai}%.`);
   }
 
-  function simpanSesi(v: Isian) {
-    if (arsip) return;
-    const waktuBuka = v.buka || null;
-    const batasPengisian = v.batas || null;
-
-    if (diedit) {
-      setSesiList((prev) =>
-        prev.map((s) => (s.id === diedit.id ? { ...s, judul: v.judul, waktuBuka, batasPengisian } : s)),
-      );
-      setPesan(`${v.judul} diperbarui.`);
-    } else {
-      const no = sesiList.reduce((m, s) => Math.max(m, Number(s.id.replace(/\D/g, ""))), 0) + 1;
-      setSesiList((prev) => [
-        ...prev,
-        {
-          id: `sesi-${no}`,
-          kegiatanId: kegiatan!.id,
-          urutan: sesi.length + 1,
-          judul: v.judul,
-          waktuBuka,
-          batasPengisian,
-        },
-      ]);
-      setPesan(`${v.judul} ditambahkan.`);
-    }
-    setForm(null);
+  async function simpanSesi(v: Isian) {
+    const err = diedit
+      ? await jalankan(() => ubahSesi(diedit.id, v), `${v.judul} diperbarui.`)
+      : await jalankan(() => tambahSesi(kegiatan.id, v), `${v.judul} ditambahkan.`);
+    if (!err) setForm(null);
+    return err;
   }
 
-  function hapusSesi() {
-    if (!dihapus || arsip || jumlahIsi(dihapus.id) > 0) return setHapusSesiId(null);
-    setSesiList((prev) => {
-      const sisa = prev.filter((s) => s.id !== dihapus.id);
-      // nomor sesi hanya label urutan, dirapatkan lagi setelah ada yang dihapus
-      const urutan = new Map(
-        sesiKegiatan(sisa, dihapus.kegiatanId).map((s, i) => [s.id, i + 1] as [string, number]),
-      );
-      return sisa.map((s) => (urutan.has(s.id) ? { ...s, urutan: urutan.get(s.id)! } : s));
-    });
-    setPesan(`${dihapus.judul} dihapus.`);
+  function tutupHapusSesi() {
     setHapusSesiId(null);
+    setGalatAksi("");
   }
 
-  function hapusKehadiran() {
-    if (!rec || arsip) return;
-    setPresensi((prev) => prev.filter((p) => p.id !== rec.id));
-    setPesan(`Kehadiran ${opdRec?.nama ?? "OPD"} pada ${sesiRec ? labelSesi(sesiRec) : "sesi"} dihapus.`);
-    setKonfirmasi(false);
-    setTerpilih(null);
+  async function prosesHapusSesi() {
+    if (!dihapus || proses) return;
+    setProses(true);
+    const err = await jalankan(() => hapusSesi(dihapus.id), `${dihapus.judul} dihapus.`);
+    setProses(false);
+    if (err) return setGalatAksi(err);
+    tutupHapusSesi();
   }
 
   function tutupDetail() {
     setTerpilih(null);
     setKonfirmasi(false);
+    setGalatAksi("");
   }
 
-  function selRekap(opdId: string, s: SesiPembinaan) {
-    const p = presensi.find((x) => x.opdId === opdId && x.sesiId === s.id);
+  async function prosesHapusKehadiran() {
+    if (!rec || proses) return;
+    setProses(true);
+    const err = await jalankan(
+      () => hapusKehadiran(rec.id),
+      `Kehadiran ${pegawaiRec?.nama ?? "pegawai"} pada ${sesiRec ? labelSesi(sesiRec) : "sesi"} dihapus.`,
+    );
+    setProses(false);
+    if (err) return setGalatAksi(err);
+    tutupDetail();
+  }
+
+  function selRekap(penggunaId: string, s: SesiPembinaan) {
+    const p = presensi.find((x) => x.penggunaId === penggunaId && x.sesiId === s.id);
     if (p) {
       return (
         <button
           type="button"
-          onClick={() => setTerpilih({ opdId, sesiId: s.id })}
+          onClick={() => setTerpilih({ penggunaId, sesiId: s.id })}
           title="Lihat detail"
           className="rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
@@ -376,7 +376,6 @@ export default function DaftarHadirAdminClient({
 
   return (
     <div className="space-y-6">
-
       {arsip && (
         <p role="note" className="rounded-lg border border-line bg-surface-muted px-4 py-3 text-sm text-ink-muted">
           Kegiatan ini diarsipkan, jadi hanya bisa dilihat. Untuk koreksi, aktifkan kembali lewat{" "}
@@ -451,7 +450,7 @@ export default function DaftarHadirAdminClient({
                         )}
                       </td>
                       <td className="tabular px-3 py-3 text-ink-muted">
-                        {terisi} dari {opdList.length} OPD
+                        {terisi} dari {pegawaiList.length} pegawai
                       </td>
                       <td className="px-3 py-3">
                         <div className="flex justify-end gap-2">
@@ -487,15 +486,15 @@ export default function DaftarHadirAdminClient({
         )}
         <p className="mt-3 text-xs text-ink-muted">
           Sesi yang sudah ada kehadiran terisi tidak bisa dihapus. Mengubah judul atau waktu tidak
-          menghapus kehadiran yang sudah masuk.
+          menghapus kehadiran yang sudah masuk. Semua waktu dalam WITA.
         </p>
       </section>
 
-      {/* rekap OPD x sesi */}
+      {/* rekap pegawai x sesi, dikelompokkan per OPD */}
       <section aria-labelledby="judul-rekap" className={kartu}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="judul-rekap" className="font-semibold text-ink">
-            Rekap kehadiran OPD
+            Rekap kehadiran pegawai
           </h2>
           <div className="relative w-full sm:w-64">
             <Search
@@ -506,8 +505,8 @@ export default function DaftarHadirAdminClient({
               type="search"
               value={cari}
               onChange={(e) => setCari(e.target.value)}
-              placeholder="Cari OPD…"
-              aria-label="Cari OPD"
+              placeholder="Cari OPD atau pegawai…"
+              aria-label="Cari OPD atau pegawai"
               className={`${kolomInput} pl-9`}
             />
           </div>
@@ -515,14 +514,14 @@ export default function DaftarHadirAdminClient({
 
         {sesi.length === 0 ? (
           <p className="py-8 text-center text-sm text-ink-muted">Tambahkan sesi untuk melihat rekap.</p>
-        ) : opdTampil.length === 0 ? (
-          <p className="py-8 text-center text-sm text-ink-muted">Tidak ada OPD yang cocok.</p>
+        ) : kelompok.length === 0 ? (
+          <p className="py-8 text-center text-sm text-ink-muted">Tidak ada OPD atau pegawai yang cocok.</p>
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-184 text-left text-sm">
               <thead>
                 <tr className="bg-surface-muted text-xs uppercase text-ink-muted">
-                  <th scope="col" className="rounded-l-lg px-3 py-2.5 font-semibold">OPD</th>
+                  <th scope="col" className="rounded-l-lg px-3 py-2.5 font-semibold">Pegawai</th>
                   {sesi.map((s) => (
                     <th key={s.id} scope="col" title={s.judul} className="px-3 py-2.5 font-semibold">
                       Sesi {s.urutan}
@@ -534,40 +533,61 @@ export default function DaftarHadirAdminClient({
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {opdTampil.map((opd) => {
-                  const k = hitungKehadiran(opd.id, sesi, presensi);
-                  const lulus = apakahLulusKehadiran(k.persen, kegiatan);
-                  return (
-                    <tr key={opd.id}>
-                      <td className="px-3 py-3 font-medium text-ink">{opd.nama}</td>
-                      {sesi.map((s) => (
-                        <td key={s.id} className="px-3 py-3">
-                          {selRekap(opd.id, s)}
-                        </td>
-                      ))}
-                      <td className="tabular px-3 py-3 text-right">
-                        <span
-                          className={`font-semibold ${
-                            lulus ? "text-status-disetujui-fg" : "text-status-revisi-fg"
-                          }`}
-                        >
-                          {Math.round(k.persen)}%
-                        </span>
-                        <span className="block text-xs text-ink-muted">
-                          {k.hadir} dari {k.total} sesi
-                        </span>
-                      </td>
+                {kelompok.map(({ opd, tampil }) => (
+                  <Fragment key={opd.id}>
+                    <tr className="bg-surface-muted/60">
+                      <th
+                        scope="colgroup"
+                        colSpan={sesi.length + 2}
+                        className="px-3 py-2 text-left text-sm font-semibold text-ink"
+                      >
+                        {opd.nama}
+                      </th>
                     </tr>
-                  );
-                })}
+                    {tampil.length === 0 ? (
+                      <tr>
+                        <td colSpan={sesi.length + 2} className="px-3 py-3 text-ink-muted">
+                          Belum ada pegawai terdaftar.
+                        </td>
+                      </tr>
+                    ) : (
+                      tampil.map((pegawai) => {
+                        const k = hitungKehadiranPegawai(pegawai.id, sesi, presensi);
+                        const lulus = apakahLulusKehadiran(k.persen, kegiatan);
+                        return (
+                          <tr key={pegawai.id}>
+                            <td className="px-3 py-3 font-medium text-ink">{pegawai.nama}</td>
+                            {sesi.map((s) => (
+                              <td key={s.id} className="px-3 py-3">
+                                {selRekap(pegawai.id, s)}
+                              </td>
+                            ))}
+                            <td className="tabular px-3 py-3 text-right">
+                              <span
+                                className={`font-semibold ${
+                                  lulus ? "text-status-disetujui-fg" : "text-status-revisi-fg"
+                                }`}
+                              >
+                                {Math.round(k.persen)}%
+                              </span>
+                              <span className="block text-xs text-ink-muted">
+                                {k.hadir} dari {k.total} sesi
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </Fragment>
+                ))}
               </tbody>
             </table>
           </div>
         )}
         <p className="mt-3 text-xs text-ink-muted">
-          Persentase dihitung dari semua sesi kegiatan. Hadir tepat waktu, hadir terlambat, dan izin
-          tugas dinas dihitung hadir; tidak mengisi tidak. Warna hijau berarti sudah mencapai ambang{" "}
-          {kegiatan.ambangKehadiran}%.
+          Persentase dihitung per pegawai dari semua sesi kegiatan. Hadir tepat waktu, hadir terlambat,
+          dan izin tugas dinas dihitung hadir; tidak mengisi tidak. Warna hijau berarti sudah mencapai
+          ambang {kegiatan.ambangKehadiran}%.
         </p>
       </section>
 
@@ -589,16 +609,21 @@ export default function DaftarHadirAdminClient({
       </Dialog>
 
       {/* hapus sesi */}
-      <Dialog buka={!!dihapus} onTutup={() => setHapusSesiId(null)} judul="Hapus sesi">
+      <Dialog buka={!!dihapus} onTutup={tutupHapusSesi} judul="Hapus sesi">
         <p className="text-sm text-ink-muted">
           Hapus sesi <span className="font-medium text-ink">{dihapus ? labelSesi(dihapus) : ""}</span>?
           Tindakan ini tidak bisa dibatalkan.
         </p>
+        {galatAksi && (
+          <p role="alert" className="text-sm text-status-revisi-fg">
+            {galatAksi}
+          </p>
+        )}
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={() => setHapusSesiId(null)} className={tombolSekunder}>
+          <button type="button" onClick={tutupHapusSesi} disabled={proses} className={tombolSekunder}>
             Batal
           </button>
-          <button type="button" onClick={hapusSesi} className={tombolBahaya}>
+          <button type="button" onClick={prosesHapusSesi} disabled={proses} className={tombolBahaya}>
             Hapus
           </button>
         </div>
@@ -606,12 +631,16 @@ export default function DaftarHadirAdminClient({
 
       {/* detail kehadiran */}
       <Dialog buka={!!rec} onTutup={tutupDetail} judul="Detail kehadiran">
-        {rec && opdRec && sesiRec && (
+        {rec && pegawaiRec && sesiRec && (
           <>
             <dl className="space-y-2 text-sm">
               <div>
+                <dt className="text-ink-muted">Pegawai</dt>
+                <dd className="font-medium text-ink">{pegawaiRec.nama}</dd>
+              </div>
+              <div>
                 <dt className="text-ink-muted">OPD</dt>
-                <dd className="font-medium text-ink">{opdRec.nama}</dd>
+                <dd className="font-medium text-ink">{opdRec?.nama ?? "–"}</dd>
               </div>
               <div>
                 <dt className="text-ink-muted">Sesi</dt>
@@ -626,7 +655,7 @@ export default function DaftarHadirAdminClient({
                 <dd className="tabular text-ink">{teksWaktu(rec.waktuIsi, "–")}</dd>
               </div>
               <div>
-                <dt className="text-ink-muted">Catatan OPD</dt>
+                <dt className="text-ink-muted">Catatan pegawai</dt>
                 <dd className="text-ink">{rec.catatan ?? "–"}</dd>
               </div>
             </dl>
@@ -646,17 +675,37 @@ export default function DaftarHadirAdminClient({
       </Dialog>
 
       {/* konfirmasi hapus kehadiran, dibuka di atas dialog detail */}
-      <Dialog buka={konfirmasi && !!rec} onTutup={() => setKonfirmasi(false)} judul="Hapus kehadiran?">
+      <Dialog
+        buka={konfirmasi && !!rec}
+        onTutup={() => {
+          setKonfirmasi(false);
+          setGalatAksi("");
+        }}
+        judul="Hapus kehadiran?"
+      >
         <p className="text-sm text-ink-muted">
-          Kehadiran <span className="font-medium text-ink">{opdRec?.nama}</span> pada{" "}
+          Kehadiran <span className="font-medium text-ink">{pegawaiRec?.nama}</span> pada{" "}
           <span className="font-medium text-ink">{sesiRec ? labelSesi(sesiRec) : ""}</span> akan
-          dihapus. OPD bisa mengisi lagi selama sesi masih dibuka.
+          dihapus. Pegawai bisa mengisi lagi selama sesi masih dibuka.
         </p>
+        {galatAksi && (
+          <p role="alert" className="text-sm text-status-revisi-fg">
+            {galatAksi}
+          </p>
+        )}
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={() => setKonfirmasi(false)} className={tombolSekunder}>
+          <button
+            type="button"
+            onClick={() => {
+              setKonfirmasi(false);
+              setGalatAksi("");
+            }}
+            disabled={proses}
+            className={tombolSekunder}
+          >
             Batal
           </button>
-          <button type="button" onClick={hapusKehadiran} className={tombolBahaya}>
+          <button type="button" onClick={prosesHapusKehadiran} disabled={proses} className={tombolBahaya}>
             Hapus
           </button>
         </div>

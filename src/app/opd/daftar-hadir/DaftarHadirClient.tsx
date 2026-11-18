@@ -18,12 +18,11 @@ import {
   type SesiPembinaan,
   type StatusKehadiran,
 } from "@/lib/types";
+import { isiPresensi } from "./actions";
 
 type Props = {
-  opdId: string;
-  penggunaId: string;
   sesiList: SesiPembinaan[];
-  presensiAwal: Presensi[];
+  presensi: Presensi[];
 };
 
 const URUTAN_STATUS: StatusKehadiran[] = ["tepat_waktu", "terlambat", "izin"];
@@ -54,14 +53,14 @@ function Lencana({ jenis, children }: { jenis: keyof typeof WARNA_LENCANA; child
   );
 }
 
-export default function DaftarHadirClient({ opdId, penggunaId, sesiList, presensiAwal }: Props) {
-  const [presensi, setPresensi] = useState(presensiAwal);
+export default function DaftarHadirClient({ sesiList, presensi }: Props) {
   const [sekarang, setSekarang] = useState<string | null>(null);
   const [sesiId, setSesiId] = useState("");
   const [status, setStatus] = useState<StatusKehadiran>("tepat_waktu");
   const [catatan, setCatatan] = useState("");
   const [galat, setGalat] = useState<string | null>(null);
   const [konfirmasi, setKonfirmasi] = useState(false);
+  const [proses, setProses] = useState(false);
 
   // Waktu dihitung di browser, diperbarui tiap 30 detik agar sesi terkunci tepat waktu
   useEffect(() => {
@@ -89,8 +88,8 @@ export default function DaftarHadirClient({ opdId, penggunaId, sesiList, presens
     setKonfirmasi(true);
   }
 
-  function kirim() {
-    if (!sesiTerpilih) return;
+  async function kirim() {
+    if (!sesiTerpilih || proses) return;
     const waktu = waktuSekarang();
     setSekarang(waktu);
     setKonfirmasi(false);
@@ -102,23 +101,20 @@ export default function DaftarHadirClient({ opdId, penggunaId, sesiList, presens
       return;
     }
 
-    setPresensi((prev) => [
-      ...prev,
-      {
-        id: `hadir-${penggunaId}-${sesiTerpilih.id}`,
-        penggunaId,
-        opdId,
-        sesiId: sesiTerpilih.id,
-        status,
-        waktuIsi: waktu,
-        catatan: catatan.trim() || null,
-      },
-    ]);
+    setProses(true);
+    const hasil = await isiPresensi(sesiTerpilih.id, status, catatan);
+    setProses(false);
+    if (!hasil.ok) {
+      setGalat(hasil.pesan);
+      return;
+    }
+
     setSesiId("");
     setStatus("tepat_waktu");
     setCatatan("");
     setGalat(null);
   }
+  
 
   return (
     <div className="grid gap-6 lg:grid-cols-5">
@@ -137,7 +133,7 @@ export default function DaftarHadirClient({ opdId, penggunaId, sesiList, presens
               id="sesi"
               value={sesiId}
               onChange={(e) => setSesiId(e.target.value)}
-              disabled={sekarang === null}
+              disabled={sekarang === null || proses}
               className={KELAS_INPUT}
             >
               <option value="">Pilih sesi…</option>
@@ -200,7 +196,7 @@ export default function DaftarHadirClient({ opdId, penggunaId, sesiList, presens
 
           <button
             type="submit"
-            disabled={sekarang === null}
+            disabled={sekarang === null || proses}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-60"
           >
             <Send className="size-4" aria-hidden />

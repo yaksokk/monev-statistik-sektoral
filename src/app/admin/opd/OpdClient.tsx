@@ -7,6 +7,7 @@ import {
   Copy,
   ExternalLink,
   FileSpreadsheet,
+  FileText,
   KeyRound,
   Link2,
   Pencil,
@@ -19,8 +20,10 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Galat } from "@/components/ui/Galat";
 import { KonfirmasiHapus } from "@/components/ui/KonfirmasiHapus";
 import { linkHttps } from "@/lib/dashboard";
-import type { Opd, Pengguna } from "@/lib/types";
 import { hapusOpd, simpanLinkSertifikat, tambahOpd, ubahOpd } from "./actions";
+import { bukaDiTabBaru } from "@/lib/buka-tautan";
+import type { Dokumen, ItemDokumen, Kegiatan, Opd, Pengguna } from "@/lib/types"; 
+import { buatLinkDokumenAdmin } from "./actions-dokumen";
 
 const tombolUtama =
   "inline-flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
@@ -419,10 +422,19 @@ function FormReset({
 interface Props {
   opdAwal: Opd[];
   pegawaiAwal: Pengguna[];
+  kegiatanAktif: Kegiatan | null;
+  itemAwal: ItemDokumen[];
+  dokumenAwal: Dokumen[];
 }
 
 // Data berasal dari server (props); setelah aksi berhasil, halaman disegarkan
-export default function OpdClient({ opdAwal: opdList, pegawaiAwal: pegawai }: Props) {
+export default function OpdClient({
+  opdAwal: opdList,
+  pegawaiAwal: pegawai,
+  kegiatanAktif,
+  itemAwal: itemList,
+  dokumenAwal: dokumenList,
+}: Props) {
   const router = useRouter();
   const [cari, setCari] = useState("");
   const [pesan, setPesan] = useState("");
@@ -434,6 +446,8 @@ export default function OpdClient({ opdAwal: opdList, pegawaiAwal: pegawai }: Pr
   const [reset, setReset] = useState<{ p: Pengguna; hasil: string | null } | null>(null);
   const [hapusP, setHapusP] = useState<Pengguna | null>(null);
   const [hapusO, setHapusO] = useState<Opd | null>(null);
+  const [idDokumen, setIdDokumen] = useState<string | null>(null); // id pegawai
+  const [galatBuka, setGalatBuka] = useState("");
 
   const pegawaiOpd = (opdId: string) => pegawai.filter((p) => p.opdId === opdId);
 
@@ -452,7 +466,24 @@ export default function OpdClient({ opdAwal: opdList, pegawaiAwal: pegawai }: Pr
   const pegawaiDiedit = formPegawai?.id ? pegawai.find((p) => p.id === formPegawai.id) : undefined;
   const opdFormPegawai = formPegawai ? opdList.find((o) => o.id === formPegawai.opdId) : undefined;
   const pegawaiLink = idLink ? pegawai.find((p) => p.id === idLink) : undefined;
+  const pegawaiDokumen = idDokumen ? pegawai.find((p) => p.id === idDokumen) : undefined;
 
+
+  function waktuUnggah(iso: string) {
+    return new Date(iso).toLocaleString("id-ID", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Makassar",
+    });
+  }
+
+  async function bukaDokumen(dokumenId: string) {
+    setGalatBuka("");
+    const g = await bukaDiTabBaru(() => buatLinkDokumenAdmin(dokumenId));
+    if (g) setGalatBuka(g);
+  }
   const emailDipakai = (email: string, kecuali?: string) =>
     pegawai.some((p) => p.email.toLowerCase() === email.toLowerCase() && p.id !== kecuali);
 
@@ -681,6 +712,10 @@ export default function OpdClient({ opdAwal: opdList, pegawaiAwal: pegawai }: Pr
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
+                          <button onClick={() => setIdDokumen(p.id)} className={tombolSekunder}>
+                            <FileText className="size-4" aria-hidden />
+                            Dokumen
+                          </button>
                           <button onClick={() => setIdLink(p.id)} className={tombolSekunder}>
                             <Link2 className="size-4" aria-hidden />
                             Link sertifikat
@@ -765,6 +800,70 @@ export default function OpdClient({ opdAwal: opdList, pegawaiAwal: pegawai }: Pr
           />
         )}
       </Dialog>
+      <Dialog
+        buka={!!pegawaiDokumen}
+        onTutup={() => {
+          setIdDokumen(null);
+          setGalatBuka("");
+        }}
+        judul={`Dokumen ${pegawaiDokumen?.nama ?? ""}`}
+        lebar="w-[min(40rem,calc(100%-2rem))]"
+      >
+        {pegawaiDokumen && (
+          <>
+            {!kegiatanAktif ? (
+              <p className="text-sm text-ink-muted">Belum ada kegiatan yang aktif.</p>
+            ) : (
+              <>
+                <p className="text-sm text-ink-muted">{kegiatanAktif.nama}</p>
+                <ul className="divide-y divide-line rounded-card border border-line">
+                  {itemList.map((i) => {
+                    const d = dokumenList.find(
+                      (x) => x.penggunaId === pegawaiDokumen.id && x.itemId === i.id,
+                    );
+                    return (
+                      <li key={i.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                        <div className="min-w-0">
+                          <p className="font-medium text-ink">{i.nama}</p>
+                          <p className="truncate text-sm text-ink-muted">
+                            {d?.namaFile && d.diunggahPada
+                              ? `${d.namaFile} · ${waktuUnggah(d.diunggahPada)}`
+                              : "Belum ada file"}
+                          </p>
+                        </div>
+                        {d?.namaFile && (
+                          <button onClick={() => bukaDokumen(d.id)} className={tombolSekunder}>
+                            <ExternalLink className="size-4" aria-hidden />
+                            Buka
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+                  {itemList.length === 0 && (
+                    <li className="px-4 py-6 text-center text-sm text-ink-muted">
+                      Kegiatan ini belum punya item dokumen.
+                    </li>
+                  )}
+                </ul>
+              </>
+            )}
+            <Galat pesan={galatBuka} />
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => {
+                  setIdDokumen(null);
+                  setGalatBuka("");
+                }}
+                className={tombolSekunder}
+              >
+                Tutup
+              </button>
+            </div>
+          </>
+        )}
+      </Dialog>
+
 
       <Dialog
         buka={!!pegawaiLink}

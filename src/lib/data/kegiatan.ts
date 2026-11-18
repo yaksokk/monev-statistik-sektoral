@@ -105,3 +105,29 @@ export async function ambilIdItemBerdata(): Promise<string[]> {
   if (error) throw new Error(`Gagal membaca data item: ${error.message}`);
   return (data as { item_id: string }[]).map((b) => b.item_id);
 }
+
+const KOLOM_KEGIATAN =
+  "id, nama, tanggal_mulai, tanggal_selesai, tenggat, status, bobot, ambang_kehadiran, pretest_aktif, posttest_aktif";
+
+// Kegiatan berstatus aktif (paling banyak satu). Pegawai dan admin sama-sama bisa membacanya lewat RLS
+export async function ambilKegiatanAktif(): Promise<Kegiatan | null> {
+  const supabase = await buatKlienServer();
+  const { data, error } = await supabase
+    .from("kegiatan")
+    .select(KOLOM_KEGIATAN)
+    .eq("status", "aktif")
+    .maybeSingle();
+  if (error) throw new Error(`Gagal membaca kegiatan aktif: ${error.message}`);
+  return data ? petakanKegiatan(data as BarisKegiatan) : null;
+}
+
+export async function ambilItemKegiatan(kegiatanId: string): Promise<ItemDokumen[]> {
+  const supabase = await buatKlienServer();
+  const { data, error } = await supabase
+    .from("item_dokumen")
+    .select("id, kegiatan_id, nama")
+    .eq("kegiatan_id", kegiatanId)
+    .order("urutan");
+  if (error) throw new Error(`Gagal membaca item dokumen: ${error.message}`);
+  return (data as BarisItem[]).map(petakanItem);
+}

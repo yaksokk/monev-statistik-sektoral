@@ -1,4 +1,5 @@
-import { DOKUMEN_LIST, ITEM_LIST, KEGIATAN_LIST } from "@/data/dummy";
+import { ambilDokumenSaya } from "@/lib/data/dokumen";
+import { ambilItemKegiatan, ambilKegiatanAktif } from "@/lib/data/kegiatan";
 import { ambilOperator } from "@/lib/operator";
 import DaftarDokumenClient from "./DaftarDokumenClient";
 
@@ -6,7 +7,7 @@ export default async function DaftarDokumenPage() {
   const { pengguna, opd } = await ambilOperator();
 
   // OPD hanya melihat kegiatan yang sedang aktif (ditentukan admin)
-  const kegiatan = KEGIATAN_LIST.find((k) => k.aktif);
+  const kegiatan = await ambilKegiatanAktif();
 
   if (!kegiatan) {
     return (
@@ -18,10 +19,10 @@ export default async function DaftarDokumenPage() {
   }
 
   // hanya item milik kegiatan aktif dan dokumen milik pegawai yang sedang login
-  const item = ITEM_LIST.filter((i) => i.kegiatanId === kegiatan.id);
-  const dokumen = DOKUMEN_LIST.filter(
-    (d) => d.penggunaId === pengguna.id && d.kegiatanId === kegiatan.id,
-  );
+  const [item, dokumen] = await Promise.all([
+    ambilItemKegiatan(kegiatan.id),
+    ambilDokumenSaya(pengguna.id, opd.id, kegiatan.id),
+  ]);
 
   const opdAman = { id: opd.id, nama: opd.nama, singkatan: opd.singkatan };
 

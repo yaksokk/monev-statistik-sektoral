@@ -74,18 +74,28 @@ export async function PATCH(req: Request, { params }: Konteks) {
 }
 
 // Hapus semua file di bucket pada folder <id pegawai>/. Mengembalikan pesan galat, atau null bila berhasil.
+// Hapus semua file di bucket pada folder (termasuk sub-folder). Mengembalikan pesan galat, atau null bila berhasil.
 async function hapusFolderStorage(
   admin: ReturnType<typeof buatKlienAdmin>,
-  idPegawai: string,
+  folder: string,
+  kedalaman = 0,
 ): Promise<string | null> {
+  if (kedalaman > 3) return "Struktur folder terlalu dalam.";
   const bucket = admin.storage.from(BUCKET);
   for (let putaran = 0; putaran < 100; putaran++) {
-    const { data, error } = await bucket.list(idPegawai, { limit: 100 });
+    const { data, error } = await bucket.list(folder, { limit: 100 });
     if (error) return error.message;
-    const berkas = (data ?? []).filter((f) => f.id); // sub-folder kosong (id null) dilewati
-    if (berkas.length === 0) return null;
-    const { error: galatHapus } = await bucket.remove(berkas.map((f) => `${idPegawai}/${f.name}`));
-    if (galatHapus) return galatHapus.message;
+    if (!data || data.length === 0) return null;
+
+    for (const sub of data.filter((f) => !f.id)) {
+      const g = await hapusFolderStorage(admin, `${folder}/${sub.name}`, kedalaman + 1);
+      if (g) return g;
+    }
+    const berkas = data.filter((f) => f.id).map((f) => `${folder}/${f.name}`);
+    if (berkas.length > 0) {
+      const { error: galatHapus } = await bucket.remove(berkas);
+      if (galatHapus) return galatHapus.message;
+    }
   }
   return "Terlalu banyak berkas.";
 }

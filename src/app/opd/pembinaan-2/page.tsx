@@ -1,9 +1,10 @@
 import ModulClient from "@/components/modul/ModulClient";
 import KartuQuiz from "@/components/quiz/KartuQuiz";
+import { ambilKegiatanAktif } from "@/lib/data/kegiatan";
 import { ambilBabModul, ambilIdBabSelesaiSaya, ambilModul } from "@/lib/data/modul";
+import { ambilQuizPegawai, finalkanSesiSaya } from "@/lib/data/quiz";
 import { ambilOperator } from "@/lib/operator";
 import { waktuSekarang } from "@/lib/presensi";
-import { ambilQuizOpd, kegiatanBerjalan } from "@/lib/quiz-opd";
 
 const PEMBINAAN = 2;
 
@@ -16,7 +17,15 @@ export default async function Pembinaan2Page({ searchParams }: Props) {
   const { bab } = await searchParams;
   const sekarang = waktuSekarang();
 
-  const [modul, babSelesai] = await Promise.all([ambilModul(), ambilIdBabSelesaiSaya(pengguna.id)]);
+  // quiz mengikuti kegiatan aktif; Post-Test yang dimatikan admin disembunyikan
+  const kegiatan = await ambilKegiatanAktif();
+  await finalkanSesiSaya();
+  const [modul, babSelesai, pre, post] = await Promise.all([
+    ambilModul(),
+    ambilIdBabSelesaiSaya(pengguna.id),
+    ambilQuizPegawai(kegiatan, "pretest", pengguna.id),
+    ambilQuizPegawai(kegiatan, "posttest", pengguna.id),
+  ]);
   const babList = modul
     ? (await ambilBabModul(modul.id)).filter((b) => b.pembinaan === PEMBINAAN)
     : [];
@@ -26,11 +35,6 @@ export default async function Pembinaan2Page({ searchParams }: Props) {
     0,
     babList.findIndex((b) => b.id === bab),
   );
-
-  // quiz mengikuti kegiatan berjalan; Post-Test yang dimatikan admin disembunyikan (masih dummy sampai langkah 6)
-  const kegiatan = kegiatanBerjalan();
-  const pre = ambilQuizOpd(kegiatan, "pretest", opd.id, pengguna.id);
-  const post = ambilQuizOpd(kegiatan, "posttest", opd.id, pengguna.id);
 
   const rentang =
     babList.length > 0
@@ -64,8 +68,8 @@ export default async function Pembinaan2Page({ searchParams }: Props) {
           deskripsi="Uji kompetensi akhir untuk mengukur peningkatan pemahaman."
           href="/opd/pembinaan-2/post-test"
           pengaturan={post.pengaturan}
-          soalList={post.soal}
-          hasil={post.hasil}
+          jumlahSoal={post.jumlahSoal}
+          ringkasan={post.hasil}
           sekarang={sekarang}
           diizinkan={post.diizinkan}
           prasyarat={

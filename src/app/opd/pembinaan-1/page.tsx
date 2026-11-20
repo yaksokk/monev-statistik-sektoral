@@ -1,9 +1,10 @@
 import ModulClient from "@/components/modul/ModulClient";
 import KartuQuiz from "@/components/quiz/KartuQuiz";
+import { ambilKegiatanAktif } from "@/lib/data/kegiatan";
 import { ambilBabModul, ambilIdBabSelesaiSaya, ambilModul } from "@/lib/data/modul";
+import { ambilQuizPegawai, finalkanSesiSaya } from "@/lib/data/quiz";
 import { ambilOperator } from "@/lib/operator";
 import { waktuSekarang } from "@/lib/presensi";
-import { ambilQuizOpd, kegiatanBerjalan } from "@/lib/quiz-opd";
 
 const PEMBINAAN = 1;
 
@@ -16,7 +17,14 @@ export default async function Pembinaan1Page({ searchParams }: Props) {
   const { bab } = await searchParams;
   const sekarang = waktuSekarang();
 
-  const [modul, babSelesai] = await Promise.all([ambilModul(), ambilIdBabSelesaiSaya(pengguna.id)]);
+  // quiz mengikuti kegiatan aktif; Pre-Test yang dimatikan admin disembunyikan
+  const kegiatan = await ambilKegiatanAktif();
+  await finalkanSesiSaya();
+  const [modul, babSelesai, pre] = await Promise.all([
+    ambilModul(),
+    ambilIdBabSelesaiSaya(pengguna.id),
+    ambilQuizPegawai(kegiatan, "pretest", pengguna.id),
+  ]);
   const babList = modul
     ? (await ambilBabModul(modul.id)).filter((b) => b.pembinaan === PEMBINAAN)
     : [];
@@ -26,9 +34,6 @@ export default async function Pembinaan1Page({ searchParams }: Props) {
     0,
     babList.findIndex((b) => b.id === bab),
   );
-
-  // quiz mengikuti kegiatan berjalan; Pre-Test yang dimatikan admin disembunyikan (masih dummy sampai langkah 6)
-  const pre = ambilQuizOpd(kegiatanBerjalan(), "pretest", opd.id, pengguna.id);
 
   const rentang =
     babList.length > 0
@@ -50,8 +55,8 @@ export default async function Pembinaan1Page({ searchParams }: Props) {
           deskripsi="Uji pemahaman dasar sebelum mempelajari modul."
           href="/opd/pembinaan-1/pre-test"
           pengaturan={pre.pengaturan}
-          soalList={pre.soal}
-          hasil={pre.hasil}
+          jumlahSoal={pre.jumlahSoal}
+          ringkasan={pre.hasil}
           sekarang={sekarang}
           diizinkan={pre.diizinkan}
         />

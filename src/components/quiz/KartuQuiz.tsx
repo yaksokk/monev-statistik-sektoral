@@ -1,17 +1,17 @@
 import Link from "next/link";
 import { ClipboardList } from "lucide-react";
-import { formatNilai, hitungHasil, soalAktif, statusQuiz } from "@/lib/quiz";
-import type { HasilQuiz, PengaturanQuiz, SoalQuiz } from "@/lib/types";
+import { formatNilai, statusQuiz } from "@/lib/quiz";
+import type { PengaturanQuiz, RingkasanHasil } from "@/lib/types";
 
 interface Props {
   nama: string; // "Pre-Test" atau "Post-Test"
   deskripsi: string;
   href: string; // halaman pengerjaan dan hasil quiz
   pengaturan: PengaturanQuiz | undefined; // undefined = admin belum mengatur quiz ini
-  soalList: SoalQuiz[];
-  hasil: HasilQuiz | null;
+  jumlahSoal: number; // soal aktif
+  ringkasan: Pick<RingkasanHasil, "nilai" | "benar" | "total"> | null; // null = belum selesai
   sekarang: string; // yyyy-mm-ddTHH:mm
-  diizinkan?: boolean; // OPD punya izin kerjakan ulang dari admin
+  diizinkan?: boolean; // pegawai punya izin kerjakan ulang dari admin
   prasyarat?: { terpenuhi: boolean; pesan: string };
 }
 
@@ -23,14 +23,14 @@ export default function KartuQuiz({
   deskripsi,
   href,
   pengaturan,
-  soalList,
-  hasil,
+  jumlahSoal,
+  ringkasan,
   sekarang,
   diizinkan = true,
   prasyarat,
 }: Props) {
   const status = pengaturan
-    ? statusQuiz(pengaturan, hasil !== null, sekarang, diizinkan)
+    ? statusQuiz(pengaturan, ringkasan !== null, sekarang, diizinkan)
     : "belum_dibuka";
   const pesanSyarat = prasyarat && !prasyarat.terpenuhi ? prasyarat.pesan : null;
   const idJudul = `judul-${nama.toLowerCase().replace(/\s+/g, "-")}`;
@@ -38,8 +38,6 @@ export default function KartuQuiz({
   let pesan: string | null = pesanSyarat;
   if (!pesan && status === "belum_dibuka") pesan = `${nama} belum dibuka oleh admin.`;
   if (!pesan && status === "terkunci") pesan = `${nama} sudah ditutup dan tidak bisa dikerjakan lagi.`;
-
-  const ringkasan = hasil ? hitungHasil(soalList, hasil.jawaban) : null;
 
   return (
     <section
@@ -77,7 +75,7 @@ export default function KartuQuiz({
         <>
           {pengaturan && (
             <p className="tabular mt-4 text-sm text-ink">
-              {soalAktif(soalList).length} soal · {pengaturan.durasiMenit} menit · hanya bisa dikerjakan satu
+              {jumlahSoal} soal · {pengaturan.durasiMenit} menit · hanya bisa dikerjakan satu
               kali
             </p>
           )}

@@ -1,17 +1,22 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import QuizClient from "@/components/quiz/QuizClient";
+import { ambilKegiatanAktif } from "@/lib/data/kegiatan";
+import { ambilQuizPegawai, finalkanSesiSaya } from "@/lib/data/quiz";
 import { ambilOperator } from "@/lib/operator";
-import { ambilQuizOpd, kegiatanBerjalan } from "@/lib/quiz-opd";
 
 const KELAS_PESAN = "rounded-lg bg-surface-muted px-4 py-3 text-sm text-ink-muted";
 
 export default async function PostTestPage() {
   const { pengguna, opd } = await ambilOperator();
 
-  const kegiatan = kegiatanBerjalan();
-  const pre = ambilQuizOpd(kegiatan, "pretest", opd.id, pengguna.id);
-  const post = ambilQuizOpd(kegiatan, "posttest", opd.id, pengguna.id);
+  const kegiatan = await ambilKegiatanAktif();
+  // sesi yang waktunya sudah lewat (browser ditutup) dijadikan hasil dulu
+  await finalkanSesiSaya();
+  const [pre, post] = await Promise.all([
+    ambilQuizPegawai(kegiatan, "pretest", pengguna.id),
+    ambilQuizPegawai(kegiatan, "posttest", pengguna.id, { rincian: true }),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -34,15 +39,16 @@ export default async function PostTestPage() {
       ) : !kegiatan || !post.pengaturan ? (
         <p className={KELAS_PESAN}>Post-Test belum dibuka oleh admin.</p>
       ) : (
-        /* Dummy: kunci ikut dikirim ke browser. Setelah ada server, penilaian dilakukan di server */
+        /* Kunci tidak pernah dikirim ke browser sebelum jawaban terkirim; penilaian di server */
         <QuizClient
-          opdId={opd.id}
-          penggunaId={pengguna.id}
           kegiatanId={kegiatan.id}
+          jenis="posttest"
           nama="Post-Test"
           pengaturan={post.pengaturan}
-          soalList={post.soal}
-          hasilAwal={post.hasil}
+          jumlahSoal={post.jumlahSoal}
+          hasil={post.hasil}
+          review={post.review}
+          sesi={post.sesi}
           diizinkan={post.diizinkan}
           prasyarat={
             pre.aktif

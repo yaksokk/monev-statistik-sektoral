@@ -119,6 +119,7 @@ export interface PengaturanQuiz {
   waktuBuka: string | null; // yyyy-mm-ddTHH:mm (waktu lokal), null = belum dibuka
   batasAkhir: string | null; // yyyy-mm-ddTHH:mm (waktu lokal), null = tanpa batas; memotong waktu pengerjaan
   hanyaBerizin?: boolean; // true setelah batas akhir pertama lewat: hanya OPD berizin yang boleh mulai
+  acakSoal?: boolean; // urutan soal diacak per pegawai; kosong dianggap true
 }
 
 // Hasil satu OPD, hanya ada setelah jawaban terkirim. Nilai tidak disimpan, dihitung dari jawaban dan kunci
@@ -141,6 +142,51 @@ export interface IzinKerjaUlang {
   penggunaId: string;
   diberikanPada: string; // yyyy-mm-ddTHH:mm
   admin: string;
+}
+
+// ---- Sisi pegawai: soal tanpa kunci. Kunci dan pembahasan baru terbaca setelah jawaban terkirim ----
+
+export interface SoalPegawai {
+  id: string;
+  pertanyaan: string;
+  opsi: string[];
+}
+
+// Pengerjaan yang sedang berjalan. Waktu mulai dan batas selesai ditentukan server
+export interface SesiPegawai {
+  mulai: string; // yyyy-mm-ddTHH:mm
+  sisaDetik: number; // sisa waktu saat halaman dibuat server
+  jawaban: Record<string, number>; // jawaban yang sudah tersimpan (autosave)
+  soal: SoalPegawai[]; // sudah dalam urutan yang dilihat pegawai
+}
+
+// Nilai tidak disimpan di database, dihitung dari jawaban dan kunci
+export interface RingkasanHasil {
+  nilai: number;
+  benar: number;
+  salah: number;
+  total: number;
+  selesai: string; // yyyy-mm-ddTHH:mm
+  otomatis: boolean;
+}
+
+export interface ReviewSoal {
+  id: string;
+  pertanyaan: string;
+  opsi: string[];
+  kunci: number;
+  pembahasan: string;
+  pilihan: number | null; // null = tidak dijawab
+}
+
+export interface DataQuizPegawai {
+  aktif: boolean;
+  pengaturan: PengaturanQuiz | undefined;
+  jumlahSoal: number; // soal aktif
+  diizinkan: boolean; // punya izin kerja ulang dari admin
+  hasil: RingkasanHasil | null;
+  review: ReviewSoal[] | null; // hanya bila diminta dan hasil sudah ada
+  sesi: SesiPegawai | null; // hanya bila diminta dan pegawai sedang mengerjakan
 }
 
 export type JenisLogQuiz = "kunci" | "nonaktif" | "aktifkan" | "izin_ulang" | "edit";

@@ -1,16 +1,19 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import QuizClient from "@/components/quiz/QuizClient";
+import { ambilKegiatanAktif } from "@/lib/data/kegiatan";
+import { ambilQuizPegawai, finalkanSesiSaya } from "@/lib/data/quiz";
 import { ambilOperator } from "@/lib/operator";
-import { ambilQuizOpd, kegiatanBerjalan } from "@/lib/quiz-opd";
 
 const KELAS_PESAN = "rounded-lg bg-surface-muted px-4 py-3 text-sm text-ink-muted";
 
 export default async function PreTestPage() {
   const { pengguna, opd } = await ambilOperator();
 
-  const kegiatan = kegiatanBerjalan();
-  const pre = ambilQuizOpd(kegiatan, "pretest", opd.id, pengguna.id);
+  const kegiatan = await ambilKegiatanAktif();
+  // sesi yang waktunya sudah lewat (browser ditutup) dijadikan hasil dulu
+  await finalkanSesiSaya();
+  const pre = await ambilQuizPegawai(kegiatan, "pretest", pengguna.id, { rincian: true });
 
   return (
     <div className="space-y-6">
@@ -33,15 +36,16 @@ export default async function PreTestPage() {
       ) : !kegiatan || !pre.pengaturan ? (
         <p className={KELAS_PESAN}>Pre-Test belum dibuka oleh admin.</p>
       ) : (
-        /* Dummy: kunci ikut dikirim ke browser. Setelah ada server, penilaian dilakukan di server */
+        /* Kunci tidak pernah dikirim ke browser sebelum jawaban terkirim; penilaian di server */
         <QuizClient
-          opdId={opd.id}
-          penggunaId={pengguna.id}
           kegiatanId={kegiatan.id}
+          jenis="pretest"
           nama="Pre-Test"
           pengaturan={pre.pengaturan}
-          soalList={pre.soal}
-          hasilAwal={pre.hasil}
+          jumlahSoal={pre.jumlahSoal}
+          hasil={pre.hasil}
+          review={pre.review}
+          sesi={pre.sesi}
           diizinkan={pre.diizinkan}
         />
       )}

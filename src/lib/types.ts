@@ -199,7 +199,8 @@ export interface LogPerubahanQuiz {
   soalId?: string; // untuk kunci, nonaktif, aktifkan
   kunciLama?: number; // hanya untuk jenis "kunci"
   kunciBaru?: number;
-  opdId?: string; // hanya untuk jenis "izin_ulang"
+  opdId?: string; // lama, tidak dipakai lagi
+  penggunaId?: string; // hanya untuk jenis "izin_ulang"
   admin: string;
   waktu: string; // yyyy-mm-ddTHH:mm
 }

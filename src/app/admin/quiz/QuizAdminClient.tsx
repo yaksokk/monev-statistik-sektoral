@@ -3,16 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { waktuSekarang } from "@/lib/presensi";
-import {
-  JENIS_QUIZ,
-  LABEL_QUIZ,
-  cariPengaturan,
-  soalAktif,
-  soalBisaDiubah,
-  soalQuiz,
-  statusWaktuQuiz,
-  type MasukanPengaturan,
-} from "@/lib/quiz";
+import { JENIS_QUIZ, LABEL_QUIZ, cariPengaturan, soalQuiz } from "@/lib/quiz";
 import type {
   HasilQuiz,
   IzinKerjaUlang,
@@ -24,44 +15,42 @@ import type {
   Pengguna,
   SoalQuiz,
 } from "@/lib/types";
+import {
+  beriIzinKerjaUlang,
+  geserSoalQuiz,
+  hapusSoalQuiz,
+  simpanPengaturanQuiz,
+  simpanSoalQuiz,
+  ubahAktifSoalQuiz,
+} from "./actions";
 import TabQuiz, { type AksiTabQuiz, type DataSoal, type EditTerkunci } from "./TabQuiz";
 import TabRekap, { type TargetIzin } from "./TabRekap";
 
-// Dummy, belum ada login. Ganti dengan nama admin dari sesi nanti
-const NAMA_ADMIN = "Admin BPS";
-
 type NamaTab = JenisQuiz | "rekap";
 
-const angka = (id: string) => Number(id.replace(/\D/g, ""));
-
+// Semua data berasal dari server dan sudah difilter untuk kegiatan ini. Setelah tiap aksi,
+// halaman disegarkan server (revalidatePath), jadi tidak ada salinan data di state.
 type Props = {
-  kegiatanId: string;
-  kegiatanAwal: Kegiatan[];
+  kegiatan: Kegiatan;
   opdList: Opd[];
   penggunaList: Pengguna[];
-  soalAwal: SoalQuiz[];
-  pengaturanAwal: PengaturanQuiz[];
-  hasilAwal: HasilQuiz[];
-  izinAwal: IzinKerjaUlang[];
-  logAwal: LogPerubahanQuiz[];
+  soalList: SoalQuiz[];
+  pengaturanList: PengaturanQuiz[];
+  hasilList: HasilQuiz[];
+  izinList: IzinKerjaUlang[];
+  logList: LogPerubahanQuiz[];
 };
 
 export default function QuizAdminClient({
-  kegiatanId,
-  kegiatanAwal,
+  kegiatan: kg,
   opdList,
   penggunaList,
-  soalAwal,
-  pengaturanAwal,
-  hasilAwal,
-  izinAwal,
-  logAwal,
+  soalList,
+  pengaturanList,
+  hasilList,
+  izinList,
+  logList,
 }: Props) {
-  const [soalList, setSoalList] = useState(soalAwal);
-  const [pengaturanList, setPengaturanList] = useState(pengaturanAwal);
-  const [hasilList, setHasilList] = useState(hasilAwal);
-  const [izinList, setIzinList] = useState(izinAwal);
-  const [logList, setLogList] = useState(logAwal);
   const [sekarang, setSekarang] = useState<string | null>(null);
   const [tab, setTab] = useState<NamaTab>("pretest");
   const [pesan, setPesan] = useState("");
@@ -73,166 +62,77 @@ export default function QuizAdminClient({
     return () => clearInterval(timer);
   }, []);
 
-  const kegiatan = kegiatanAwal.find((k) => k.id === kegiatanId);
-  if (!kegiatan) return null;
-  const kg: Kegiatan = kegiatan;
-
   const arsip = !!kg.arsip;
-  const soalKegiatan = soalList.filter((s) => s.kegiatanId === kg.id);
-  const pengaturanKegiatan = pengaturanList.filter((p) => p.kegiatanId === kg.id);
-  const hasilKegiatan = hasilList.filter((h) => h.kegiatanId === kg.id);
-  const izinKegiatan = izinList.filter((i) => i.kegiatanId === kg.id);
 
-  function bolehUbahSoal(jenis: JenisQuiz) {
-    if (arsip || sekarang === null) return false;
-    const jumlah = hasilKegiatan.filter((h) => h.quizId === jenis).length;
-    return soalBisaDiubah(cariPengaturan(pengaturanList, kg.id, jenis), jumlah, sekarang);
-  }
-
-  function catatLog(
-    entri: Omit<LogPerubahanQuiz, "id" | "kegiatanId" | "admin" | "waktu">[],
-  ) {
-    if (sekarang === null || entri.length === 0) return;
-    const awal = logList.reduce((m, l) => Math.max(m, angka(l.id)), 0);
-    setLogList((prev) => [
-      ...prev,
-      ...entri.map((e, i) => ({
-        ...e,
-        id: `log-${awal + i + 1}`,
-        kegiatanId: kg.id,
-        admin: NAMA_ADMIN,
-        waktu: sekarang,
-      })),
-    ]);
-  }
-
-  function simpanPengaturan(jenis: JenisQuiz, m: MasukanPengaturan) {
-    if (arsip || sekarang === null) return;
-    const lama = cariPengaturan(pengaturanList, kg.id, jenis);
-    // batas akhir pertama sudah lewat: sejak itu hanya pegawai berizin yang boleh mulai
-    const sudahTutup = !!lama && statusWaktuQuiz(lama, sekarang) === "ditutup";
-    const baru: PengaturanQuiz = {
-      id: jenis,
-      kegiatanId: kg.id,
-      judul: lama?.judul ?? `${LABEL_QUIZ[jenis]} ${kg.nama}`,
-      durasiMenit: m.durasiMenit,
-      waktuBuka: m.waktuBuka,
-      batasAkhir: m.batasAkhir,
-      hanyaBerizin: lama?.hanyaBerizin || sudahTutup || undefined,
-    };
-    setPengaturanList((prev) =>
-      lama
-        ? prev.map((p) => (p.kegiatanId === kg.id && p.id === jenis ? baru : p))
-        : [...prev, baru],
-    );
+  // Semua aksi mengembalikan teks galat, atau null bila berhasil
+  async function simpanPengaturan(jenis: JenisQuiz, m: Parameters<AksiTabQuiz["simpanPengaturan"]>[0]) {
+    const r = await simpanPengaturanQuiz(kg.id, jenis, m);
+    if (!r.ok) return r.pesan;
     setPesan(`Pengaturan ${LABEL_QUIZ[jenis]} disimpan.`);
+    return null;
   }
 
-  function tambahSoal(jenis: JenisQuiz, d: DataSoal) {
-    if (!bolehUbahSoal(jenis)) return;
-    const no = soalList.reduce((m, s) => Math.max(m, angka(s.id)), 0) + 1;
-    const urutan = soalQuiz(soalList, kg.id, jenis).length + 1;
-    setSoalList((prev) => [
-      ...prev,
-      { ...d, id: `soal-${no}`, kegiatanId: kg.id, quizId: jenis, urutan, aktif: true },
-    ]);
+  async function tambahSoal(jenis: JenisQuiz, d: DataSoal) {
+    const r = await simpanSoalQuiz(kg.id, jenis, null, d);
+    if (!r.ok) return r.pesan;
     setPesan(`Soal ditambahkan ke ${LABEL_QUIZ[jenis]}.`);
+    return null;
   }
 
-  function ubahSoal(jenis: JenisQuiz, id: string, d: DataSoal) {
-    if (!bolehUbahSoal(jenis)) return;
-    setSoalList((prev) => prev.map((s) => (s.id === id ? { ...s, ...d } : s)));
+  async function ubahSoal(jenis: JenisQuiz, id: string, d: DataSoal) {
+    const r = await simpanSoalQuiz(kg.id, jenis, id, d);
+    if (!r.ok) return r.pesan;
     setPesan("Soal diperbarui.");
+    return null;
   }
 
-  function hapusSoal(jenis: JenisQuiz, id: string) {
-    if (!bolehUbahSoal(jenis)) return;
-    const sisaAktif = soalAktif(soalQuiz(soalList, kg.id, jenis)).filter((s) => s.id !== id).length;
-    setSoalList((prev) => {
-      const sisa = prev.filter((s) => s.id !== id);
-      const urutan = new Map(
-        soalQuiz(sisa, kg.id, jenis).map((s, i) => [s.id, i + 1] as [string, number]),
-      );
-      return sisa.map((s) => (urutan.has(s.id) ? { ...s, urutan: urutan.get(s.id)! } : s));
-    });
-    // quiz tanpa soal aktif tidak boleh punya waktu buka
-    const lama = cariPengaturan(pengaturanList, kg.id, jenis);
-    const kosongkan = sisaAktif === 0 && !!lama?.waktuBuka;
-    if (kosongkan) {
-      setPengaturanList((prev) =>
-        prev.map((p) => (p.kegiatanId === kg.id && p.id === jenis ? { ...p, waktuBuka: null } : p)),
-      );
-    }
-    setPesan(kosongkan ? "Soal dihapus. Waktu buka dikosongkan karena tidak ada soal aktif." : "Soal dihapus.");
-  }
-
-  function geser(jenis: JenisQuiz, id: string, arah: -1 | 1) {
-    if (!bolehUbahSoal(jenis)) return;
-    const daftar = soalQuiz(soalList, kg.id, jenis);
-    const i = daftar.findIndex((s) => s.id === id);
-    const j = i + arah;
-    if (i < 0 || j < 0 || j >= daftar.length) return;
-    const a = daftar[i];
-    const b = daftar[j];
-    setSoalList((prev) =>
-      prev.map((s) => (s.id === a.id ? { ...s, urutan: b.urutan } : s.id === b.id ? { ...s, urutan: a.urutan } : s)),
+  async function hapusSoal(id: string) {
+    const r = await hapusSoalQuiz(id);
+    if (!r.ok) return r.pesan;
+    setPesan(
+      r.waktuBukaDikosongkan
+        ? "Soal dihapus. Waktu buka dikosongkan karena tidak ada soal aktif."
+        : "Soal dihapus.",
     );
+    return null;
   }
 
-  // Setelah quiz dibuka: hanya teks soal, pembahasan, dan kunci yang boleh berubah
-  function editTerkunci(jenis: JenisQuiz, id: string, d: EditTerkunci) {
-    if (arsip) return;
+  async function geser(id: string, arah: -1 | 1) {
+    const r = await geserSoalQuiz(id, arah);
+    return r.ok ? null : r.pesan;
+  }
+
+  // Setelah quiz dibuka: hanya teks soal, pembahasan, dan kunci yang boleh berubah (opsi tetap)
+  async function editTerkunci(jenis: JenisQuiz, id: string, d: EditTerkunci) {
     const s = soalList.find((x) => x.id === id);
-    if (!s) return;
+    if (!s) return "Soal tidak ditemukan.";
     const kunciBerubah = s.kunci !== d.kunci;
     const teksBerubah = s.pertanyaan !== d.pertanyaan || s.pembahasan !== d.pembahasan;
-    if (!kunciBerubah && !teksBerubah) return;
-    setSoalList((prev) => prev.map((x) => (x.id === id ? { ...x, ...d } : x)));
-    catatLog([
-      ...(kunciBerubah
-        ? [{ quizId: jenis, jenis: "kunci" as const, soalId: id, kunciLama: s.kunci, kunciBaru: d.kunci }]
-        : []),
-      ...(teksBerubah ? [{ quizId: jenis, jenis: "edit" as const, soalId: id }] : []),
-    ]);
+    if (!kunciBerubah && !teksBerubah) return null;
+
+    const r = await simpanSoalQuiz(kg.id, jenis, id, {
+      pertanyaan: d.pertanyaan,
+      opsi: s.opsi,
+      kunci: d.kunci,
+      pembahasan: d.pembahasan,
+    });
+    if (!r.ok) return r.pesan;
     setPesan(kunciBerubah ? "Soal diperbarui, nilai OPD dihitung ulang." : "Soal diperbarui.");
+    return null;
   }
 
-  function ubahAktif(jenis: JenisQuiz, id: string, aktif: boolean) {
-    if (arsip) return;
-    setSoalList((prev) => prev.map((x) => (x.id === id ? { ...x, aktif } : x)));
-    catatLog([{ quizId: jenis, jenis: aktif ? "aktifkan" : "nonaktif", soalId: id }]);
+  async function ubahAktif(id: string, aktif: boolean) {
+    const r = await ubahAktifSoalQuiz(id, aktif);
+    if (!r.ok) return r.pesan;
     setPesan(aktif ? "Soal diaktifkan." : "Soal dinonaktifkan, nilai OPD dihitung ulang.");
+    return null;
   }
 
-  function berikanIzin(target: TargetIzin[]) {
-    if (arsip || sekarang === null || target.length === 0) return;
-    const kunci = new Set(target.map((t) => `${t.penggunaId}:${t.jenis}`));
-    const cocok = (penggunaId: string, quizId: string) => kunci.has(`${penggunaId}:${quizId}`);
-
-    setHasilList((prev) => prev.filter((h) => !(h.kegiatanId === kg.id && cocok(h.penggunaId ?? "", h.quizId))));
-    setIzinList((prev) => [
-      ...prev.filter((i) => !(i.kegiatanId === kg.id && cocok(i.penggunaId, i.quizId))),
-      ...target.map((t) => ({
-        kegiatanId: kg.id,
-        quizId: t.jenis,
-        penggunaId: t.penggunaId,
-        diberikanPada: sekarang,
-        admin: NAMA_ADMIN,
-      })),
-    ]);
-    catatLog(target.map((t) => ({ quizId: t.jenis, jenis: "izin_ulang" as const, penggunaId: t.penggunaId })));
-
-    const ditutup = new Set(
-      target
-        .map((t) => t.jenis)
-        .filter((j) => statusWaktuQuiz(cariPengaturan(pengaturanList, kg.id, j), sekarang) === "ditutup"),
-    );
-    if (ditutup.size > 0) {
-      setPengaturanList((prev) =>
-        prev.map((p) => (p.kegiatanId === kg.id && ditutup.has(p.id) ? { ...p, hanyaBerizin: true } : p)),
-      );
-    }
+  async function berikanIzin(target: TargetIzin[]) {
+    const r = await beriIzinKerjaUlang(kg.id, target);
+    if (!r.ok) return r.pesan;
     setPesan(`${target.length} pegawai diizinkan mengerjakan ulang.`);
+    return null;
   }
 
   function aksiUntuk(jenis: JenisQuiz): AksiTabQuiz {
@@ -240,10 +140,10 @@ export default function QuizAdminClient({
       simpanPengaturan: (m) => simpanPengaturan(jenis, m),
       tambahSoal: (d) => tambahSoal(jenis, d),
       ubahSoal: (id, d) => ubahSoal(jenis, id, d),
-      hapusSoal: (id) => hapusSoal(jenis, id),
-      geser: (id, arah) => geser(jenis, id, arah),
+      hapusSoal: (id) => hapusSoal(id),
+      geser: (id, arah) => geser(id, arah),
       editTerkunci: (id, d) => editTerkunci(jenis, id, d),
-      ubahAktif: (id, aktif) => ubahAktif(jenis, id, aktif),
+      ubahAktif: (id, aktif) => ubahAktif(id, aktif),
     };
   }
 
@@ -288,10 +188,10 @@ export default function QuizAdminClient({
             arsip={arsip}
             opdList={opdList}
             penggunaList={penggunaList}
-            soalList={soalKegiatan}
-            pengaturanList={pengaturanKegiatan}
-            hasil={hasilKegiatan}
-            izin={izinKegiatan}
+            soalList={soalList}
+            pengaturanList={pengaturanList}
+            hasil={hasilList}
+            izin={izinList}
             sekarang={sekarang}
             onIzin={berikanIzin}
           />
@@ -304,8 +204,8 @@ export default function QuizAdminClient({
             totalPegawai={penggunaList.length}
             pengaturan={cariPengaturan(pengaturanList, kg.id, tab)}
             soal={soalQuiz(soalList, kg.id, tab)}
-            hasil={hasilKegiatan.filter((h) => h.quizId === tab)}
-            log={logList.filter((l) => l.kegiatanId === kg.id && l.quizId === tab)}
+            hasil={hasilList.filter((h) => h.quizId === tab)}
+            log={logList.filter((l) => l.quizId === tab)}
             sekarang={sekarang}
             aksi={aksiUntuk(tab)}
           />

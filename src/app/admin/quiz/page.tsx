@@ -1,21 +1,12 @@
-import {
-  HASIL_QUIZ_LIST,
-  IZIN_KERJA_ULANG_LIST,
-  KEGIATAN_LIST,
-  LOG_PERUBAHAN_QUIZ_LIST,
-  OPD_LIST,
-  PENGATURAN_QUIZ_LIST,
-  PENGGUNA_LIST,
-  SOAL_QUIZ_LIST,
-} from "@/data/dummy";
+import { ambilDaftarKegiatan } from "@/lib/data/kegiatan";
+import { ambilDataQuizAdmin } from "@/lib/data/quiz";
 import QuizAdminClient from "./QuizAdminClient";
 
-// Pegawai OPD (operator); izin kerjakan ulang dan rekap hasil per pegawai
-const PEGAWAI_LIST = PENGGUNA_LIST.filter((p) => p.peran === "operator" && p.opdId);
-
-export default function KelolaQuizPage() {
+export default async function KelolaQuizPage() {
   // kegiatan aktif, kalau tidak ada pakai yang pertama
-  const kegiatan = KEGIATAN_LIST.find((k) => k.aktif) ?? KEGIATAN_LIST[0];
+  const daftar = await ambilDaftarKegiatan();
+  const kegiatan = daftar.find((k) => k.aktif) ?? daftar[0];
+  const data = kegiatan ? await ambilDataQuizAdmin(kegiatan.id) : null;
 
   return (
     <div className="space-y-6">
@@ -26,17 +17,16 @@ export default function KelolaQuizPage() {
         </p>
       </header>
 
-      {kegiatan ? (
+      {kegiatan && data ? (
         <QuizAdminClient
-          kegiatanId={kegiatan.id}
-          kegiatanAwal={KEGIATAN_LIST}
-          opdList={OPD_LIST}
-          penggunaList={PEGAWAI_LIST}
-          soalAwal={SOAL_QUIZ_LIST}
-          pengaturanAwal={PENGATURAN_QUIZ_LIST}
-          hasilAwal={HASIL_QUIZ_LIST}
-          izinAwal={IZIN_KERJA_ULANG_LIST}
-          logAwal={LOG_PERUBAHAN_QUIZ_LIST}
+          kegiatan={kegiatan}
+          opdList={data.opdList}
+          penggunaList={data.penggunaList}
+          soalList={data.soalList}
+          pengaturanList={data.pengaturanList}
+          hasilList={data.hasilList}
+          izinList={data.izinList}
+          logList={data.logList}
         />
       ) : (
         <p className="text-sm text-ink-muted">Belum ada kegiatan. Tambahkan lewat menu Kegiatan.</p>

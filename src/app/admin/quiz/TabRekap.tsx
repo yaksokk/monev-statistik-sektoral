@@ -51,7 +51,7 @@ type Props = {
   hasil: HasilQuiz[]; // hasil kegiatan ini
   izin: IzinKerjaUlang[]; // izin kegiatan ini
   sekarang: string | null;
-  onIzin: (target: TargetIzin[]) => void;
+  onIzin: (target: TargetIzin[]) => Promise<string | null>; // teks galat, atau null bila berhasil
 };
 
 export default function TabRekap({
@@ -70,6 +70,8 @@ export default function TabRekap({
   const [pilihan, setPilihan] = useState<string[]>([]);
   const [detail, setDetail] = useState<TargetIzin | null>(null);
   const [konfirmasi, setKonfirmasi] = useState<TargetIzin[] | null>(null);
+  const [prosesIzin, setProsesIzin] = useState(false);
+  const [galatIzin, setGalatIzin] = useState<string | null>(null);
 
   const dataJenis = JENIS_QUIZ.map((jenis) => ({
     jenis,
@@ -109,9 +111,27 @@ export default function TabRekap({
     });
   }
 
-  function terapkan() {
-    if (!konfirmasi) return;
-    onIzin(konfirmasi);
+  function bukaKonfirmasi(target: TargetIzin[]) {
+    setGalatIzin(null);
+    setKonfirmasi(target);
+  }
+
+  function tutupKonfirmasi() {
+    setKonfirmasi(null);
+    setGalatIzin(null);
+  }
+
+  // Hasil lama dihapus dan izin dicatat di server dalam satu transaksi; bila gagal, dialog tetap terbuka
+  async function terapkan() {
+    if (!konfirmasi || prosesIzin) return;
+    setProsesIzin(true);
+    setGalatIzin(null);
+    const galat = await onIzin(konfirmasi);
+    setProsesIzin(false);
+    if (galat) {
+      setGalatIzin(galat);
+      return;
+    }
     setKonfirmasi(null);
     setDetail(null);
     setPilihan([]);
@@ -218,7 +238,7 @@ export default function TabRekap({
             <button type="button" onClick={() => setPilihan([])} className={tombolSekunder}>
               Batal pilih
             </button>
-            <button type="button" onClick={() => setKonfirmasi(targetDariPilihan())} className={tombolUtama}>
+            <button type="button" onClick={() => bukaKonfirmasi(targetDariPilihan())} className={tombolUtama}>
               <RotateCcw className="size-4" aria-hidden />
               Izinkan kerjakan ulang
             </button>
@@ -348,7 +368,7 @@ export default function TabRekap({
                 Tutup
               </button>
               {!arsip && (
-                <button type="button" onClick={() => setKonfirmasi([detail])} className={tombolUtama}>
+                <button type="button" onClick={() => bukaKonfirmasi([detail])} className={tombolUtama}>
                   <RotateCcw className="size-4" aria-hidden />
                   Izinkan kerjakan ulang
                 </button>
@@ -358,7 +378,7 @@ export default function TabRekap({
         )}
       </Dialog>
 
-      <Dialog buka={!!konfirmasi} onTutup={() => setKonfirmasi(null)} judul="Izinkan kerjakan ulang?">
+      <Dialog buka={!!konfirmasi} onTutup={tutupKonfirmasi} judul="Izinkan kerjakan ulang?">
         {konfirmasi && (
           <>
             <p className="text-sm text-ink-muted">
@@ -375,8 +395,8 @@ export default function TabRekap({
             {jenisDitutup.length > 0 ? (
               <p role="note" className="text-sm text-status-menunggu-fg">
                 Batas akhir {jenisDitutup.map((j) => LABEL_QUIZ[j]).join(" dan ")} sudah lewat. Izin baru
-                berlaku setelah Anda mengatur batas akhir baru di tab quiz itu, dan hanya pegawai yang diizinkan yang
-                bisa mengerjakan.
+                berlaku setelah Anda mengatur batas akhir baru di tab quiz itu, dan hanya pegawai yang diizinkan
+                yang bisa mengerjakan.
               </p>
             ) : (
               <p className="text-sm text-ink-muted">
@@ -388,11 +408,16 @@ export default function TabRekap({
                 N-Gain {pegawaiNGainKosong.join(", ")} kosong sampai Pre-Test dikerjakan lagi.
               </p>
             )}
+            {galatIzin && (
+              <p role="alert" className="text-sm text-status-revisi-fg">
+                {galatIzin}
+              </p>
+            )}
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setKonfirmasi(null)} className={tombolSekunder}>
+              <button type="button" onClick={tutupKonfirmasi} disabled={prosesIzin} className={tombolSekunder}>
                 Batal
               </button>
-              <button type="button" onClick={terapkan} className={tombolBahaya}>
+              <button type="button" onClick={terapkan} disabled={prosesIzin} className={tombolBahaya}>
                 Hapus hasil dan izinkan
               </button>
             </div>

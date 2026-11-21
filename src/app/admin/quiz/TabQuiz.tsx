@@ -44,14 +44,17 @@ export type DataSoal = { pertanyaan: string; opsi: string[]; kunci: number; pemb
 // Yang boleh diubah setelah quiz dibuka: teks soal, kunci, pembahasan
 export type EditTerkunci = { pertanyaan: string; kunci: number; pembahasan: string };
 
+export type MasukanPengaturanAdmin = MasukanPengaturan & { acakSoal: boolean };
+
+// Semua aksi mengembalikan teks galat dari server, atau null bila berhasil
 export type AksiTabQuiz = {
-  simpanPengaturan: (m: MasukanPengaturan) => void;
-  tambahSoal: (d: DataSoal) => void;
-  ubahSoal: (id: string, d: DataSoal) => void;
-  hapusSoal: (id: string) => void;
-  geser: (id: string, arah: -1 | 1) => void;
-  editTerkunci: (id: string, d: EditTerkunci) => void;
-  ubahAktif: (id: string, aktif: boolean) => void;
+  simpanPengaturan: (m: MasukanPengaturanAdmin) => Promise<string | null>;
+  tambahSoal: (d: DataSoal) => Promise<string | null>;
+  ubahSoal: (id: string, d: DataSoal) => Promise<string | null>;
+  hapusSoal: (id: string) => Promise<string | null>;
+  geser: (id: string, arah: -1 | 1) => Promise<string | null>;
+  editTerkunci: (id: string, d: EditTerkunci) => Promise<string | null>;
+  ubahAktif: (id: string, aktif: boolean) => Promise<string | null>;
 };
 
 const LABEL_LOG = {
@@ -72,6 +75,7 @@ function BagianPengaturan({
   totalPegawai,
   sekarang,
   arsip,
+  acakTerkunci,
   onSimpan,
 }: {
   jenis: JenisQuiz;
@@ -81,16 +85,21 @@ function BagianPengaturan({
   totalPegawai: number;
   sekarang: string | null;
   arsip: boolean;
-  onSimpan: (m: MasukanPengaturan) => void;
+  acakTerkunci: boolean; // pilihan acak soal tidak bisa diubah setelah quiz dibuka
+  onSimpan: (m: MasukanPengaturanAdmin) => Promise<string | null>;
 }) {
   const [buka, setBuka] = useState(pengaturan?.waktuBuka ?? "");
   const [batas, setBatas] = useState(pengaturan?.batasAkhir ?? "");
   const [durasi, setDurasi] = useState(String(pengaturan?.durasiMenit ?? 15));
+  const [acak, setAcak] = useState(pengaturan?.acakSoal ?? true);
+  const [proses, setProses] = useState(false);
+  const [galatSimpan, setGalatSimpan] = useState<string | null>(null);
 
-  const masukan: MasukanPengaturan = {
+  const masukan: MasukanPengaturanAdmin = {
     waktuBuka: buka || null,
     batasAkhir: batas || null,
     durasiMenit: durasi.trim() === "" ? NaN : Number(durasi),
+    acakSoal: acak,
   };
   const validasi: HasilValidasi = sekarang
     ? validasiPengaturan(masukan, jumlahSoalAktif, sekarang)
@@ -100,10 +109,14 @@ function BagianPengaturan({
   const status = sekarang ? statusWaktuQuiz(pengaturan, sekarang) : null;
   const terbatas = !!pengaturan?.hanyaBerizin || status === "ditutup";
 
-  function simpan(e: FormEvent) {
+  async function simpan(e: FormEvent) {
     e.preventDefault();
-    if (arsip || !sekarang || adaGalat) return;
-    onSimpan(masukan);
+    if (arsip || !sekarang || adaGalat || proses) return;
+    setProses(true);
+    setGalatSimpan(null);
+    const g = await onSimpan(masukan);
+    setProses(false);
+    if (g) setGalatSimpan(g);
   }
 
   return (
@@ -187,6 +200,24 @@ function BagianPengaturan({
           </div>
         </div>
 
+        <div className="space-y-1.5">
+          <label htmlFor={`acak-${jenis}`} className="flex items-center gap-2 text-sm font-medium text-ink">
+            <input
+              id={`acak-${jenis}`}
+              type="checkbox"
+              checked={acak}
+              onChange={(e) => setAcak(e.target.checked)}
+              disabled={arsip || acakTerkunci}
+              className="size-4 shrink-0 accent-(--color-primary)"
+            />
+            Acak urutan soal per pegawai
+          </label>
+          <p className="text-xs text-ink-muted">
+            Bila dimatikan, semua pegawai melihat soal sesuai urutan di daftar soal. Pilihan ini terkunci setelah
+            quiz dibuka atau sudah ada pegawai yang mengerjakan.
+          </p>
+        </div>
+
         <p className="text-xs text-ink-muted">
           Waktu buka kosong berarti quiz belum dibuka. Batas akhir kosong berarti tanpa batas. Batas akhir juga
           memotong waktu pengerjaan: OPD yang mulai mepet batas akhir hanya mendapat sisa waktu, dan jawabannya
@@ -205,9 +236,18 @@ function BagianPengaturan({
             ))}
           </ul>
         )}
+        {galatSimpan && (
+          <p role="alert" className="text-sm text-status-revisi-fg">
+            {galatSimpan}
+          </p>
+        )}
 
         <div className="flex justify-end">
-          <button type="submit" disabled={arsip || sekarang === null || adaGalat} className={tombolUtama}>
+          <button
+            type="submit"
+            disabled={arsip || sekarang === null || adaGalat || proses}
+            className={tombolUtama}
+          >
             Simpan pengaturan
           </button>
         </div>
@@ -229,11 +269,12 @@ function FormSoal({
   onBatal,
 }: {
   awal: IsianSoal;
-  onSimpan: (d: DataSoal) => void;
+  onSimpan: (d: DataSoal) => Promise<string | null>;
   onBatal: () => void;
 }) {
   const [v, setV] = useState(awal);
   const [galat, setGalat] = useState("");
+  const [proses, setProses] = useState(false);
 
   function ubahOpsi(i: number, teks: string) {
     setV({ ...v, opsi: v.opsi.map((o, j) => (j === i ? teks : o)) });
@@ -246,14 +287,20 @@ function FormSoal({
     setV({ ...v, opsi: v.opsi.filter((_, j) => j !== i), kunci });
   }
 
-  function kirim(e: FormEvent) {
+  async function kirim(e: FormEvent) {
     e.preventDefault();
+    if (proses) return;
     const pertanyaan = v.pertanyaan.trim();
     const opsi = v.opsi.map((o) => o.trim());
     if (!pertanyaan) return setGalat("Teks soal wajib diisi.");
     if (opsi.some((o) => !o)) return setGalat("Semua opsi wajib diisi.");
     if (v.kunci === null) return setGalat("Pilih satu opsi sebagai kunci jawaban.");
-    onSimpan({ pertanyaan, opsi, kunci: v.kunci, pembahasan: v.pembahasan.trim() });
+
+    setGalat("");
+    setProses(true);
+    const g = await onSimpan({ pertanyaan, opsi, kunci: v.kunci, pembahasan: v.pembahasan.trim() });
+    setProses(false);
+    if (g) setGalat(g);
   }
 
   return (
@@ -333,10 +380,10 @@ function FormSoal({
         </p>
       )}
       <div className="flex justify-end gap-2 pt-2">
-        <button type="button" onClick={onBatal} className={tombolSekunder}>
+        <button type="button" onClick={onBatal} disabled={proses} className={tombolSekunder}>
           Batal
         </button>
-        <button type="submit" className={tombolUtama}>
+        <button type="submit" disabled={proses} className={tombolUtama}>
           Simpan soal
         </button>
       </div>
@@ -376,6 +423,8 @@ export default function TabQuiz({
   const [edit, setEdit] = useState<({ id: string } & EditTerkunci) | null>(null);
   const [toggleId, setToggleId] = useState<string | null>(null);
   const [tertunda, setTertunda] = useState<DataSoal | null>(null);
+  const [proses, setProses] = useState(false);
+  const [galatAksi, setGalatAksi] = useState<string | null>(null);
 
   const label = LABEL_QUIZ[jenis];
 
@@ -401,6 +450,7 @@ export default function TabQuiz({
   const dihapus = hapusId ? soal.find((s) => s.id === hapusId) : undefined;
   const disunting = edit ? soal.find((s) => s.id === edit.id) : undefined;
   const ditoggle = toggleId ? soal.find((s) => s.id === toggleId) : undefined;
+  const dialogTerbuka = !!form || !!tertunda || !!dihapus || !!disunting || !!ditoggle;
 
   const dampakEdit =
     disunting && edit
@@ -450,35 +500,80 @@ export default function TabQuiz({
         )
       : null;
 
-  function simpanSoal(d: DataSoal) {
+  // Menjalankan aksi ke server: dialog tetap terbuka dan menampilkan galat bila gagal
+  async function jalankan(kerja: () => Promise<string | null>, selesai: () => void) {
+    if (proses) return;
+    setProses(true);
+    setGalatAksi(null);
+    const galat = await kerja();
+    setProses(false);
+    if (galat) setGalatAksi(galat);
+    else selesai();
+  }
+
+  function tutupDialog() {
     setForm(null);
-    if (diedit) return aksi.ubahSoal(diedit.id, d);
+    setTertunda(null);
+    setHapusId(null);
+    setEdit(null);
+    setToggleId(null);
+    setGalatAksi(null);
+  }
+
+  // Galat dikembalikan ke FormSoal agar tampil di dalam form
+  async function simpanSoal(d: DataSoal): Promise<string | null> {
+    if (diedit) {
+      const galat = await aksi.ubahSoal(diedit.id, d);
+      if (!galat) tutupDialog();
+      return galat;
+    }
     // sudah ada hasil: minta konfirmasi dulu
-    if (hasil.length > 0) return setTertunda(d);
-    aksi.tambahSoal(d);
+    if (hasil.length > 0) {
+      setForm(null);
+      setTertunda(d);
+      return null;
+    }
+    const galat = await aksi.tambahSoal(d);
+    if (!galat) tutupDialog();
+    return galat;
   }
 
   function terapkanTambah() {
-    if (tertunda) aksi.tambahSoal(tertunda);
-    setTertunda(null);
+    if (!tertunda) return;
+    const d = tertunda;
+    void jalankan(() => aksi.tambahSoal(d), tutupDialog);
   }
 
   function terapkanEdit() {
-    if (!edit || !disunting || teksKosong || tidakBerubah) return setEdit(null);
-    aksi.editTerkunci(disunting.id, {
+    if (!edit || !disunting || teksKosong || tidakBerubah) return tutupDialog();
+    const id = disunting.id;
+    const d = {
       pertanyaan: edit.pertanyaan.trim(),
       kunci: edit.kunci,
       pembahasan: edit.pembahasan.trim(),
-    });
-    setEdit(null);
+    };
+    void jalankan(() => aksi.editTerkunci(id, d), tutupDialog);
   }
 
   function terapkanToggle() {
-    if (ditoggle) aksi.ubahAktif(ditoggle.id, !ditoggle.aktif);
-    setToggleId(null);
+    if (!ditoggle) return;
+    const { id, aktif } = ditoggle;
+    void jalankan(() => aksi.ubahAktif(id, !aktif), tutupDialog);
+  }
+
+  function terapkanHapus() {
+    if (!dihapus) return;
+    const id = dihapus.id;
+    void jalankan(() => aksi.hapusSoal(id), tutupDialog);
   }
 
   const urutLog = [...log].sort((a, b) => (a.waktu < b.waktu ? 1 : -1));
+
+  const pesanGalat = galatAksi && (
+    <p role="alert" className="text-sm text-status-revisi-fg">
+      {galatAksi}
+    </p>
+  );
 
   return (
     <div className="space-y-6">
@@ -493,7 +588,7 @@ export default function TabQuiz({
       )}
 
       <BagianPengaturan
-        key={`${pengaturan?.waktuBuka}|${pengaturan?.batasAkhir}|${pengaturan?.durasiMenit}`}
+        key={`${pengaturan?.waktuBuka}|${pengaturan?.batasAkhir}|${pengaturan?.durasiMenit}|${pengaturan?.acakSoal}`}
         jenis={jenis}
         pengaturan={pengaturan}
         jumlahSoalAktif={soalAktif(soal).length}
@@ -501,6 +596,7 @@ export default function TabQuiz({
         totalPegawai={totalPegawai}
         sekarang={sekarang}
         arsip={arsip}
+        acakTerkunci={!bisaUbah}
         onSimpan={aksi.simpanPengaturan}
       />
 
@@ -511,7 +607,10 @@ export default function TabQuiz({
           </h2>
           <button
             type="button"
-            onClick={() => setForm({ id: null })}
+            onClick={() => {
+              setGalatAksi(null);
+              setForm({ id: null });
+            }}
             disabled={arsip}
             className={tombolUtama}
           >
@@ -526,6 +625,7 @@ export default function TabQuiz({
             tambah soal, edit teks soal, pembahasan, dan kunci, serta nonaktifkan soal.
           </p>
         )}
+        {!dialogTerbuka && galatAksi && <div className="mt-3">{pesanGalat}</div>}
 
         {soal.length === 0 ? (
           <p className="py-8 text-center text-sm text-ink-muted">Belum ada soal untuk quiz ini.</p>
@@ -557,8 +657,8 @@ export default function TabQuiz({
                       <>
                         <button
                           type="button"
-                          onClick={() => aksi.geser(s.id, -1)}
-                          disabled={i === 0}
+                          onClick={() => void jalankan(() => aksi.geser(s.id, -1), () => {})}
+                          disabled={i === 0 || proses}
                           aria-label={`Naikkan soal ${i + 1}`}
                           className={tombolSekunder}
                         >
@@ -566,18 +666,32 @@ export default function TabQuiz({
                         </button>
                         <button
                           type="button"
-                          onClick={() => aksi.geser(s.id, 1)}
-                          disabled={i === soal.length - 1}
+                          onClick={() => void jalankan(() => aksi.geser(s.id, 1), () => {})}
+                          disabled={i === soal.length - 1 || proses}
                           aria-label={`Turunkan soal ${i + 1}`}
                           className={tombolSekunder}
                         >
                           <ArrowDown className="size-4" aria-hidden />
                         </button>
-                        <button type="button" onClick={() => setForm({ id: s.id })} className={tombolSekunder}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setGalatAksi(null);
+                            setForm({ id: s.id });
+                          }}
+                          className={tombolSekunder}
+                        >
                           <Pencil className="size-4" aria-hidden />
                           Ubah
                         </button>
-                        <button type="button" onClick={() => setHapusId(s.id)} className={tombolSekunder}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setGalatAksi(null);
+                            setHapusId(s.id);
+                          }}
+                          className={tombolSekunder}
+                        >
                           <Trash2 className="size-4" aria-hidden />
                           Hapus
                         </button>
@@ -586,20 +700,28 @@ export default function TabQuiz({
                       <>
                         <button
                           type="button"
-                          onClick={() =>
+                          onClick={() => {
+                            setGalatAksi(null);
                             setEdit({
                               id: s.id,
                               kunci: s.kunci,
                               pertanyaan: s.pertanyaan,
                               pembahasan: s.pembahasan,
-                            })
-                          }
+                            });
+                          }}
                           className={tombolSekunder}
                         >
                           <Pencil className="size-4" aria-hidden />
                           Edit soal
                         </button>
-                        <button type="button" onClick={() => setToggleId(s.id)} className={tombolSekunder}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setGalatAksi(null);
+                            setToggleId(s.id);
+                          }}
+                          className={tombolSekunder}
+                        >
                           {s.aktif ? (
                             <EyeOff className="size-4" aria-hidden />
                           ) : (
@@ -616,8 +738,8 @@ export default function TabQuiz({
           </ol>
         )}
         <p className="mt-3 text-xs text-ink-muted">
-          Urutan soal diacak per OPD, urutan opsi tidak. Nilai dihitung dari jawaban OPD dan kunci yang berlaku,
-          jadi koreksi kunci langsung memperbarui nilai.
+          Urutan soal diacak per pegawai bila pilihan acak di Pengaturan menyala, urutan opsi tidak. Nilai
+          dihitung dari jawaban OPD dan kunci yang berlaku, jadi koreksi kunci langsung memperbarui nilai.
         </p>
       </section>
 
@@ -645,12 +767,7 @@ export default function TabQuiz({
         </details>
       )}
 
-      <Dialog
-        buka={!!form}
-        onTutup={() => setForm(null)}
-        judul={diedit ? "Ubah soal" : "Tambah soal"}
-        lebar={LEBAR_DIALOG}
-      >
+      <Dialog buka={!!form} onTutup={tutupDialog} judul={diedit ? "Ubah soal" : "Tambah soal"} lebar={LEBAR_DIALOG}>
         <FormSoal
           awal={{
             pertanyaan: diedit?.pertanyaan ?? "",
@@ -659,11 +776,11 @@ export default function TabQuiz({
             pembahasan: diedit?.pembahasan ?? "",
           }}
           onSimpan={simpanSoal}
-          onBatal={() => setForm(null)}
+          onBatal={tutupDialog}
         />
       </Dialog>
 
-      <Dialog buka={!!tertunda} onTutup={() => setTertunda(null)} judul="Tambah soal">
+      <Dialog buka={!!tertunda} onTutup={tutupDialog} judul="Tambah soal">
         {tertunda && (
           <>
             <p className="text-sm text-ink-muted">
@@ -677,11 +794,12 @@ export default function TabQuiz({
               {dampakTambah?.statusBerubah != null &&
                 ` ${dampakTambah.statusBerubah} pegawai statusnya berubah (lulus atau tidak lulus).`}
             </p>
+            {pesanGalat}
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setTertunda(null)} className={tombolSekunder}>
+              <button type="button" onClick={tutupDialog} disabled={proses} className={tombolSekunder}>
                 Batal
               </button>
-              <button type="button" onClick={terapkanTambah} className={tombolUtama}>
+              <button type="button" onClick={terapkanTambah} disabled={proses} className={tombolUtama}>
                 Tambahkan soal
               </button>
             </div>
@@ -689,29 +807,23 @@ export default function TabQuiz({
         )}
       </Dialog>
 
-      <Dialog buka={!!dihapus} onTutup={() => setHapusId(null)} judul="Hapus soal">
+      <Dialog buka={!!dihapus} onTutup={tutupDialog} judul="Hapus soal">
         <p className="text-sm text-ink-muted">
           Hapus soal <span className="font-medium text-ink">{dihapus ? ringkas(dihapus.pertanyaan) : ""}</span>?
           Tindakan ini tidak bisa dibatalkan.
         </p>
+        {pesanGalat}
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={() => setHapusId(null)} className={tombolSekunder}>
+          <button type="button" onClick={tutupDialog} disabled={proses} className={tombolSekunder}>
             Batal
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (dihapus) aksi.hapusSoal(dihapus.id);
-              setHapusId(null);
-            }}
-            className={tombolBahaya}
-          >
+          <button type="button" onClick={terapkanHapus} disabled={proses} className={tombolBahaya}>
             Hapus
           </button>
         </div>
       </Dialog>
 
-      <Dialog buka={!!disunting} onTutup={() => setEdit(null)} judul="Edit soal" lebar={LEBAR_DIALOG}>
+      <Dialog buka={!!disunting} onTutup={tutupDialog} judul="Edit soal" lebar={LEBAR_DIALOG}>
         {disunting && edit && dampakEdit && (
           <>
             <div className="space-y-1.5">
@@ -775,14 +887,15 @@ export default function TabQuiz({
                   ` ${dampakEdit.statusBerubah} pegawai statusnya berubah (lulus atau tidak lulus).`}
               </p>
             )}
+            {pesanGalat}
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setEdit(null)} className={tombolSekunder}>
+              <button type="button" onClick={tutupDialog} disabled={proses} className={tombolSekunder}>
                 Batal
               </button>
               <button
                 type="button"
                 onClick={terapkanEdit}
-                disabled={teksKosong || tidakBerubah}
+                disabled={teksKosong || tidakBerubah || proses}
                 className={tombolUtama}
               >
                 Simpan perubahan
@@ -794,7 +907,7 @@ export default function TabQuiz({
 
       <Dialog
         buka={!!ditoggle}
-        onTutup={() => setToggleId(null)}
+        onTutup={tutupDialog}
         judul={ditoggle?.aktif ? "Nonaktifkan soal" : "Aktifkan soal"}
       >
         {ditoggle && dampakToggle && (
@@ -812,11 +925,12 @@ export default function TabQuiz({
               {dampakToggle.statusBerubah !== null &&
                 ` ${dampakToggle.statusBerubah} pegawai statusnya berubah (lulus atau tidak lulus).`}
             </p>
+            {pesanGalat}
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setToggleId(null)} className={tombolSekunder}>
+              <button type="button" onClick={tutupDialog} disabled={proses} className={tombolSekunder}>
                 Batal
               </button>
-              <button type="button" onClick={terapkanToggle} className={tombolUtama}>
+              <button type="button" onClick={terapkanToggle} disabled={proses} className={tombolUtama}>
                 {ditoggle.aktif ? "Nonaktifkan" : "Aktifkan"}
               </button>
             </div>

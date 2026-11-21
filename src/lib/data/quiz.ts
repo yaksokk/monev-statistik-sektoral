@@ -3,9 +3,15 @@ import { hitungHasil, quizAktif } from "@/lib/quiz";
 import { buatKlienServer } from "@/lib/supabase/server";
 import type {
   DataQuizPegawai,
+  HasilQuiz,
+  IzinKerjaUlang,
+  JenisLogQuiz,
   JenisQuiz,
   Kegiatan,
+  LogPerubahanQuiz,
+  Opd,
   PengaturanQuiz,
+  Pengguna,
   ReviewSoal,
   SesiPegawai,
   SoalQuiz,
@@ -242,5 +248,138 @@ async function ambilSesiSaya(
     sisaDetik,
     jawaban: bersihkanJawaban(sesi.jawaban),
     soal,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Sisi admin (halaman Kelola Quiz)                                    */
+/* ------------------------------------------------------------------ */
+
+export type DataQuizAdmin = {
+  opdList: Opd[];
+  penggunaList: Pengguna[]; // pegawai OPD (operator)
+  soalList: SoalQuiz[]; // dengan kunci dan pembahasan
+  pengaturanList: PengaturanQuiz[];
+  hasilList: HasilQuiz[];
+  izinList: IzinKerjaUlang[];
+  logList: LogPerubahanQuiz[];
+};
+
+type BarisHasilAdmin = {
+  pengguna_id: string;
+  quiz: JenisQuiz;
+  urutan_soal: string[];
+  jawaban: unknown;
+  mulai: string;
+  selesai: string;
+  otomatis: boolean;
+};
+
+type BarisIzin = {
+  kegiatan_id: string;
+  quiz: JenisQuiz;
+  pengguna_id: string;
+  diberikan_pada: string;
+  admin_nama: string;
+};
+
+type BarisLog = {
+  id: string;
+  kegiatan_id: string;
+  quiz: JenisQuiz;
+  jenis: JenisLogQuiz;
+  soal_id: string | null;
+  kunci_lama: number | null;
+  kunci_baru: number | null;
+  pengguna_id: string | null;
+  admin_nama: string;
+  waktu: string;
+};
+
+// Sesi admin (RLS mengizinkan admin membaca semuanya). Sesi pegawai yang waktunya sudah lewat
+// dijadikan hasil dulu supaya rekap tidak ketinggalan.
+export async function ambilDataQuizAdmin(kegiatanId: string): Promise<DataQuizAdmin> {
+  const supabase = await buatKlienServer();
+
+  const { error: errFinal } = await supabase.rpc("finalkan_sesi_kedaluwarsa", { p_kegiatan_id: kegiatanId });
+  if (errFinal) throw new Error(`Gagal memeriksa sesi quiz: ${errFinal.message}`);
+
+  const [opdRes, pegawaiRes, soalRes, pengaturanRes, hasilRes, izinRes, logRes] = await Promise.all([
+    supabase.from("opd").select("id, nama, singkatan").order("nama"),
+    supabase.from("profil").select("id, nama, email, opd_id").eq("peran", "operator").order("nama"),
+    supabase
+      .from("soal_quiz")
+      .select("id, kegiatan_id, quiz, urutan, pertanyaan, opsi, aktif, kunci_soal(kunci, pembahasan)")
+      .eq("kegiatan_id", kegiatanId)
+      .order("quiz")
+      .order("urutan"),
+    supabase.from("pengaturan_quiz").select(KOLOM_PENGATURAN).eq("kegiatan_id", kegiatanId),
+    supabase.rpc("hasil_quiz_admin", { p_kegiatan_id: kegiatanId }),
+    supabase
+      .from("izin_kerja_ulang")
+      .select("kegiatan_id, quiz, pengguna_id, diberikan_pada, admin_nama")
+      .eq("kegiatan_id", kegiatanId),
+    supabase
+      .from("log_perubahan_quiz")
+      .select("id, kegiatan_id, quiz, jenis, soal_id, kunci_lama, kunci_baru, pengguna_id, admin_nama, waktu")
+      .eq("kegiatan_id", kegiatanId)
+      .order("waktu"),
+  ]);
+  if (opdRes.error) throw new Error(`Gagal membaca OPD: ${opdRes.error.message}`);
+  if (pegawaiRes.error) throw new Error(`Gagal membaca pegawai: ${pegawaiRes.error.message}`);
+  if (soalRes.error) throw new Error(`Gagal membaca soal quiz: ${soalRes.error.message}`);
+  if (pengaturanRes.error) throw new Error(`Gagal membaca pengaturan quiz: ${pengaturanRes.error.message}`);
+  if (hasilRes.error) throw new Error(`Gagal membaca hasil quiz: ${hasilRes.error.message}`);
+  if (izinRes.error) throw new Error(`Gagal membaca izin quiz: ${izinRes.error.message}`);
+  if (logRes.error) throw new Error(`Gagal membaca log quiz: ${logRes.error.message}`);
+
+  const penggunaList: Pengguna[] = (
+    pegawaiRes.data as { id: string; nama: string; email: string; opd_id: string | null }[]
+  ).map((p) => ({
+    id: p.id,
+    nama: p.nama,
+    email: p.email,
+    peran: "operator",
+    opdId: p.opd_id ?? undefined,
+  }));
+  const opdPegawai = new Map(penggunaList.map((p) => [p.id, p.opdId ?? ""]));
+
+  return {
+    opdList: opdRes.data as Opd[],
+    penggunaList,
+    soalList: (soalRes.data as BarisSoalLengkap[])
+      .map(petakanSoalLengkap)
+      .filter((s): s is SoalQuiz => s !== null),
+    pengaturanList: (pengaturanRes.data as BarisPengaturan[]).map(petakanPengaturan),
+    hasilList: (hasilRes.data as BarisHasilAdmin[]).map((h) => ({
+      penggunaId: h.pengguna_id,
+      opdId: opdPegawai.get(h.pengguna_id) ?? "",
+      kegiatanId,
+      quizId: h.quiz,
+      urutanSoal: h.urutan_soal,
+      jawaban: bersihkanJawaban(h.jawaban),
+      mulai: isoKeLokal(h.mulai),
+      selesai: isoKeLokal(h.selesai),
+      otomatis: h.otomatis,
+    })),
+    izinList: (izinRes.data as BarisIzin[]).map((i) => ({
+      kegiatanId: i.kegiatan_id,
+      quizId: i.quiz,
+      penggunaId: i.pengguna_id,
+      diberikanPada: isoKeLokal(i.diberikan_pada),
+      admin: i.admin_nama,
+    })),
+    logList: (logRes.data as BarisLog[]).map((l) => ({
+      id: l.id,
+      kegiatanId: l.kegiatan_id,
+      quizId: l.quiz,
+      jenis: l.jenis,
+      soalId: l.soal_id ?? undefined,
+      kunciLama: l.kunci_lama ?? undefined,
+      kunciBaru: l.kunci_baru ?? undefined,
+      penggunaId: l.pengguna_id ?? undefined,
+      admin: l.admin_nama,
+      waktu: isoKeLokal(l.waktu),
+    })),
   };
 }

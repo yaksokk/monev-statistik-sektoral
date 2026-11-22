@@ -1,6 +1,7 @@
-import { MILESTONE_LIST } from "@/data/monev-milestone";
+import { ambilMilestone } from "@/lib/data/monev";
 import MonevMilestoneClient from "./MonevMilestoneClient";
 
-export default function MonevMilestonePage() {
-  return <MonevMilestoneClient milestoneList={MILESTONE_LIST} />;
+export default async function MonevMilestonePage() {
+  const milestoneList = await ambilMilestone();
+  return <MonevMilestoneClient milestoneList={milestoneList} />;
 }

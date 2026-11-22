@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ExternalLink, Link2, Pencil } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
 import type { AspekMonev } from "@/lib/types";
+import { hapusLinkIndikator, simpanLinkIndikator } from "./actions";
 
 const dasarTombol =
   "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50";
@@ -22,18 +23,34 @@ function FormLink({
 }: {
   teks: string;
   awal: string;
-  onSimpan: (link: string) => void;
-  onHapus: () => void;
+  onSimpan: (link: string) => Promise<string | null>; // teks galat dari server, atau null bila berhasil
+  onHapus: () => Promise<string | null>;
   onBatal: () => void;
 }) {
   const [link, setLink] = useState(awal);
   const [galat, setGalat] = useState("");
+  const [proses, setProses] = useState(false);
 
-  function simpan() {
+  async function simpan() {
+    if (proses) return;
     const bersih = link.trim();
     if (!bersih) return setGalat("Link wajib diisi.");
     if (!bersih.toLowerCase().startsWith("https://")) return setGalat("Link harus diawali https://");
-    onSimpan(bersih);
+
+    setGalat("");
+    setProses(true);
+    const g = await onSimpan(bersih);
+    setProses(false);
+    if (g) setGalat(g);
+  }
+
+  async function hapus() {
+    if (proses) return;
+    setGalat("");
+    setProses(true);
+    const g = await onHapus();
+    setProses(false);
+    if (g) setGalat(g);
   }
 
   return (
@@ -59,14 +76,14 @@ function FormLink({
       )}
       <div className="flex flex-wrap justify-end gap-2 pt-2">
         {awal && (
-          <button onClick={onHapus} className={`${tombolBahaya} mr-auto`}>
+          <button type="button" onClick={hapus} disabled={proses} className={`${tombolBahaya} mr-auto`}>
             Hapus link
           </button>
         )}
-        <button onClick={onBatal} className={tombolSekunder}>
+        <button type="button" onClick={onBatal} disabled={proses} className={tombolSekunder}>
           Batal
         </button>
-        <button onClick={simpan} className={tombolUtama}>
+        <button type="button" onClick={simpan} disabled={proses} className={tombolUtama}>
           Simpan
         </button>
       </div>
@@ -74,8 +91,9 @@ function FormLink({
   );
 }
 
+// Data dan link berasal dari server. Setelah tiap aksi, halaman disegarkan server (revalidatePath),
+// jadi tidak ada salinan data di state.
 export default function MonevIndikatorClient({ aspekList }: { aspekList: AspekMonev[] }) {
-  const [links, setLinks] = useState<Record<string, string>>({});
   const [editId, setEditId] = useState<string | null>(null);
   const [pesan, setPesan] = useState("");
 
@@ -83,21 +101,22 @@ export default function MonevIndikatorClient({ aspekList }: { aspekList: AspekMo
     ? aspekList.flatMap((a) => a.indikator).find((i) => i.id === editId)
     : undefined;
 
-  function simpan(link: string) {
-    if (!editId) return;
-    setLinks((prev) => ({ ...prev, [editId]: link }));
+  async function simpan(link: string): Promise<string | null> {
+    if (!editId) return "Indikator tidak ditemukan.";
+    const r = await simpanLinkIndikator(editId, link);
+    if (!r.ok) return r.pesan;
     setPesan("Link dokumen disimpan.");
     setEditId(null);
+    return null;
   }
 
-  function hapus() {
-    if (!editId) return;
-    setLinks((prev) => {
-      const { [editId]: _, ...sisa } = prev;
-      return sisa;
-    });
+  async function hapus(): Promise<string | null> {
+    if (!editId) return "Indikator tidak ditemukan.";
+    const r = await hapusLinkIndikator(editId);
+    if (!r.ok) return r.pesan;
     setPesan("Link dokumen dihapus.");
     setEditId(null);
+    return null;
   }
 
   return (
@@ -142,7 +161,7 @@ export default function MonevIndikatorClient({ aspekList }: { aspekList: AspekMo
                 <td className="px-4 py-4">
                   <ul className="space-y-4">
                     {a.indikator.map((i) => {
-                      const link = links[i.id];
+                      const link = i.linkDokumen;
                       return (
                         <li key={i.id} className="space-y-2">
                           <p className="text-ink">{i.teks}</p>
@@ -158,12 +177,12 @@ export default function MonevIndikatorClient({ aspekList }: { aspekList: AspekMo
                                 <ExternalLink className="size-3.5" aria-hidden />
                               </a>
                             ) : (
-                              <button disabled className={tombolSekunder}>
+                              <button type="button" disabled className={tombolSekunder}>
                                 Lihat dokumen
                                 <ExternalLink className="size-3.5" aria-hidden />
                               </button>
                             )}
-                            <button onClick={() => setEditId(i.id)} className={tombolSekunder}>
+                            <button type="button" onClick={() => setEditId(i.id)} className={tombolSekunder}>
                               {link ? (
                                 <Pencil className="size-3.5" aria-hidden />
                               ) : (
@@ -192,7 +211,7 @@ export default function MonevIndikatorClient({ aspekList }: { aspekList: AspekMo
         {diedit && (
           <FormLink
             teks={diedit.teks}
-            awal={links[diedit.id] ?? ""}
+            awal={diedit.linkDokumen ?? ""}
             onSimpan={simpan}
             onHapus={hapus}
             onBatal={() => setEditId(null)}

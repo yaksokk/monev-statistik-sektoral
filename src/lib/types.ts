@@ -244,6 +244,7 @@ export interface Undangan {
 export interface IndikatorKeberhasilan {
   id: string;
   teks: string;
+  linkDokumen: string | null; // link dokumen dari admin, null = belum diisi
 }
 
 // Satu baris tabel Monev Indikator Keberhasilan
@@ -259,6 +260,7 @@ export interface AspekMonev {
 export interface OutputMilestone {
   id: string;
   teks: string;
+  linkDokumen: string | null;
 }
 
 // Satu baris tabel Monev Milestone

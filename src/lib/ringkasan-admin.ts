@@ -17,9 +17,8 @@ import type {
 } from "@/lib/types";
 
 // Evaluasi Pendalaman tidak dipakai (keputusan pimpinan), jadi tidak masuk dashboard
-const JENIS_DASHBOARD = ["pretest", "posttest"] as const satisfies readonly JenisQuiz[];
-type JenisDashboard = (typeof JENIS_DASHBOARD)[number];
-
+// Evaluasi Pendalaman tidak dipakai (keputusan pimpinan), jadi tidak masuk dashboard
+type JenisDashboard = Extract<JenisQuiz, "pretest" | "posttest">;
 // Semua data dibaca server di page.tsx dan dikirim ke sini, supaya fungsi di bawah murni
 export interface DataDashboardAdmin {
   opdList: Opd[];

@@ -43,10 +43,6 @@ export interface Kegiatan {
   // Saklar quiz per kegiatan. Kosong dianggap aktif; terkunci bila kegiatan diarsipkan
   preTestAktif?: boolean;
   postTestAktif?: boolean;
-  // Surat undangan, diisi admin, sama untuk semua OPD
-  judulUndangan?: string;
-  tanggalUndangan?: string; // ISO yyyy-mm-dd, tanggal surat
-  linkUndangan?: string; // link Google Drive
   
 }
 

@@ -1,48 +1,56 @@
-import {
-  HASIL_QUIZ_LIST,
-  KEGIATAN_LIST,
-  OPD_LIST,
-  PENGATURAN_QUIZ_LIST,
-  PENGGUNA_LIST,
-  PRESENSI_LIST,
-  SESI_LIST,
-  SOAL_QUIZ_LIST,
-} from "@/data/dummy";
+import { ambilDokumenKegiatan } from "@/lib/data/dokumen";
+import { ambilItemKegiatan, ambilKegiatanAktif } from "@/lib/data/kegiatan";
+import { ambilPresensiKegiatan } from "@/lib/data/presensi";
+import { ambilDataQuizAdmin } from "@/lib/data/quiz";
+import { ambilSesiKegiatan } from "@/lib/data/sesi";
+import { ambilAdmin } from "@/lib/pengguna";
 import {
   susunRekapOpd,
   susunRekapPegawai,
   susunRingkasan,
   type DataDashboardAdmin,
 } from "@/lib/ringkasan-admin";
-import HeaderKegiatan from "./HeaderKegiatan";
 import RekapDashboardClient from "./RekapDashboardClient";
 
-// Semua masih data dummy; nanti diganti data backend
-const DATA: DataDashboardAdmin = {
-  opdList: OPD_LIST,
-  penggunaList: PENGGUNA_LIST,
-  sesiList: SESI_LIST,
-  presensiList: PRESENSI_LIST,
-  soalList: SOAL_QUIZ_LIST,
-  pengaturanList: PENGATURAN_QUIZ_LIST,
-  hasilList: HASIL_QUIZ_LIST,
-};
+export default async function DashboardAdmin() {
+  await ambilAdmin();
 
-export default function DashboardAdmin() {
-  const kegiatan = KEGIATAN_LIST.find((k) => k.aktif);
+  const kegiatan = await ambilKegiatanAktif();
 
-  const pegawai = kegiatan ? susunRekapPegawai(kegiatan, DATA) : [];
-  const baris = kegiatan ? susunRekapOpd(kegiatan, pegawai, DATA.opdList) : [];
-  const ringkasan = kegiatan ? susunRingkasan(kegiatan, pegawai) : null;
+  let isi: React.ReactNode = null;
+  if (kegiatan) {
+    const sesiList = await ambilSesiKegiatan(kegiatan.id);
+    // ambilDataQuizAdmin juga menjadikan sesi quiz yang waktunya lewat sebagai hasil
+    const [quiz, presensiList, dokumenList, itemList] = await Promise.all([
+      ambilDataQuizAdmin(kegiatan.id),
+      ambilPresensiKegiatan(sesiList.map((s) => s.id)),
+      ambilDokumenKegiatan(kegiatan.id),
+      ambilItemKegiatan(kegiatan.id),
+    ]);
+
+    const data: DataDashboardAdmin = {
+      opdList: quiz.opdList,
+      penggunaList: quiz.penggunaList,
+      sesiList,
+      presensiList,
+      soalList: quiz.soalList,
+      pengaturanList: quiz.pengaturanList,
+      hasilList: quiz.hasilList,
+      itemList,
+      dokumenList,
+    };
+
+    const pegawai = susunRekapPegawai(kegiatan, data);
+    const baris = susunRekapOpd(kegiatan, pegawai, data.opdList);
+    const ringkasan = susunRingkasan(kegiatan, pegawai);
+    isi = <RekapDashboardClient kegiatan={kegiatan} ringkasan={ringkasan} baris={baris} />;
+  }
 
   return (
     <div>
       <h1 className="text-2xl font-semibold text-primary">Dashboard</h1>
       <p className="mt-1 text-ink-muted">Ringkasan pembinaan dan kelengkapan dokumen seluruh pegawai OPD.</p>
-
-      {kegiatan && ringkasan && (
-        <RekapDashboardClient kegiatan={kegiatan} ringkasan={ringkasan} baris={baris} />
-      )}
+      {isi}
     </div>
   );
 }

@@ -7,7 +7,7 @@ import {
   TrendingUp,
   type LucideIcon,
 } from "lucide-react";
-import { AMBANG_POSTTEST, formatNGain } from "@/lib/dashboard";
+import { AMBANG_POSTTEST, AMBANG_PRETEST, formatNGain } from "@/lib/dashboard";
 import { formatNilai } from "@/lib/quiz";
 import type { RingkasanKegiatan } from "@/lib/ringkasan-admin";
 import type { Kegiatan } from "@/lib/types";
@@ -51,8 +51,9 @@ const nilaiAtauStrip = (n: number | null) => (n === null ? "-" : formatNilai(n))
 
 // Kartu yang quiz-nya dimatikan di Kelola Kegiatan tidak dibuat sama sekali
 export function susunKartu(kegiatan: Kegiatan, r: RingkasanKegiatan): DefKartu[] {
-  const syarat = [`Kehadiran ≥ ${kegiatan.ambangKehadiran}%`];
-  if (r.aktif.posttest) syarat.push(`Post-Test ≥ ${AMBANG_POSTTEST}`);
+    const syarat = [`Kehadiran ≥ ${kegiatan.ambangKehadiran}%`];
+    if (r.aktif.pretest) syarat.push(`Pre-Test ≥ ${AMBANG_PRETEST}`);
+    if (r.aktif.posttest) syarat.push(`Post-Test ≥ ${AMBANG_POSTTEST}`);
 
   const kartu: DefKartu[] = [
     {

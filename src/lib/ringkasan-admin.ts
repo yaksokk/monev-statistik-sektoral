@@ -1,5 +1,5 @@
-import { AMBANG_POSTTEST, ambilNilaiQuiz, hitungNGain, nGainTersedia } from "@/lib/dashboard";
-import { apakahLulusKehadiran, hitungKehadiranPegawai, sesiKegiatan } from "@/lib/presensi";
+import { ambilNilaiQuiz, hitungNGain, nGainTersedia, tentukanKelulusan } from "@/lib/dashboard";
+import { hitungKehadiranPegawai, sesiKegiatan } from "@/lib/presensi";
 import {
   LABEL_QUIZ,
   cariPengaturan,
@@ -7,9 +7,10 @@ import {
   soalQuiz,
   statusWaktuQuiz,
 } from "@/lib/quiz";
-import { hitungKelengkapanPegawai, hitungStatusPegawai } from "@/lib/rekap";
 import type {
+  Dokumen,
   HasilQuiz,
+  ItemDokumen,
   JenisQuiz,
   Kegiatan,
   Opd,
@@ -30,7 +31,7 @@ const MS_HARI = 24 * 60 * 60 * 1000;
 const JENIS_DASHBOARD = ["pretest", "posttest"] as const satisfies readonly JenisQuiz[];
 type JenisDashboard = (typeof JENIS_DASHBOARD)[number];
 
-// Data dummy dikirim dari page.tsx supaya fungsi di sini murni (mudah diganti data backend nanti)
+// Semua data dibaca server di page.tsx dan dikirim ke sini, supaya fungsi di bawah murni
 export interface DataDashboardAdmin {
   opdList: Opd[];
   penggunaList: Pengguna[]; // semua pengguna; hanya operator yang dipakai
@@ -39,6 +40,8 @@ export interface DataDashboardAdmin {
   soalList: SoalQuiz[];
   pengaturanList: PengaturanQuiz[];
   hasilList: HasilQuiz[];
+  itemList: ItemDokumen[];
+  dokumenList: Dokumen[]; // dokumen semua pegawai pada kegiatan terpilih
 }
 
 // Satu baris per pegawai
@@ -51,7 +54,8 @@ export interface BarisPegawai {
   nGain: number | null;
   dokumen: { status: Record<StatusDokumen, number>; total: number; kelengkapan: number };
   // postTest null = Post-Test dimatikan, syarat gugur (sama seperti PanelKelulusan sisi OPD)
-  syarat: { kehadiran: boolean; postTest: boolean | null };
+    // preTest/postTest null = quiz dimatikan, syarat gugur (sama seperti PanelKelulusan sisi OPD)
+  syarat: { kehadiran: boolean; preTest: boolean | null; postTest: boolean | null };
   lulus: boolean;
 }
 
@@ -113,6 +117,7 @@ function rataNilai(nilai: (number | null)[]): RataNilai {
 }
 
 // Satu baris per pegawai untuk kegiatan terpilih. OPD tanpa pegawai tidak muncul.
+// Satu baris per pegawai untuk kegiatan terpilih. OPD tanpa pegawai tidak muncul.
 export function susunRekapPegawai(kegiatan: Kegiatan, data: DataDashboardAdmin): BarisPegawai[] {
   const sesi = sesiKegiatan(data.sesiList, kegiatan.id);
   const aktif: Record<JenisDashboard, boolean> = {
@@ -125,6 +130,16 @@ export function susunRekapPegawai(kegiatan: Kegiatan, data: DataDashboardAdmin):
   const tampilNGain = nGainTersedia(kegiatan);
   const opdPerId = new Map(data.opdList.map((o) => [o.id, o]));
 
+  // dokumen dikelompokkan per pegawai sekali saja
+  const totalItem = data.itemList.filter((i) => i.kegiatanId === kegiatan.id).length;
+  const dokumenPerPegawai = new Map<string, Dokumen[]>();
+  for (const d of data.dokumenList) {
+    if (d.kegiatanId !== kegiatan.id || !d.penggunaId) continue;
+    const daftar = dokumenPerPegawai.get(d.penggunaId) ?? [];
+    daftar.push(d);
+    dokumenPerPegawai.set(d.penggunaId, daftar);
+  }
+
   return data.penggunaList
     .filter((p) => p.peran === "operator" && p.opdId && opdPerId.has(p.opdId))
     .map((pegawai) => {
@@ -132,34 +147,39 @@ export function susunRekapPegawai(kegiatan: Kegiatan, data: DataDashboardAdmin):
       const hasilPegawai = hasilKegiatan.filter((h) => h.penggunaId === pegawai.id);
 
       const hadir = hitungKehadiranPegawai(pegawai.id, sesi, data.presensiList);
-      const lulusHadir = apakahLulusKehadiran(hadir.persen, kegiatan);
 
       const preTest = aktif.pretest ? ambilNilaiQuiz(hasilPegawai, "pretest", soalPre) : null;
       const postTest = aktif.posttest ? ambilNilaiQuiz(hasilPegawai, "posttest", soalPost) : null;
       const nGain = tampilNGain ? hitungNGain(preTest, postTest) : null;
 
-      const syarat = {
-        kehadiran: lulusHadir,
-        postTest: aktif.posttest ? postTest !== null && postTest >= AMBANG_POSTTEST : null,
-      };
+      // aturan yang sama dengan Dashboard OPD
+      const { syarat: s, lulus } = tentukanKelulusan({
+        persenKehadiran: hadir.persen,
+        ambangKehadiran: kegiatan.ambangKehadiran,
+        preAktif: aktif.pretest,
+        postAktif: aktif.posttest,
+        nilaiPre: preTest,
+        nilaiPost: postTest,
+      });
 
-      const status = hitungStatusPegawai(pegawai.id, kegiatan.id);
-      const totalDokumen = Object.values(status).reduce((s, n) => s + n, 0);
+      const status: Record<StatusDokumen, number> = { belum: 0, disetujui: 0 };
+      for (const d of dokumenPerPegawai.get(pegawai.id) ?? []) status[d.status] += 1;
+      const totalDokumen = status.belum + status.disetujui;
 
       return {
         pegawai,
         opd,
-        kehadiran: { ...hadir, lulus: lulusHadir },
+        kehadiran: { ...hadir, lulus: s.presensi },
         preTest,
         postTest,
         nGain,
         dokumen: {
           status,
           total: totalDokumen,
-          kelengkapan: hitungKelengkapanPegawai(pegawai.id, kegiatan.id),
+          kelengkapan: totalItem === 0 ? 0 : Math.round((status.disetujui / totalItem) * 100),
         },
-        syarat,
-        lulus: lulusHadir && syarat.postTest !== false,
+        syarat: { kehadiran: s.presensi, preTest: s.preTest, postTest: s.postTest },
+        lulus,
       };
     });
 }

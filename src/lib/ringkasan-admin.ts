@@ -1,12 +1,6 @@
 import { ambilNilaiQuiz, hitungNGain, nGainTersedia, tentukanKelulusan } from "@/lib/dashboard";
 import { hitungKehadiranPegawai, sesiKegiatan } from "@/lib/presensi";
-import {
-  LABEL_QUIZ,
-  cariPengaturan,
-  quizAktif,
-  soalQuiz,
-  statusWaktuQuiz,
-} from "@/lib/quiz";
+import { quizAktif, soalQuiz } from "@/lib/quiz";
 import type {
   Dokumen,
   HasilQuiz,
@@ -21,11 +15,6 @@ import type {
   SoalQuiz,
   StatusDokumen,
 } from "@/lib/types";
-
-// Pegawai yang belum mengerjakan quiz dianggap perlu tindakan bila batas akhir tinggal sekian hari
-export const HARI_DEKAT_BATAS = 3;
-
-const MS_HARI = 24 * 60 * 60 * 1000;
 
 // Evaluasi Pendalaman tidak dipakai (keputusan pimpinan), jadi tidak masuk dashboard
 const JENIS_DASHBOARD = ["pretest", "posttest"] as const satisfies readonly JenisQuiz[];
@@ -53,8 +42,7 @@ export interface BarisPegawai {
   postTest: number | null;
   nGain: number | null;
   dokumen: { status: Record<StatusDokumen, number>; total: number; kelengkapan: number };
-  // postTest null = Post-Test dimatikan, syarat gugur (sama seperti PanelKelulusan sisi OPD)
-    // preTest/postTest null = quiz dimatikan, syarat gugur (sama seperti PanelKelulusan sisi OPD)
+  // preTest/postTest null = quiz dimatikan, syarat gugur (sama seperti PanelKelulusan sisi OPD)
   syarat: { kehadiran: boolean; preTest: boolean | null; postTest: boolean | null };
   lulus: boolean;
 }
@@ -90,19 +78,6 @@ export interface RingkasanKegiatan {
   dokumen: { rataKelengkapan: number; totalDokumen: number };
 }
 
-export interface TindakanQuiz {
-  jenis: JenisQuiz;
-  label: string;
-  batasAkhir: string; // yyyy-mm-ddTHH:mm
-  sisaHari: number; // dibulatkan ke atas, minimal 1
-  pegawaiBelum: { nama: string; opd: string }[]; // opd = singkatan
-}
-
-export interface PerluTindakan {
-  hariDekat: number;
-  quizMendekatiBatas: TindakanQuiz[];
-}
-
 // Nilai kosong (belum mengerjakan) dihitung 0
 function rataDenganNol(nilai: (number | null)[]) {
   return nilai.length === 0 ? 0 : nilai.reduce<number>((s, n) => s + (n ?? 0), 0) / nilai.length;
@@ -116,7 +91,6 @@ function rataNilai(nilai: (number | null)[]): RataNilai {
   };
 }
 
-// Satu baris per pegawai untuk kegiatan terpilih. OPD tanpa pegawai tidak muncul.
 // Satu baris per pegawai untuk kegiatan terpilih. OPD tanpa pegawai tidak muncul.
 export function susunRekapPegawai(kegiatan: Kegiatan, data: DataDashboardAdmin): BarisPegawai[] {
   const sesi = sesiKegiatan(data.sesiList, kegiatan.id);
@@ -233,52 +207,5 @@ export function susunRingkasan(kegiatan: Kegiatan, baris: BarisPegawai[]): Ringk
       rataKelengkapan: bagi(baris.reduce((s, b) => s + b.dokumen.kelengkapan, 0)),
       totalDokumen: baris.reduce((s, b) => s + b.dokumen.total, 0),
     },
-  };
-}
-
-// sekarang berformat yyyy-mm-ddTHH:mm (lihat waktuSekarang di lib/presensi.ts).
-// Kegiatan arsip hanya-lihat, jadi tidak ada tindakan.
-export function susunPerluTindakan(
-  kegiatan: Kegiatan,
-  baris: BarisPegawai[],
-  data: DataDashboardAdmin,
-  sekarang: string,
-): PerluTindakan {
-  if (kegiatan.arsip) {
-    return { hariDekat: HARI_DEKAT_BATAS, quizMendekatiBatas: [] };
-  }
-
-  const quizMendekatiBatas: TindakanQuiz[] = [];
-  for (const jenis of JENIS_DASHBOARD) {
-    if (!quizAktif(kegiatan, jenis)) continue;
-    const pengaturan = cariPengaturan(data.pengaturanList, kegiatan.id, jenis);
-    if (!pengaturan?.batasAkhir) continue;
-    if (statusWaktuQuiz(pengaturan, sekarang) !== "dibuka") continue;
-
-    const sisaMs = Date.parse(pengaturan.batasAkhir) - Date.parse(sekarang);
-    if (sisaMs < 0 || sisaMs > HARI_DEKAT_BATAS * MS_HARI) continue;
-
-    const sudah = new Set(
-      data.hasilList
-        .filter((h) => h.kegiatanId === kegiatan.id && h.quizId === jenis)
-        .map((h) => h.penggunaId),
-    );
-    const pegawaiBelum = baris
-      .filter((b) => !sudah.has(b.pegawai.id))
-      .map((b) => ({ nama: b.pegawai.nama, opd: b.opd.singkatan }));
-    if (pegawaiBelum.length === 0) continue;
-
-    quizMendekatiBatas.push({
-      jenis,
-      label: LABEL_QUIZ[jenis],
-      batasAkhir: pengaturan.batasAkhir,
-      sisaHari: Math.max(1, Math.ceil(sisaMs / MS_HARI)),
-      pegawaiBelum,
-    });
-  }
-
-  return {
-    hariDekat: HARI_DEKAT_BATAS,
-    quizMendekatiBatas,
   };
 }

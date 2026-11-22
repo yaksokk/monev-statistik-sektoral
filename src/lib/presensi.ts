@@ -16,8 +16,6 @@ export const AMBANG_KEHADIRAN_AWAL = 75;
 
 const BULAN = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
-const dua = (n: number) => String(n).padStart(2, "0");
-
 // Waktu WITA tetap (tidak bergantung zona waktu perangkat). Panggil hanya dari useEffect atau event handler.
 export function waktuSekarang(): string {
   return sekarangWita();

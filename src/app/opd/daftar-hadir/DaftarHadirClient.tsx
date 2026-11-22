@@ -64,9 +64,12 @@ export default function DaftarHadirClient({ sesiList, presensi }: Props) {
 
   // Waktu dihitung di browser, diperbarui tiap 30 detik agar sesi terkunci tepat waktu
   useEffect(() => {
-    setSekarang(waktuSekarang());
+    const awal = setTimeout(() => setSekarang(waktuSekarang()), 0);
     const timer = setInterval(() => setSekarang(waktuSekarang()), 30_000);
-    return () => clearInterval(timer);
+    return () => {
+      clearTimeout(awal);
+      clearInterval(timer);
+    };
   }, []);
 
   const sesiTerpilih = sesiList.find((s) => s.id === sesiId);

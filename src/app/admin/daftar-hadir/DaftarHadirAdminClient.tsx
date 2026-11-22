@@ -272,10 +272,13 @@ export default function DaftarHadirAdminClient({
   const [galatAksi, setGalatAksi] = useState("");
 
   // Waktu WITA dihitung di browser, diperbarui tiap 30 detik agar status sesi ikut berubah
-  useEffect(() => {
-    setSekarang(waktuSekarang());
+    useEffect(() => {
+    const awal = setTimeout(() => setSekarang(waktuSekarang()), 0);
     const timer = setInterval(() => setSekarang(waktuSekarang()), 30_000);
-    return () => clearInterval(timer);
+    return () => {
+      clearTimeout(awal);
+      clearInterval(timer);
+    };
   }, []);
 
   const arsip = !!kegiatan.arsip;

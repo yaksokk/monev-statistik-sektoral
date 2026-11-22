@@ -56,10 +56,13 @@ export default function QuizAdminClient({
   const [pesan, setPesan] = useState("");
 
   // Waktu dihitung di browser, diperbarui tiap 30 detik agar status quiz ikut berubah
-  useEffect(() => {
-    setSekarang(waktuSekarang());
+    useEffect(() => {
+    const awal = setTimeout(() => setSekarang(waktuSekarang()), 0);
     const timer = setInterval(() => setSekarang(waktuSekarang()), 30_000);
-    return () => clearInterval(timer);
+    return () => {
+      clearTimeout(awal);
+      clearInterval(timer);
+    };
   }, []);
 
   const arsip = !!kg.arsip;

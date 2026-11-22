@@ -231,8 +231,13 @@ export default function DaftarDokumenClient({ opd, kegiatan, item, dokumen }: Pr
   const [hariIni, setHariIni] = useState<string | null>(null);
 
   // tanggal dihitung di browser agar tidak terkunci saat build
+   // tanggal dihitung di browser agar tidak terkunci saat build
   useEffect(() => {
-    setHariIni(new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Makassar" }));
+    const awal = setTimeout(
+      () => setHariIni(new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Makassar" })),
+      0,
+    );
+    return () => clearTimeout(awal);
   }, []);
 
   const lewat = hariIni !== null && hariIni > kegiatan.tenggat;

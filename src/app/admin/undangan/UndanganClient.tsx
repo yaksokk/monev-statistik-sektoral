@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ExternalLink, Mail, Pencil, Send, Trash2, Undo2 } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
 import type { Opd, Undangan } from "@/lib/types";
+import { hapusUndangan, simpanUndangan, tarikUndanganDariSemua } from "./actions";
 
 const dasarTombol =
   "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50";
@@ -12,14 +13,6 @@ const tombolSekunder = `${dasarTombol} border border-line bg-surface text-ink ho
 const tombolBahaya = `${dasarTombol} bg-status-revisi-fg text-white hover:opacity-90`;
 const kolomInput =
   "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-primary";
-
-// waktu lokal Makassar, format yyyy-mm-ddTHH:mm
-function waktuSekarang() {
-  return new Date()
-    .toLocaleString("sv-SE", { timeZone: "Asia/Makassar", hour12: false })
-    .slice(0, 16)
-    .replace(" ", "T");
-}
 
 function formatWaktu(iso: string) {
   const tgl = new Date(`${iso.slice(0, 10)}T00:00:00Z`).toLocaleDateString("id-ID", {
@@ -56,11 +49,12 @@ function FormUndangan({
   opdList: Opd[];
   bolehKosong: boolean;
   labelSimpan: string;
-  onSimpan: (v: Isian) => void;
+  onSimpan: (v: Isian) => Promise<string | null>; // teks galat dari server, atau null bila berhasil
   onBatal: () => void;
 }) {
   const [v, setV] = useState(awal);
   const [galat, setGalat] = useState("");
+  const [proses, setProses] = useState(false);
   const semua = opdList.length > 0 && v.opdIds.length === opdList.length;
 
   function pilihSemua() {
@@ -74,13 +68,19 @@ function FormUndangan({
     });
   }
 
-  function kirim() {
+  async function kirim() {
+    if (proses) return;
     const judul = v.judul.trim();
     const link = v.link.trim();
     if (!judul || !link) return setGalat("Judul dan link wajib diisi.");
     if (!link.toLowerCase().startsWith("https://")) return setGalat("Link harus diawali https://");
     if (!bolehKosong && v.opdIds.length === 0) return setGalat("Pilih minimal satu OPD penerima.");
-    onSimpan({ judul, link, opdIds: v.opdIds });
+
+    setGalat("");
+    setProses(true);
+    const g = await onSimpan({ judul, link, opdIds: v.opdIds });
+    setProses(false);
+    if (g) setGalat(g);
   }
 
   return (
@@ -134,10 +134,10 @@ function FormUndangan({
         </p>
       )}
       <div className="flex justify-end gap-2 pt-2">
-        <button onClick={onBatal} className={tombolSekunder}>
+        <button type="button" onClick={onBatal} disabled={proses} className={tombolSekunder}>
           Batal
         </button>
-        <button onClick={kirim} className={tombolUtama}>
+        <button type="button" onClick={kirim} disabled={proses} className={tombolUtama}>
           {labelSimpan}
         </button>
       </div>
@@ -145,43 +145,49 @@ function FormUndangan({
   );
 }
 
-export default function UndanganClient({ awal, opdList }: { awal: Undangan[]; opdList: Opd[] }) {
-  const [daftar, setDaftar] = useState(awal);
+// Semua data berasal dari server. Setelah tiap aksi, halaman disegarkan server (revalidatePath),
+// jadi tidak ada salinan data di state.
+export default function UndanganClient({ daftar, opdList }: { daftar: Undangan[]; opdList: Opd[] }) {
   const [form, setForm] = useState<{ id: string | null } | null>(null);
   const [hapusId, setHapusId] = useState<string | null>(null);
   const [pesan, setPesan] = useState("");
+  const [proses, setProses] = useState(false);
+  const [galatHapus, setGalatHapus] = useState<string | null>(null);
 
   const diedit = form?.id ? daftar.find((u) => u.id === form.id) : undefined;
   const dihapus = hapusId ? daftar.find((u) => u.id === hapusId) : undefined;
   const terurut = [...daftar].sort((a, b) => b.dikirimPada.localeCompare(a.dikirimPada));
 
-  function simpan(v: Isian) {
-    if (diedit) {
-      setDaftar((prev) =>
-        prev.map((u) => (u.id === diedit.id ? { ...u, judul: v.judul, link: v.link, opdIds: v.opdIds } : u)),
-      );
-      setPesan(`${v.judul} diperbarui.`);
-    } else {
-      const no = daftar.reduce((m, u) => Math.max(m, Number(u.id.replace(/\D/g, ""))), 0) + 1;
-      setDaftar((prev) => [
-        ...prev,
-        { id: `undangan-${no}`, judul: v.judul, link: v.link, dikirimPada: waktuSekarang(), opdIds: v.opdIds },
-      ]);
-      setPesan(`${v.judul} dikirim ke ${v.opdIds.length} OPD.`);
-    }
+  async function simpan(v: Isian): Promise<string | null> {
+    const r = await simpanUndangan(diedit?.id ?? null, v);
+    if (!r.ok) return r.pesan;
+    setPesan(diedit ? `${v.judul} diperbarui.` : `${v.judul} dikirim ke ${v.opdIds.length} OPD.`);
     setForm(null);
+    return null;
   }
 
-  function tarikSemua(u: Undangan) {
-    setDaftar((prev) => prev.map((x) => (x.id === u.id ? { ...x, opdIds: [] } : x)));
-    setPesan(`${u.judul} ditarik dari semua OPD.`);
+  async function tarikSemua(u: Undangan) {
+    if (proses) return;
+    setProses(true);
+    const r = await tarikUndanganDariSemua(u.id);
+    setProses(false);
+    setPesan(r.ok ? `${u.judul} ditarik dari semua OPD.` : r.pesan);
   }
 
-  function hapus() {
-    if (!dihapus) return;
-    setDaftar((prev) => prev.filter((u) => u.id !== dihapus.id));
+  async function hapus() {
+    if (!dihapus || proses) return;
+    setProses(true);
+    setGalatHapus(null);
+    const r = await hapusUndangan(dihapus.id);
+    setProses(false);
+    if (!r.ok) return setGalatHapus(r.pesan);
     setPesan(`${dihapus.judul} dihapus.`);
     setHapusId(null);
+  }
+
+  function tutupHapus() {
+    setHapusId(null);
+    setGalatHapus(null);
   }
 
   return (
@@ -191,7 +197,7 @@ export default function UndanganClient({ awal, opdList }: { awal: Undangan[]; op
           <h1 className="text-2xl font-semibold text-ink">Undangan</h1>
           <p className="tabular text-sm text-ink-muted">{daftar.length} undangan</p>
         </div>
-        <button onClick={() => setForm({ id: null })} className={tombolUtama}>
+        <button type="button" onClick={() => setForm({ id: null })} className={tombolUtama}>
           <Send className="size-4" aria-hidden />
           Kirim undangan
         </button>
@@ -238,18 +244,26 @@ export default function UndanganClient({ awal, opdList }: { awal: Undangan[]; op
 
               <div className="flex flex-wrap justify-end gap-2 border-t border-line p-3 sm:px-5">
                 <button
-                  onClick={() => tarikSemua(u)}
-                  disabled={u.opdIds.length === 0}
+                  type="button"
+                  onClick={() => void tarikSemua(u)}
+                  disabled={u.opdIds.length === 0 || proses}
                   className={tombolSekunder}
                 >
                   <Undo2 className="size-4" aria-hidden />
                   Tarik dari semua
                 </button>
-                <button onClick={() => setHapusId(u.id)} className={tombolSekunder}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGalatHapus(null);
+                    setHapusId(u.id);
+                  }}
+                  className={tombolSekunder}
+                >
                   <Trash2 className="size-4" aria-hidden />
                   Hapus
                 </button>
-                <button onClick={() => setForm({ id: u.id })} className={tombolSekunder}>
+                <button type="button" onClick={() => setForm({ id: u.id })} className={tombolSekunder}>
                   <Pencil className="size-4" aria-hidden />
                   Ubah
                 </button>
@@ -279,16 +293,21 @@ export default function UndanganClient({ awal, opdList }: { awal: Undangan[]; op
         />
       </Dialog>
 
-      <Dialog buka={!!dihapus} onTutup={() => setHapusId(null)} judul="Hapus undangan">
+      <Dialog buka={!!dihapus} onTutup={tutupHapus} judul="Hapus undangan">
         <p className="text-sm text-ink-muted">
           Hapus undangan <span className="font-medium text-ink">{dihapus?.judul}</span>? Surat ini hilang dari semua
           OPD penerima. Tindakan ini tidak bisa dibatalkan.
         </p>
+        {galatHapus && (
+          <p role="alert" className="text-sm text-status-revisi-fg">
+            {galatHapus}
+          </p>
+        )}
         <div className="flex justify-end gap-2 pt-2">
-          <button onClick={() => setHapusId(null)} className={tombolSekunder}>
+          <button type="button" onClick={tutupHapus} disabled={proses} className={tombolSekunder}>
             Batal
           </button>
-          <button onClick={hapus} className={tombolBahaya}>
+          <button type="button" onClick={() => void hapus()} disabled={proses} className={tombolBahaya}>
             Hapus
           </button>
         </div>

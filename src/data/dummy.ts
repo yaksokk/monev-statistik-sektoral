@@ -455,19 +455,3 @@ export const IZIN_KERJA_ULANG_LIST: IzinKerjaUlang[] = [];
 
 export const LOG_PERUBAHAN_QUIZ_LIST: LogPerubahanQuiz[] = [];
 
-export const UNDANGAN_LIST: Undangan[] = [
-  {
-    id: "undangan-1",
-    judul: "Undangan Pembinaan Statistik Sektoral",
-    link: "https://drive.google.com/file/d/contoh-1/view",
-    dikirimPada: "2026-10-12T09:00",
-    opdIds: OPD_LIST.map((o) => o.id),
-  },
-  {
-    id: "undangan-2",
-    judul: "Undangan Rapat Koordinasi Operator",
-    link: "https://drive.google.com/file/d/contoh-2/view",
-    dikirimPada: "2026-10-20T13:30",
-    opdIds: OPD_LIST.slice(0, 3).map((o) => o.id),
-  },
-];

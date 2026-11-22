@@ -8,7 +8,7 @@ export async function segarkanSesi(req: NextRequest) {
   let response = NextResponse.next({ request: req });
 
   const supabase = createServerClient(
-    process.env.UPABASE_URL!,
+    process.env.SUPABASE_URL!,
     process.env.SUPABASE_ANON_KEY!,
     {
       cookies: {

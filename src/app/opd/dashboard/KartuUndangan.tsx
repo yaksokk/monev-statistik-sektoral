@@ -16,8 +16,8 @@ function formatTanggal(iso: string): string {
 }
 
 export default function KartuUndangan({ judul, tanggal, link }: Props) {
-  const keterangan = !link
-    ? "Belum dikirim admin"
+    const keterangan = !link
+    ? "Belum ada undangan"
     : tanggal
       ? formatTanggal(tanggal)
       : "Dari BPS";

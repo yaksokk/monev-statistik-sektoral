@@ -22,6 +22,30 @@ export function nGainTersedia(kegiatan: Kegiatan) {
   return quizAktif(kegiatan, "pretest") && quizAktif(kegiatan, "posttest");
 }
 
+// Syarat kelulusan satu pegawai, dipakai Dashboard OPD (nanti juga Dashboard admin).
+// Syarat quiz yang dimatikan di kegiatan bernilai null dan gugur (tidak menghalangi lulus).
+export function tentukanKelulusan(masukan: {
+  persenKehadiran: number;
+  ambangKehadiran: number | null; // null = tidak ada kegiatan aktif
+  preAktif: boolean;
+  postAktif: boolean;
+  nilaiPre: number | null;
+  nilaiPost: number | null;
+}) {
+  const syarat = {
+    presensi:
+      masukan.ambangKehadiran !== null && masukan.persenKehadiran >= masukan.ambangKehadiran,
+    preTest: masukan.preAktif
+      ? masukan.nilaiPre !== null && masukan.nilaiPre >= AMBANG_PRETEST
+      : null,
+    postTest: masukan.postAktif
+      ? masukan.nilaiPost !== null && masukan.nilaiPost >= AMBANG_POSTTEST
+      : null,
+  };
+  const lulus = syarat.presensi && syarat.preTest !== false && syarat.postTest !== false;
+  return { syarat, lulus };
+}
+
 export function formatNGain(n: number) {
   return (Math.round(n * 100) / 100 + 0).toFixed(2).replace(".", ",");
 }

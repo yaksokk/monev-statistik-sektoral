@@ -1,18 +1,21 @@
 import { CalendarCheck, ClipboardList, GraduationCap, LayoutDashboard, TrendingUp } from "lucide-react";
-import { BAB_LIST, BAB_SELESAI_LIST, MODUL_LIST } from "@/data/modul";
-import { DOKUMEN_LIST, ITEM_LIST, KEGIATAN_LIST, PRESENSI_LIST, SESI_LIST } from "@/data/dummy";
+import { ambilDokumenSaya } from "@/lib/data/dokumen";
+import { ambilItemKegiatan, ambilKegiatanAktif } from "@/lib/data/kegiatan";
+import { ambilBabModul, ambilIdBabSelesaiSaya, ambilModul } from "@/lib/data/modul";
+import { ambilPresensiSaya } from "@/lib/data/presensi";
+import { ambilQuizPegawai, finalkanSesiSaya } from "@/lib/data/quiz";
+import { ambilSesiKegiatan } from "@/lib/data/sesi";
+import { ambilUndanganSaya } from "@/lib/data/undangan";
 import {
-  AMBANG_PRETEST,
-  AMBANG_POSTTEST,
   formatNGain,
   hitungNGain,
   linkHttps,
   nGainTersedia,
+  tentukanKelulusan,
 } from "@/lib/dashboard";
 import { ambilOperator } from "@/lib/operator";
-import { apakahLulusKehadiran, hitungKehadiranPegawai, sesiKegiatan } from "@/lib/presensi";
-import { formatNilai, hitungHasil } from "@/lib/quiz";
-import { ambilQuizOpd } from "@/lib/quiz-opd";
+import { hitungKehadiranPegawai } from "@/lib/presensi";
+import { formatNilai } from "@/lib/quiz";
 import KartuMetrik from "./KartuMetrik";
 import PanelDokumen, { type BarisDokumen } from "./PanelDokumen";
 import PanelKelulusan from "./PanelKelulusan";
@@ -23,61 +26,66 @@ export default async function DashboardOpdPage() {
   const { pengguna, opd } = await ambilOperator();
 
   // presensi, ambang, dan dokumen mengikuti kegiatan aktif
-  const kegiatan = KEGIATAN_LIST.find((k) => k.aktif);
+  const kegiatan = await ambilKegiatanAktif();
 
-  // kehadiran dan quiz
-  const sesiAktif = kegiatan ? sesiKegiatan(SESI_LIST, kegiatan.id) : [];
-  const kehadiran = hitungKehadiranPegawai(pengguna.id, sesiAktif, PRESENSI_LIST);
+  // sesi quiz yang waktunya lewat dijadikan hasil dulu, sebelum nilai dibaca
+  await finalkanSesiSaya();
 
-  const pre = ambilQuizOpd(kegiatan, "pretest", opd.id, pengguna.id);
-  const post = ambilQuizOpd(kegiatan, "posttest", opd.id, pengguna.id);
-  const nilaiPre = pre.hasil ? hitungHasil(pre.soal, pre.hasil.jawaban).nilai : null;
-  const nilaiPost = post.hasil ? hitungHasil(post.soal, post.hasil.jawaban).nilai : null;
+  const [sesiAktif, pre, post, undangan, modul, idBabSelesai, itemList, dokumenList] =
+    await Promise.all([
+      kegiatan ? ambilSesiKegiatan(kegiatan.id) : Promise.resolve([]),
+      ambilQuizPegawai(kegiatan, "pretest", pengguna.id),
+      ambilQuizPegawai(kegiatan, "posttest", pengguna.id),
+      ambilUndanganSaya(),
+      ambilModul(),
+      ambilIdBabSelesaiSaya(pengguna.id),
+      kegiatan ? ambilItemKegiatan(kegiatan.id) : Promise.resolve([]),
+      kegiatan ? ambilDokumenSaya(pengguna.id, opd.id, kegiatan.id) : Promise.resolve([]),
+    ]);
+
+  // kehadiran
+  const presensi = await ambilPresensiSaya(
+    pengguna.id,
+    opd.id,
+    sesiAktif.map((s) => s.id),
+  );
+  const kehadiran = hitungKehadiranPegawai(pengguna.id, sesiAktif, presensi);
+
+  // nilai quiz sudah dihitung di lib/data/quiz.ts; null bila belum dikerjakan
+  const nilaiPre = pre.hasil?.nilai ?? null;
+  const nilaiPost = post.hasil?.nilai ?? null;
   const nGainBerlaku = kegiatan ? nGainTersedia(kegiatan) : true;
   const nGain = nGainBerlaku ? hitungNGain(nilaiPre, nilaiPost) : null;
 
-  // syarat kelulusan (kelengkapan dokumen bukan syarat); syarat quiz yang dimatikan gugur (null)
-  const syarat = {
-    presensi: kegiatan ? apakahLulusKehadiran(kehadiran.persen, kegiatan) : false,
-    preTest: pre.aktif ? nilaiPre !== null && nilaiPre >= AMBANG_PRETEST : null,
-    postTest: post.aktif ? nilaiPost !== null && nilaiPost >= AMBANG_POSTTEST : null,
-  };
-  const lulus =
-    syarat.presensi && syarat.preTest !== false && syarat.postTest !== false;
+  // kelengkapan dokumen bukan syarat kelulusan
+  const { syarat, lulus } = tentukanKelulusan({
+    persenKehadiran: kehadiran.persen,
+    ambangKehadiran: kegiatan?.ambangKehadiran ?? null,
+    preAktif: pre.aktif,
+    postAktif: post.aktif,
+    nilaiPre,
+    nilaiPost,
+  });
   // link baru dikirim ke komponen bila semua syarat terpenuhi
   const linkSertifikat = lulus ? linkHttps(pengguna.linkSertifikat) : null;
 
   // progress bab
-  const modul = MODUL_LIST[0];
-  const babSelesai = new Set(
-    BAB_SELESAI_LIST.filter((s) => s.penggunaId === pengguna.id).map((s) => s.babId),
-  );
-  const babList = modul
-    ? BAB_LIST.filter((b) => b.modulId === modul.id)
-        .sort((a, b) => a.urutan - b.urutan)
-        .map((b) => ({
-          id: b.id,
-          urutan: b.urutan,
-          judul: b.judul,
-          pembinaan: b.pembinaan,
-          selesai: babSelesai.has(b.id),
-        }))
-    : [];
-
-  // undangan hanya ditampilkan bila link ada dan berawalan https
-  const linkUndangan = linkHttps(kegiatan?.linkUndangan);
-
-  // dokumen kegiatan aktif
-  const barisDokumen: BarisDokumen[] = kegiatan
-    ? ITEM_LIST.filter((i) => i.kegiatanId === kegiatan.id).map((item) => ({
-        id: item.id,
-        nama: item.nama,
-        status:
-          DOKUMEN_LIST.find(
-            (d) => d.penggunaId === pengguna.id && d.kegiatanId === kegiatan.id && d.itemId === item.id,
-          )?.status ?? "belum",
+  const babSelesai = new Set(idBabSelesai);
+  const babList = modul ? (await ambilBabModul(modul.id)).map((b) => ({
+        id: b.id,
+        urutan: b.urutan,
+        judul: b.judul,
+        pembinaan: b.pembinaan,
+        selesai: babSelesai.has(b.id),
       }))
     : [];
+
+  // dokumen kegiatan aktif
+  const barisDokumen: BarisDokumen[] = itemList.map((item) => ({
+    id: item.id,
+    nama: item.nama,
+    status: dokumenList.find((d) => d.itemId === item.id)?.status ?? "belum",
+  }));
 
   return (
     <div className="space-y-6">
@@ -92,13 +100,20 @@ export default async function DashboardOpdPage() {
         </p>
       </header>
 
-      {kegiatan && (
-        <KartuUndangan
-          judul={kegiatan.judulUndangan ?? "Surat Undangan"}
-          tanggal={kegiatan.tanggalUndangan ?? null}
-          link={linkUndangan}
-        />
-      )}
+      <div className="space-y-2">
+        {undangan.length === 0 ? (
+          <KartuUndangan judul="Surat Undangan" tanggal={null} link={null} />
+        ) : (
+          undangan.map((u) => (
+            <KartuUndangan
+              key={u.id}
+              judul={u.judul}
+              tanggal={u.dikirimPada.slice(0, 10)}
+              link={linkHttps(u.link)}
+            />
+          ))
+        )}
+      </div>
 
       <section
         aria-label="Ringkasan capaian"

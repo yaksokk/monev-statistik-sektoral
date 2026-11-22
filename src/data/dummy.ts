@@ -14,7 +14,6 @@ import type {
   SesiPembinaan,
   SoalQuiz,
   StatusDokumen,
-  Undangan,
   StatusKehadiran,
 } from "@/lib/types";
 

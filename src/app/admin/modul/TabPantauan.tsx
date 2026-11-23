@@ -38,9 +38,7 @@ export default function TabPantauan({ modul, babList, opdList, pegawaiList, sele
               className="flex w-full items-center justify-between gap-3 text-left focus-visible:outline-2 focus-visible:outline-primary"
             >
               <span className="flex flex-wrap items-center gap-2">
-                <span className="font-medium text-ink">
-                  Bab {b.urutan}: {b.judul}
-                </span>
+                <span className="font-medium text-ink">{b.judul}</span>
                 <Lencana kelas={LENCANA.netral}>Pembinaan {b.pembinaan}</Lencana>
               </span>
               <span className="flex shrink-0 items-center gap-2 text-sm text-ink-muted">

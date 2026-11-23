@@ -137,11 +137,12 @@ function FormBab({
     <form onSubmit={kirim} className="space-y-4">
       <div className="space-y-1.5">
         <label htmlFor="bab-judul" className="text-sm font-medium text-ink">
-          Judul bab
+          Nama bab
         </label>
         <input
           id="bab-judul"
           value={v.judul}
+          placeholder="Contoh: Bab 1: Pengantar, atau Domain Kependudukan"
           onChange={(e) => setV({ ...v, judul: e.target.value })}
           className={kolomInput}
         />
@@ -261,9 +262,7 @@ export default function TabKelola({ modul, babList, jumlahSelesai, aksi, sibuk }
                       {daftar.map((b, i) => (
                         <li key={b.id} className="space-y-3 rounded-lg border border-line p-4">
                           <div className="flex flex-wrap items-start justify-between gap-3">
-                            <p className="font-medium text-ink">
-                              Bab {b.urutan}: {b.judul}
-                            </p>
+                            <p className="font-medium text-ink">{b.judul}</p>
                             <Lencana kelas="bg-surface-muted text-ink-muted">
                               {jumlahSelesai[b.id] ?? 0} pegawai selesai
                             </Lencana>
@@ -286,7 +285,7 @@ export default function TabKelola({ modul, babList, jumlahSelesai, aksi, sibuk }
                               type="button"
                               onClick={() => void aksi.geser(b.id, -1)}
                               disabled={i === 0 || sibuk}
-                              aria-label={`Naikkan bab ${b.urutan}`}
+                              aria-label={`Naikkan ${b.judul}`}
                               className={tombolSekunder}
                             >
                               <ArrowUp className="size-4" aria-hidden />
@@ -295,7 +294,7 @@ export default function TabKelola({ modul, babList, jumlahSelesai, aksi, sibuk }
                               type="button"
                               onClick={() => void aksi.geser(b.id, 1)}
                               disabled={i === daftar.length - 1 || sibuk}
-                              aria-label={`Turunkan bab ${b.urutan}`}
+                              aria-label={`Turunkan ${b.judul}`}
                               className={tombolSekunder}
                             >
                               <ArrowDown className="size-4" aria-hidden />
@@ -353,7 +352,7 @@ export default function TabKelola({ modul, babList, jumlahSelesai, aksi, sibuk }
         {dihapus && (
           <>
             <p className="text-sm text-ink-muted">
-              Hapus <span className="font-medium text-ink">Bab {dihapus.urutan}: {dihapus.judul}</span>?{" "}
+              Hapus <span className="font-medium text-ink">{dihapus.judul}</span>?{" "}
               {terdampak > 0
                 ? `${terdampak} pegawai sudah menandai bab ini selesai, dan catatannya ikut hilang.`
                 : "Belum ada pegawai yang menandai bab ini selesai."}{" "}

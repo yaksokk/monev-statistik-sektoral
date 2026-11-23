@@ -69,7 +69,7 @@ export default function ModulClient({ modul, babList, babSelesai, indeksAwal = 0
           >
             {babList.map((b, n) => (
               <option key={b.id} value={n}>
-                Bab {b.urutan}: {b.judul}
+                {b.judul}
               </option>
             ))}
           </select>
@@ -77,9 +77,7 @@ export default function ModulClient({ modul, babList, babSelesai, indeksAwal = 0
       </header>
 
       <div className="py-8">
-        <h2 className="text-xl font-semibold text-navy-800">
-          Bab {bab.urutan}: {bab.judul}
-        </h2>
+        <h2 className="text-xl font-semibold text-navy-800">{bab.judul}</h2>
 
         {materiAda ? (
           <>
@@ -111,7 +109,7 @@ export default function ModulClient({ modul, babList, babSelesai, indeksAwal = 0
           className="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-medium text-ink hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ArrowLeft className="size-4" aria-hidden />
-          Bab sebelumnya
+          Sebelumnya
         </button>
 
         <button
@@ -137,7 +135,7 @@ export default function ModulClient({ modul, babList, babSelesai, indeksAwal = 0
           disabled={!adaSelanjutnya}
           className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Bab selanjutnya
+          Selanjutnya
           <ArrowRight className="size-4" aria-hidden />
         </button>
       </footer>

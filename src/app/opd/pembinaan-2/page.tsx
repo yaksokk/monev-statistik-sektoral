@@ -36,18 +36,14 @@ export default async function Pembinaan2Page({ searchParams }: Props) {
     babList.findIndex((b) => b.id === bab),
   );
 
-  const rentang =
-    babList.length > 0
-      ? `bab ${babList[0].urutan}-${babList[babList.length - 1].urutan}`
-      : "belum ada bab";
 
   return (
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold text-ink">Pembinaan {PEMBINAAN}</h1>
         <p className="mt-1 text-sm text-ink-muted">
-          Modul Pembelajaran {rentang}
-          {post.aktif ? " dan Post-Test" : ""} · {opd.nama}
+          Modul Pembelajaran
+{post.aktif ? " dan Post-Test" : ""} · {opd.nama}
         </p>
       </header>
 

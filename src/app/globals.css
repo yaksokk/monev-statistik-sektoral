@@ -67,6 +67,14 @@ button, a, input, select, textarea {
     outline: 2px solid var(--color-navy-500);
     outline-offset: 2px;
   }
+    button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+button:not(:disabled):hover {
+  filter: brightness(0.95);
 }
 
 /* Angka rata di kolom tabel dan nilai */

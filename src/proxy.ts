@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { AWALAN_RUTE, BERANDA} from "@/lib/akses";
+import { AWALAN_RUTE, BERANDA } from "@/lib/akses";
 import { segarkanSesi } from "@/lib/supabase/proxy";
 
 export async function proxy(req: NextRequest) {
@@ -12,12 +12,12 @@ export async function proxy(req: NextRequest) {
 
   // Sudah login tidak perlu ke halaman login
   if (pathname === "/login") {
+    if (peran) return alihkan(BERANDA[peran]);
     return sesi.lanjut();
   }
 
   // Belum login, atau akun Auth tanpa baris profil
   if (!peran) return alihkan("/login");
-
 
   // Peran hanya boleh masuk ke area miliknya
   const awalan = AWALAN_RUTE[peran];

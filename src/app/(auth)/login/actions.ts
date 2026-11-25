@@ -40,7 +40,7 @@ export async function masuk(_: StateLogin, data: FormData): Promise<StateLogin> 
 
   const peran = profil.peran as "admin" | "operator";
   const wajibGanti = peran === "operator" && profil.wajib_ganti_sandi === true;
-  redirect(wajibGanti ? RUTE_GANTI_SANDI : BERANDA[peran]);
+  redirect(BERANDA[peran]);
 }
 
 export async function keluar() {

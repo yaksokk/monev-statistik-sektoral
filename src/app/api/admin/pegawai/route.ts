@@ -58,7 +58,7 @@ export async function POST(req: Request) {
       email,
       peran: "operator",
       opd_id: opdId,
-      wajib_ganti_sandi: true,
+      wajib_ganti_sandi: false,
     });
 
     if (galatProfil) {

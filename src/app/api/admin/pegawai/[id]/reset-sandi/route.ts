@@ -28,7 +28,7 @@ export async function POST(req: Request, { params }: Konteks) {
     // Penanda dulu, baru sandi: bila sandi gagal diganti, pegawai paling buruk diminta ganti sandi lagi
     const { error: galatProfil } = await admin
       .from("profil")
-      .update({ wajib_ganti_sandi: true })
+      .update({ wajib_ganti_sandi: false })
       .eq("id", id);
     if (galatProfil) {
       console.error("Set wajib_ganti_sandi gagal:", id, galatProfil.message);

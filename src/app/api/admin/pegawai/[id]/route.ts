@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { buatKlienAdmin } from "@/lib/supabase/admin";
-import { EMAIL, UUID, bacaJson, jawab, pastikanAdmin, teks } from "@/lib/api-admin";
+import {
+  PESAN_USERNAME,
+  bersihkanUsername,
+  usernameKeEmail,
+  usernameValid,
+} from "@/lib/username";
+import { UUID, bacaJson, jawab, pastikanAdmin, sandiValid, teks } from "@/lib/api-admin"; 
 
 type Konteks = { params: Promise<{ id: string }> };
 
@@ -18,10 +24,11 @@ export async function PATCH(req: Request, { params }: Konteks) {
   if (!b) return jawab("Permintaan tidak valid.", 400);
 
   const nama = teks(b.nama);
-  const email = teks(b.email).toLowerCase();
-  if (!nama || !email) return jawab("Semua kolom wajib diisi.", 400);
+  const username = bersihkanUsername(teks(b.username));
+  if (!nama || !username) return jawab("Semua kolom wajib diisi.", 400);
   if (nama.length > 150) return jawab("Nama terlalu panjang.", 400);
-  if (email.length > 254 || !EMAIL.test(email)) return jawab("Format email belum benar.", 400);
+  if (!usernameValid(username)) return jawab(PESAN_USERNAME, 400);
+  const email = usernameKeEmail(username);
 
   try {
     const admin = buatKlienAdmin();
@@ -40,7 +47,7 @@ export async function PATCH(req: Request, { params }: Konteks) {
     // Profil dulu: indeks unik email memberi pesan duplikat yang jelas
     const { error: galatProfil } = await admin.from("profil").update({ nama, email }).eq("id", id);
     if (galatProfil) {
-      if (galatProfil.code === "23505") return jawab("Email ini sudah dipakai.", 409);
+      if (galatProfil.code === "23505") return jawab("Username ini sudah dipakai.", 409);
       console.error("Update profil gagal:", galatProfil.code, galatProfil.message);
       return jawab("Gagal menyimpan perubahan.", 500);
     }
@@ -60,7 +67,7 @@ export async function PATCH(req: Request, { params }: Konteks) {
 
         const sudahAda =
           galatAuth.code === "email_exists" || /already|registered/i.test(galatAuth.message);
-        if (sudahAda) return jawab("Email ini sudah dipakai.", 409);
+        if (sudahAda) return jawab("Username ini sudah dipakai.", 409);
         console.error("updateUserById gagal:", galatAuth.code, galatAuth.message);
         return jawab("Gagal mengubah email akun.", 500);
       }

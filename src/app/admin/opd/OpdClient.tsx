@@ -16,13 +16,20 @@ import {
   Trash2,
   UserPlus,
 } from "lucide-react";
+import {
+  PESAN_USERNAME,
+  bersihkanUsername,
+  emailKeUsername,
+  usernameKeEmail,
+  usernameValid,
+} from "@/lib/username";
 import { Dialog } from "@/components/ui/Dialog";
 import { Galat } from "@/components/ui/Galat";
 import { KonfirmasiHapus } from "@/components/ui/KonfirmasiHapus";
 import { linkHttps } from "@/lib/dashboard";
 import { hapusOpd, simpanLinkSertifikat, tambahOpd, ubahOpd } from "./actions";
 import { bukaDiTabBaru } from "@/lib/buka-tautan";
-import type { Dokumen, ItemDokumen, Kegiatan, Opd, Pengguna } from "@/lib/types"; 
+import type { Dokumen, ItemDokumen, Kegiatan, Opd, Pengguna } from "@/lib/types";
 import { buatLinkDokumenAdmin } from "./actions-dokumen";
 
 const tombolUtama =
@@ -33,7 +40,6 @@ const kolomInput =
   "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-primary";
 const nonaktif = "disabled:cursor-not-allowed disabled:opacity-50";
 
-const EMAIL = /^\S+@\S+\.\S+$/;
 const SANDI_MIN = 8;
 
 function buatSandi() {
@@ -70,12 +76,14 @@ function Isian({
   tipe = "text",
   nilai,
   onUbah,
+  petunjuk,
 }: {
   id: string;
   label: string;
   tipe?: string;
   nilai: string;
   onUbah: (v: string) => void;
+  petunjuk?: string;
 }) {
   return (
     <div className="space-y-1.5">
@@ -89,6 +97,7 @@ function Isian({
         onChange={(e) => onUbah(e.target.value)}
         className={kolomInput}
       />
+      {petunjuk && <p className="text-sm text-ink-muted">{petunjuk}</p>}
     </div>
   );
 }
@@ -200,7 +209,7 @@ function FormOpd({
   );
 }
 
-type IsianPegawai = { nama: string; email: string; sandi: string };
+type IsianPegawai = { nama: string; username: string; sandi: string };
 
 function FormPegawai({
   tambah,
@@ -209,7 +218,7 @@ function FormPegawai({
   opdId,
   onPilihOpd,
   onOpdBaru,
-  emailDipakai,
+  usernameDipakai,
   onSimpan,
   onBatal,
 }: {
@@ -219,7 +228,7 @@ function FormPegawai({
   opdId: string;
   onPilihOpd: (id: string) => void;
   onOpdBaru: () => void;
-  emailDipakai: (email: string) => boolean;
+  usernameDipakai: (username: string) => boolean;
   onSimpan: (v: IsianPegawai) => Promise<string | null>;
   onBatal: () => void;
 }) {
@@ -229,15 +238,15 @@ function FormPegawai({
 
   async function kirim() {
     const nama = v.nama.trim();
-    const email = v.email.trim();
+    const username = bersihkanUsername(v.username);
     if (tambah && !opdId) return setGalat("Pilih OPD dulu.");
-    if (!nama || !email || (tambah && !v.sandi)) return setGalat("Semua kolom wajib diisi.");
-    if (!EMAIL.test(email)) return setGalat("Format email belum benar.");
-    if (emailDipakai(email)) return setGalat("Email ini sudah dipakai pegawai lain.");
+    if (!nama || !username || (tambah && !v.sandi)) return setGalat("Semua kolom wajib diisi.");
+    if (!usernameValid(username)) return setGalat(PESAN_USERNAME);
+    if (usernameDipakai(username)) return setGalat("Username ini sudah dipakai pegawai lain.");
     if (tambah && v.sandi.length < SANDI_MIN) return setGalat(`Kata sandi minimal ${SANDI_MIN} karakter.`);
     setGalat("");
     setProses(true);
-    const g = await onSimpan({ nama, email, sandi: v.sandi });
+    const g = await onSimpan({ nama, username, sandi: v.sandi });
     setProses(false);
     if (g) setGalat(g);
   }
@@ -272,11 +281,11 @@ function FormPegawai({
       )}
       <Isian id="p-nama" label="Nama pegawai" nilai={v.nama} onUbah={(x) => setV({ ...v, nama: x })} />
       <Isian
-        id="p-email"
-        label="Email pegawai"
-        tipe="email"
-        nilai={v.email}
-        onUbah={(x) => setV({ ...v, email: x })}
+        id="p-username"
+        label="Username pegawai"
+        nilai={v.username}
+        onUbah={(x) => setV({ ...v, username: x })}
+        petunjuk="3-30 karakter: huruf kecil, angka, titik, garis bawah, atau tanda hubung. Contoh: dina.diskominfo"
       />
       {tambah && (
         <IsianSandi
@@ -456,7 +465,9 @@ export default function OpdClient({
     const q = cari.trim().toLowerCase();
     if (!q) return true;
     const milik = pegawaiOpd(opd.id);
-    const teks = `${opd.nama} ${opd.singkatan} ${milik.map((p) => `${p.nama} ${p.email}`).join(" ")}`;
+    const teks = `${opd.nama} ${opd.singkatan} ${milik
+      .map((p) => `${p.nama} ${emailKeUsername(p.email)}`)
+      .join(" ")}`;
     return teks.toLowerCase().includes(q);
   });
 
@@ -467,7 +478,6 @@ export default function OpdClient({
   const opdFormPegawai = formPegawai ? opdList.find((o) => o.id === formPegawai.opdId) : undefined;
   const pegawaiLink = idLink ? pegawai.find((p) => p.id === idLink) : undefined;
   const pegawaiDokumen = idDokumen ? pegawai.find((p) => p.id === idDokumen) : undefined;
-
 
   function waktuUnggah(iso: string) {
     return new Date(iso).toLocaleString("id-ID", {
@@ -484,8 +494,11 @@ export default function OpdClient({
     const g = await bukaDiTabBaru(() => buatLinkDokumenAdmin(dokumenId));
     if (g) setGalatBuka(g);
   }
-  const emailDipakai = (email: string, kecuali?: string) =>
-    pegawai.some((p) => p.email.toLowerCase() === email.toLowerCase() && p.id !== kecuali);
+
+  const usernameDipakai = (username: string, kecuali?: string) => {
+    const email = usernameKeEmail(username);
+    return pegawai.some((p) => p.email.toLowerCase() === email && p.id !== kecuali);
+  };
 
   async function simpanOpd(v: IsianOpd): Promise<string | null> {
     if (opdDiedit) {
@@ -511,19 +524,19 @@ export default function OpdClient({
     if (pegawaiDiedit) {
       const r = await panggil(`/api/admin/pegawai/${pegawaiDiedit.id}`, "PATCH", {
         nama: v.nama,
-        email: v.email,
+        username: v.username,
       });
       if (!r.ok) return r.pesan;
       setPesan(`Data ${v.nama} diperbarui.`);
     } else {
       const r = await panggil("/api/admin/pegawai", "POST", {
         nama: v.nama,
-        email: v.email,
+        username: v.username,
         sandi: v.sandi,
         opdId: formPegawai.opdId,
       });
       if (!r.ok) return r.pesan;
-      setPesan(`${v.nama} ditambahkan. Sampaikan kata sandi awalnya ke pegawai.`);
+      setPesan(`${v.nama} ditambahkan. Sampaikan username dan kata sandi awalnya ke pegawai.`);
     }
     router.refresh();
     setFormPegawai(null);
@@ -705,7 +718,7 @@ export default function OpdClient({
                     <tr key={p.id}>
                       <td className="px-4 py-3">
                         <p className="font-medium text-ink">{p.nama}</p>
-                        <p className="text-ink-muted">{p.email}</p>
+                        <p className="text-ink-muted">{emailKeUsername(p.email)}</p>
                       </td>
                       <td className="px-4 py-3">
                         <KolomSertifikat pegawai={p} />
@@ -787,19 +800,24 @@ export default function OpdClient({
             tambah={!pegawaiDiedit}
             awal={
               pegawaiDiedit
-                ? { nama: pegawaiDiedit.nama, email: pegawaiDiedit.email, sandi: "" }
-                : { nama: "", email: "", sandi: "" }
+                ? {
+                    nama: pegawaiDiedit.nama,
+                    username: emailKeUsername(pegawaiDiedit.email),
+                    sandi: "",
+                  }
+                : { nama: "", username: "", sandi: "" }
             }
             opdList={opdList}
             opdId={formPegawai.opdId}
             onPilihOpd={(id) => setFormPegawai((f) => (f ? { ...f, opdId: id } : f))}
             onOpdBaru={() => setFormOpd({ id: null, dariPegawai: true })}
-            emailDipakai={(e) => emailDipakai(e, pegawaiDiedit?.id)}
+            usernameDipakai={(u) => usernameDipakai(u, pegawaiDiedit?.id)}
             onSimpan={simpanPegawai}
             onBatal={() => setFormPegawai(null)}
           />
         )}
       </Dialog>
+
       <Dialog
         buka={!!pegawaiDokumen}
         onTutup={() => {
@@ -864,7 +882,6 @@ export default function OpdClient({
         )}
       </Dialog>
 
-
       <Dialog
         buka={!!pegawaiLink}
         onTutup={() => setIdLink(null)}
@@ -917,7 +934,7 @@ export default function OpdClient({
       <Dialog buka={!!hapusP} onTutup={() => setHapusP(null)} judul="Hapus akun pegawai">
         {hapusP && (
           <KonfirmasiHapus
-            teks={`Hapus akun ${hapusP.nama} (${hapusP.email})? Semua data milik pegawai ini (dokumen dan file unggahan, kehadiran, hasil quiz, progres modul) ikut terhapus permanen dan tidak bisa dikembalikan.`}
+            teks={`Hapus akun ${hapusP.nama} (${emailKeUsername(hapusP.email)})? Semua data milik pegawai ini (dokumen dan file unggahan, kehadiran, hasil quiz, progres modul) ikut terhapus permanen dan tidak bisa dikembalikan.`}
             onYa={jalankanHapusPegawai}
             onBatal={() => setHapusP(null)}
           />

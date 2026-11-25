@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { masuk, type StateLogin } from "./actions";
 
-const AWAL: StateLogin = { pesan: null, email: "" };
+const AWAL: StateLogin = { pesan: null, username: "" };
 
 const inputClass =
   "h-11 w-full rounded-lg border border-line bg-white px-3 text-ink placeholder:text-ink-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
@@ -16,16 +16,18 @@ export function LoginForm() {
   return (
     <form action={aksi} className="space-y-4" noValidate>
       <div>
-        <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-ink">
-          Email
+        <label htmlFor="username" className="mb-1.5 block text-sm font-medium text-ink">
+          Username
         </label>
         <input
-          id="email"
-          name="email"
-          type="email"
+          id="username"
+          name="username"
+          type="text"
           autoComplete="username"
-          defaultValue={state.email}
-          placeholder="nama@instansi.go.id"
+          autoCapitalize="none"
+          spellCheck={false}
+          defaultValue={state.username}
+          placeholder="nama.opd"
           className={inputClass}
         />
       </div>

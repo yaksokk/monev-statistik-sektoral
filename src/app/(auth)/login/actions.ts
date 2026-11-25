@@ -1,18 +1,23 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { BERANDA, RUTE_GANTI_SANDI } from "@/lib/akses";
+import { BERANDA } from "@/lib/akses";
 import { buatKlienServer } from "@/lib/supabase/server";
 
-export type StateLogin = { pesan: string | null; email: string };
+import { usernameKeEmail } from "@/lib/username";
+
+export type StateLogin = { pesan: string | null; username: string };
 
 export async function masuk(_: StateLogin, data: FormData): Promise<StateLogin> {
-  const email = String(data.get("email") ?? "").trim().toLowerCase();
+  const username = String(data.get("username") ?? "").trim().toLowerCase();
   const sandi = String(data.get("sandi") ?? "");
 
-  if (!email || !sandi) {
-    return { pesan: "Email dan kata sandi wajib diisi.", email };
+  if (!username || !sandi) {
+    return { pesan: "Username dan kata sandi wajib diisi.", username };
   }
+
+  // Memuat "@" = email lengkap (misalnya admin); selain itu username pegawai
+  const email = username.includes("@") ? username : usernameKeEmail(username);
 
   const supabase = await buatKlienServer();
   const { data: hasil, error } = await supabase.auth.signInWithPassword({
@@ -22,11 +27,10 @@ export async function masuk(_: StateLogin, data: FormData): Promise<StateLogin> 
 
   if (error || !hasil.user) {
     if (error?.status === 429) {
-      return { pesan: "Terlalu banyak percobaan. Coba lagi beberapa saat lagi.", email };
+      return { pesan: "Terlalu banyak percobaan. Coba lagi beberapa saat lagi.", username };
     }
-    return { pesan: "Email atau kata sandi salah.", email };
+    return { pesan: "Username atau kata sandi salah.", username };
   }
-
   const { data: profil } = await supabase
     .from("profil")
     .select("peran, wajib_ganti_sandi")
@@ -35,7 +39,7 @@ export async function masuk(_: StateLogin, data: FormData): Promise<StateLogin> 
 
   if (!profil) {
     await supabase.auth.signOut();
-    return { pesan: "Akun belum aktif. Hubungi admin BPS.", email };
+    return { pesan: "Akun belum aktif. Hubungi admin BPS.", username };
   }
 
   const peran = profil.peran as "admin" | "operator";

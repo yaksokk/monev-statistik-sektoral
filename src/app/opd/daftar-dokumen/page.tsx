@@ -26,5 +26,13 @@ export default async function DaftarDokumenPage() {
 
   const opdAman = { id: opd.id, nama: opd.nama, singkatan: opd.singkatan };
 
-  return <DaftarDokumenClient opd={opdAman} kegiatan={kegiatan} item={item} dokumen={dokumen} />;
+  return (
+    <DaftarDokumenClient
+      opd={opdAman}
+      kegiatan={kegiatan}
+      item={item}
+      dokumen={dokumen}
+      unggahDibuka={kegiatan.unggahDibuka ?? false}
+    />
+  );
 }

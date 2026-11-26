@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState, type ChangeEvent, type DragEvent } from "react";
-import { CalendarClock, ExternalLink, FileText, FileUp, Trash2, Upload, X } from "lucide-react";
+import { CalendarClock, ExternalLink, FileText, FileUp, Info, Trash2, Upload, X } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
 import { Galat } from "@/components/ui/Galat";
 import { KonfirmasiHapus } from "@/components/ui/KonfirmasiHapus";
@@ -24,6 +24,7 @@ type Props = {
   kegiatan: Kegiatan;
   item: ItemDokumen[];
   dokumen: Dokumen[];
+  unggahDibuka: boolean;
 };
 
 const tombolKecil =
@@ -223,7 +224,8 @@ function FormUnggah({
 }
 
 // Data berasal dari server (props); setelah aksi berhasil, halaman disegarkan lewat revalidatePath
-export default function DaftarDokumenClient({ opd, kegiatan, item, dokumen }: Props) {
+export default function DaftarDokumenClient({ opd, kegiatan, item, dokumen, unggahDibuka }: Props) {
+  const idBanner = useId();
   const [dialogBuka, setDialogBuka] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
   const [galatBuka, setGalatBuka] = useState("");
@@ -231,7 +233,6 @@ export default function DaftarDokumenClient({ opd, kegiatan, item, dokumen }: Pr
   const [hariIni, setHariIni] = useState<string | null>(null);
 
   // tanggal dihitung di browser agar tidak terkunci saat build
-   // tanggal dihitung di browser agar tidak terkunci saat build
   useEffect(() => {
     const awal = setTimeout(
       () => setHariIni(new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Makassar" })),
@@ -306,7 +307,8 @@ export default function DaftarDokumenClient({ opd, kegiatan, item, dokumen }: Pr
         </div>
         <button
           type="button"
-          disabled={pilihan.length === 0}
+          disabled={!unggahDibuka || pilihan.length === 0}
+          aria-describedby={unggahDibuka ? undefined : idBanner}
           onClick={() => {
             setInfo(null);
             setDialogBuka(true);
@@ -317,6 +319,17 @@ export default function DaftarDokumenClient({ opd, kegiatan, item, dokumen }: Pr
           Unggah dokumen
         </button>
       </header>
+
+      {!unggahDibuka && (
+        <div
+          id={idBanner}
+          role="status"
+          className="flex items-start gap-2 rounded-lg border border-line bg-surface-muted p-3 text-sm text-ink-muted"
+        >
+          <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <p>Unggah dokumen belum dibuka. Informasi selanjutnya akan disampaikan oleh admin.</p>
+        </div>
+      )}
 
       {info && (
         <p

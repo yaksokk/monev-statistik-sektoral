@@ -7,6 +7,7 @@ import { buatKlienServer } from "@/lib/supabase/server";
 
 const HALAMAN = "/opd/daftar-dokumen";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const PESAN_UNGGAH_TUTUP = "Unggah dokumen belum dibuka. Informasi selanjutnya akan disampaikan oleh admin.";
 
 type Klien = Awaited<ReturnType<typeof buatKlienServer>>;
 
@@ -45,6 +46,22 @@ export async function catatUnggahan(itemId: string, path: string, namaAsli: stri
   if (!nama || nama.length > 200) return galat("Nama file tidak valid.");
 
   const supabase = await buatKlienServer();
+
+  // Unggahan hanya diterima bila admin sudah membukanya (saklar di tabel kegiatan)
+  const { data: aktif, error: galatAktif } = await supabase
+    .from("kegiatan")
+    .select("unggah_dokumen_dibuka")
+    .eq("status", "aktif")
+    .maybeSingle();
+  if (galatAktif) {
+    console.error("catatUnggahan (saklar):", galatAktif.code, galatAktif.message);
+    await hapusBerkas(supabase, [path]);
+    return galat("Gagal memeriksa status unggahan. Coba lagi.");
+  }
+  if (!aktif?.unggah_dokumen_dibuka) {
+    await hapusBerkas(supabase, [path]);
+    return galat(PESAN_UNGGAH_TUTUP);
+  }
 
   // File harus benar-benar ada di Storage dan tidak melebihi batas
   const folder = `${uid}/${itemId}`;

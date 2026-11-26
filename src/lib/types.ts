@@ -43,7 +43,7 @@ export interface Kegiatan {
   // Saklar quiz per kegiatan. Kosong dianggap aktif; terkunci bila kegiatan diarsipkan
   preTestAktif?: boolean;
   postTestAktif?: boolean;
-  
+  unggahDibuka?: boolean;
 }
 
 export interface Dokumen {

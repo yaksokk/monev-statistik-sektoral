@@ -13,6 +13,7 @@ type BarisKegiatan = {
   ambang_kehadiran: number;
   pretest_aktif: boolean;
   posttest_aktif: boolean;
+  unggah_dokumen_dibuka: boolean;
 };
 
 type BarisItem = { id: string; kegiatan_id: string; nama: string };
@@ -37,6 +38,9 @@ export type RingkasanKegiatan = {
   berdata: boolean; // true = tidak boleh dihapus
 };
 
+const KOLOM_KEGIATAN =
+  "id, nama, tanggal_mulai, tanggal_selesai, tenggat, status, bobot, ambang_kehadiran, pretest_aktif, posttest_aktif, unggah_dokumen_dibuka";
+
 // snake_case database -> camelCase types.ts. Kolom status dipecah jadi aktif/arsip (draf = keduanya false)
 export function petakanKegiatan(b: BarisKegiatan): Kegiatan {
   return {
@@ -51,6 +55,7 @@ export function petakanKegiatan(b: BarisKegiatan): Kegiatan {
     ambangKehadiran: b.ambang_kehadiran,
     preTestAktif: b.pretest_aktif,
     postTestAktif: b.posttest_aktif,
+    unggahDibuka: b.unggah_dokumen_dibuka,
   };
 }
 
@@ -63,9 +68,7 @@ export async function ambilDaftarKegiatan(): Promise<Kegiatan[]> {
   const supabase = await buatKlienServer();
   const { data, error } = await supabase
     .from("kegiatan")
-    .select(
-      "id, nama, tanggal_mulai, tanggal_selesai, tenggat, status, bobot, ambang_kehadiran, pretest_aktif, posttest_aktif",
-    )
+    .select(KOLOM_KEGIATAN)
     .order("tanggal_mulai")
     .order("dibuat_pada");
   if (error) throw new Error(`Gagal membaca kegiatan: ${error.message}`);
@@ -105,9 +108,6 @@ export async function ambilIdItemBerdata(): Promise<string[]> {
   if (error) throw new Error(`Gagal membaca data item: ${error.message}`);
   return (data as { item_id: string }[]).map((b) => b.item_id);
 }
-
-const KOLOM_KEGIATAN =
-  "id, nama, tanggal_mulai, tanggal_selesai, tenggat, status, bobot, ambang_kehadiran, pretest_aktif, posttest_aktif";
 
 // Kegiatan berstatus aktif (paling banyak satu). Pegawai dan admin sama-sama bisa membacanya lewat RLS
 export async function ambilKegiatanAktif(): Promise<Kegiatan | null> {

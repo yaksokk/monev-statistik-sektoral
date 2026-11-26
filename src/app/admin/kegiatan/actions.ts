@@ -119,6 +119,24 @@ export async function ubahSaklarQuiz(id: string, jenis: "pretest" | "posttest", 
   return berhasil();
 }
 
+// Saklar unggah dokumen oleh OPD; terkunci bila kegiatan diarsipkan
+export async function ubahSaklarUnggah(id: string, dibuka: boolean) {
+  await ambilAdmin();
+  if (!UUID.test(id)) return galat("Kegiatan tidak valid.");
+  if (typeof dibuka !== "boolean") return galat("Data tidak valid.");
+
+  const supabase = await buatKlienServer();
+  const { data, error } = await supabase
+    .from("kegiatan")
+    .update({ unggah_dokumen_dibuka: dibuka })
+    .eq("id", id)
+    .neq("status", "arsip")
+    .select("id");
+  if (error) return galatDb("ubahSaklarUnggah", error, "Gagal mengubah pengaturan unggah dokumen.");
+  if (!data?.length) return galat("Kegiatan tidak ditemukan atau sudah diarsipkan.");
+  return berhasil();
+}
+
 // Memindahkan kegiatan aktif: kegiatan aktif sebelumnya kembali ke draf (diatur fungsi SQL)
 export async function aktifkanKegiatan(id: string) {
   await ambilAdmin();

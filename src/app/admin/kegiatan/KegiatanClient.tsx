@@ -30,6 +30,7 @@ import {
   ubahItem,
   ubahKegiatan,
   ubahSaklarQuiz,
+  ubahSaklarUnggah,
 } from "./actions";
 
 const dasarTombol =
@@ -261,32 +262,32 @@ function KonfirmasiAktif({
   );
 }
 
-function SaklarQuiz({
+function Saklar({
   label,
+  namaAria,
   aktif,
   terkunci,
-  jumlahHasil,
+  keterangan,
   onUbah,
 }: {
   label: string;
+  namaAria: string;
   aktif: boolean;
   terkunci: boolean;
-  jumlahHasil: number;
+  keterangan?: string;
   onUbah: (nilai: boolean) => void;
 }) {
   return (
     <li className="flex items-center justify-between gap-3 text-sm">
       <div className="min-w-0">
         <span className="text-ink">{label}</span>
-        {jumlahHasil > 0 && (
-          <span className="tabular ml-2 text-xs text-ink-muted">{jumlahHasil} OPD sudah mengerjakan</span>
-        )}
+        {keterangan && <span className="tabular ml-2 text-xs text-ink-muted">{keterangan}</span>}
       </div>
       <button
         type="button"
         role="switch"
         aria-checked={aktif}
-        aria-label={`${label} dipakai`}
+        aria-label={namaAria}
         disabled={terkunci}
         onClick={() => onUbah(!aktif)}
         className={`relative h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50 ${aktif ? "bg-primary" : "bg-line"}`}
@@ -306,6 +307,7 @@ type AksiKartu = {
   jumlahItem: number;
   jumlahHasil: Record<JenisQuiz, number>;
   onSaklar: (jenis: JenisQuiz, nilai: boolean) => void;
+  onSaklarUnggah: (nilai: boolean) => void;
   onUbah: () => void;
   onItem: () => void;
   onAktifkan: () => void;
@@ -363,6 +365,26 @@ function KartuKegiatan({ k, ...aksi }: { k: Kegiatan } & AksiKartu) {
 
       <div className="space-y-3 border-t border-line px-4 py-3 sm:px-5">
         <div className="space-y-0.5">
+          <h3 className="text-sm font-medium text-ink">Unggah dokumen OPD</h3>
+          <p className="text-xs text-ink-muted">
+            {s === "arsip"
+              ? "Kegiatan diarsipkan, pengaturan unggah terkunci."
+              : "Bila ditutup, OPD tetap melihat daftar dokumen tetapi tidak bisa mengunggah."}
+          </p>
+        </div>
+        <ul className="space-y-2.5">
+          <Saklar
+            label="Unggah dibuka"
+            namaAria="Unggah dokumen dibuka untuk OPD"
+            aktif={k.unggahDibuka ?? false}
+            terkunci={s === "arsip" || aksi.sibuk}
+            onUbah={aksi.onSaklarUnggah}
+          />
+        </ul>
+      </div>
+
+      <div className="space-y-3 border-t border-line px-4 py-3 sm:px-5">
+        <div className="space-y-0.5">
           <h3 className="text-sm font-medium text-ink">Quiz yang dipakai</h3>
           {s === "arsip" && (
             <p className="text-xs text-ink-muted">Kegiatan diarsipkan, pengaturan quiz terkunci.</p>
@@ -370,12 +392,15 @@ function KartuKegiatan({ k, ...aksi }: { k: Kegiatan } & AksiKartu) {
         </div>
         <ul className="space-y-2.5">
           {JENIS_QUIZ.map((jenis) => (
-            <SaklarQuiz
+            <Saklar
               key={jenis}
               label={LABEL_QUIZ[jenis]}
+              namaAria={`${LABEL_QUIZ[jenis]} dipakai`}
               aktif={quizAktif(k, jenis)}
               terkunci={s === "arsip" || aksi.sibuk}
-              jumlahHasil={aksi.jumlahHasil[jenis]}
+              keterangan={
+                aksi.jumlahHasil[jenis] > 0 ? `${aksi.jumlahHasil[jenis]} OPD sudah mengerjakan` : undefined
+              }
               onUbah={(nilai) => aksi.onSaklar(jenis, nilai)}
             />
           ))}
@@ -495,6 +520,7 @@ export default function KegiatanClient({ daftar, idBerdata, hasilQuiz, isi, item
         posttest: hasilQuiz[`${k.id}:posttest`] ?? 0,
       },
       onSaklar: (jenis, nilai) => ubahSaklar(k, jenis, nilai),
+      onSaklarUnggah: (nilai) => terapkanSaklarUnggah(k, nilai),
       onUbah: () => setForm({ id: k.id }),
       onItem: () => setIdItem(k.id),
       onAktifkan: () => setAktifId(k.id),
@@ -516,6 +542,14 @@ export default function KegiatanClient({ daftar, idBerdata, hasilQuiz, isi, item
     return langsung(
       () => ubahSaklarQuiz(k.id, jenis, nilai),
       `${LABEL_QUIZ[jenis]} ${nilai ? "diaktifkan" : "dimatikan"} di ${k.nama}.`,
+    );
+  }
+
+  function terapkanSaklarUnggah(k: Kegiatan, nilai: boolean) {
+    if (k.arsip) return;
+    return langsung(
+      () => ubahSaklarUnggah(k.id, nilai),
+      `Unggah dokumen ${nilai ? "dibuka" : "ditutup"} di ${k.nama}.`,
     );
   }
 

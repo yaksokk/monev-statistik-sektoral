@@ -1,36 +1,105 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Monev Statistik Sektoral
 
-## Getting Started
+Aplikasi web monitoring dan evaluasi (monev) Statistik Sektoral untuk BPS Kabupaten Minahasa Tenggara. Dipakai memantau kelengkapan dokumen, kehadiran, modul pembelajaran, dan hasil Pre-Test/Post-Test OPD peserta pembinaan.
 
-First, run the development server:
+## Fitur
+
+### Admin (BPS)
+- Dashboard ringkasan dan rekap per OPD
+- Kelola OPD dan akun pegawai (buat akun, reset kata sandi, hapus)
+- Kelola kegiatan dan item dokumen
+- Kelola Daftar Hadir (sesi, batas waktu, rekap kehadiran)
+- Kelola Modul dan bab (materi lewat link Google Drive) beserta pantauan penyelesaian
+- Kelola Quiz (soal, kunci jawaban, waktu, izin kerja ulang)
+- Undangan ke OPD terpilih atau semua OPD
+- Monev Indikator Keberhasilan dan Monev Milestone
+
+### Operator OPD
+- Dashboard: status kelulusan, undangan, tombol sertifikat
+- Daftar Dokumen: lihat status dan unggah dokumen (PDF/JPG/PNG, maks. 2 MB)
+- Daftar Hadir per sesi
+- Pembinaan 1 dan Pembinaan 2: modul pembelajaran, Pre-Test, Post-Test
+- Wajib ganti kata sandi pada login pertama
+
+## Teknologi
+
+- [Next.js](https://nextjs.org/) (App Router) + TypeScript
+- React
+- Tailwind CSS v4
+- [Supabase](https://supabase.com/) (Auth, Postgres dengan RLS, Storage)
+- lucide-react
+
+## Peran
+
+| Peran | Keterangan |
+| --- | --- |
+| Admin | Mengelola seluruh data dan akun. Pimpinan memakai akun admin. |
+| Operator OPD | Hanya mengakses data miliknya sendiri. |
+
+Akun operator dibuat oleh admin; kata sandi awal diketik admin dan wajib diganti saat login pertama.
+
+## Menjalankan di Lokal
+
+Prasyarat: Node.js dan proyek Supabase yang sudah berisi skema.
+
+```bash
+git clone <url-repository>
+cd monev-statistik-sektoral
+npm install
+```
+
+Buat file `.env.local` di root project:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+```
+
+Catatan:
+- `NEXT_PUBLIC_SUPABASE_URL` diisi tanpa `/rest/v1/`.
+- `SUPABASE_SERVICE_ROLE_KEY` hanya dipakai di server. Jangan dimasukkan ke kode klien atau repository.
+- Pastikan `.env*` ada di `.gitignore`.
+
+Jalankan:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Database
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Skema dan migrasi ada di folder `supabase/`. Jalankan di SQL Editor Supabase sesuai urutan:
 
-## Learn More
+1. `skema.sql`
+2. Data awal
+3. File migrasi bernomor (`migrasi-*.sql`) secara berurutan
 
-To learn more about Next.js, take a look at the following resources:
+Semua tabel memakai Row Level Security. Dokumen disimpan di bucket privat `dokumen-opd` dan dibuka lewat signed URL.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Profil admin pertama dibuat manual di Supabase (Auth, lalu baris di tabel `profil`).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Struktur Folder (ringkas)
 
-## Deploy on Vercel
+```
+src/
+  app/
+    admin/        halaman admin
+    opd/          halaman operator OPD
+    api/admin/    route handler akun pegawai (service role)
+  components/     layout dan komponen UI
+  lib/            akses data, helper, dan fungsi bersama
+supabase/         skema dan migrasi SQL
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Keamanan
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Repository ini publik: jangan commit kunci atau data sensitif.
+- Pembuatan akun, reset kata sandi, dan hapus akun lewat route handler server dengan service role; setiap handler memeriksa bahwa pemanggil adalah admin.
+- Operator hanya dapat membaca dan mengubah data miliknya lewat RLS.
+
+## Lisensi
+
+Dikembangkan sebagai bagian dari kegiatan magang di BPS Kabupaten Minahasa Tenggara.

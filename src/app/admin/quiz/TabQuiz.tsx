@@ -41,8 +41,9 @@ import {
 
 export type DataSoal = { pertanyaan: string; opsi: string[]; kunci: number; pembahasan: string };
 
-// Yang boleh diubah setelah quiz dibuka: teks soal, kunci, pembahasan
-export type EditTerkunci = { pertanyaan: string; kunci: number; pembahasan: string };
+// Yang boleh diubah setelah quiz dibuka: teks soal, teks opsi, kunci, pembahasan
+// (jumlah dan urutan opsi tetap, supaya indeks jawaban pegawai tidak bergeser)
+export type EditTerkunci = { pertanyaan: string; opsi: string[]; kunci: number; pembahasan: string };
 
 export type MasukanPengaturanAdmin = MasukanPengaturan & { acakSoal: boolean };
 
@@ -452,6 +453,7 @@ export default function TabQuiz({
   const ditoggle = toggleId ? soal.find((s) => s.id === toggleId) : undefined;
   const dialogTerbuka = !!form || !!tertunda || !!dihapus || !!disunting || !!ditoggle;
 
+  // Hanya perubahan kunci yang memengaruhi nilai; teks opsi tidak
   const dampakEdit =
     disunting && edit
       ? dampakPerubahan(
@@ -462,12 +464,15 @@ export default function TabQuiz({
         )
       : null;
   const teksKosong = !!edit && edit.pertanyaan.trim() === "";
+  const opsiKosong = !!edit && edit.opsi.some((o) => o.trim() === "");
   const tidakBerubah =
     !!edit &&
     !!disunting &&
     edit.kunci === disunting.kunci &&
     edit.pertanyaan.trim() === disunting.pertanyaan &&
-    edit.pembahasan.trim() === disunting.pembahasan;
+    edit.pembahasan.trim() === disunting.pembahasan &&
+    edit.opsi.length === disunting.opsi.length &&
+    edit.opsi.every((o, j) => o.trim() === disunting.opsi[j]);
 
   const dampakToggle = ditoggle
     ? dampakPerubahan(
@@ -545,10 +550,11 @@ export default function TabQuiz({
   }
 
   function terapkanEdit() {
-    if (!edit || !disunting || teksKosong || tidakBerubah) return tutupDialog();
+    if (!edit || !disunting || teksKosong || opsiKosong || tidakBerubah) return tutupDialog();
     const id = disunting.id;
     const d = {
       pertanyaan: edit.pertanyaan.trim(),
+      opsi: edit.opsi.map((o) => o.trim()),
       kunci: edit.kunci,
       pembahasan: edit.pembahasan.trim(),
     };
@@ -622,7 +628,7 @@ export default function TabQuiz({
         {modeKoreksi && (
           <p className="mt-3 text-sm text-ink-muted">
             Soal terkunci karena quiz sudah dibuka atau sudah ada pegawai yang mengerjakan. Yang masih bisa:
-            tambah soal, edit teks soal, pembahasan, dan kunci, serta nonaktifkan soal.
+            tambah soal, edit teks soal, teks opsi, pembahasan, dan kunci, serta nonaktifkan soal.
           </p>
         )}
         {!dialogTerbuka && galatAksi && <div className="mt-3">{pesanGalat}</div>}
@@ -706,6 +712,7 @@ export default function TabQuiz({
                               id: s.id,
                               kunci: s.kunci,
                               pertanyaan: s.pertanyaan,
+                              opsi: [...s.opsi],
                               pembahasan: s.pembahasan,
                             });
                           }}
@@ -846,23 +853,41 @@ export default function TabQuiz({
             </div>
 
             <fieldset className="space-y-2">
-              <legend className="text-sm font-medium text-ink">Kunci jawaban</legend>
-              {disunting.opsi.map((o, j) => (
-                <label key={j} className="flex items-center gap-2 text-sm text-ink">
+              <legend className="text-sm font-medium text-ink">Opsi jawaban (pilih satu sebagai kunci)</legend>
+              {edit.opsi.map((o, j) => (
+                <div key={j} className="flex items-center gap-2">
                   <input
                     type="radio"
                     name="kunci-edit"
                     checked={edit.kunci === j}
                     onChange={() => setEdit({ ...edit, kunci: j })}
+                    aria-label={`Jadikan opsi ${hurufOpsi(j)} kunci`}
                     className="size-4 shrink-0 accent-(--color-primary)"
                   />
-                  <span>
-                    {hurufOpsi(j)}. {o}
-                    {j === disunting.kunci && <span className="text-ink-muted"> (kunci sekarang)</span>}
-                  </span>
-                </label>
+                  <span className="w-5 shrink-0 text-sm font-medium text-ink-muted">{hurufOpsi(j)}.</span>
+                  <input
+                    value={o}
+                    onChange={(e) =>
+                      setEdit({
+                        ...edit,
+                        opsi: edit.opsi.map((x, k) => (k === j ? e.target.value : x)),
+                      })
+                    }
+                    aria-label={`Opsi ${hurufOpsi(j)}`}
+                    aria-invalid={o.trim() === ""}
+                    className={kolomInput}
+                  />
+                  {j === disunting.kunci && (
+                    <span className="shrink-0 text-xs text-ink-muted">(kunci sekarang)</span>
+                  )}
+                </div>
               ))}
-              <p className="text-xs text-ink-muted">Teks, jumlah, dan urutan opsi tidak bisa diubah.</p>
+              {opsiKosong && (
+                <p role="alert" className="text-xs text-status-revisi-fg">
+                  Semua opsi wajib diisi.
+                </p>
+              )}
+              <p className="text-xs text-ink-muted">Jumlah dan urutan opsi tidak bisa diubah.</p>
             </fieldset>
 
             <div className="space-y-1.5">
@@ -895,7 +920,7 @@ export default function TabQuiz({
               <button
                 type="button"
                 onClick={terapkanEdit}
-                disabled={teksKosong || tidakBerubah || proses}
+                disabled={teksKosong || opsiKosong || tidakBerubah || proses}
                 className={tombolUtama}
               >
                 Simpan perubahan

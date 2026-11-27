@@ -106,23 +106,27 @@ export default function QuizAdminClient({
   }
 
   // Setelah quiz dibuka: hanya teks soal, pembahasan, dan kunci yang boleh berubah (opsi tetap)
-  async function editTerkunci(jenis: JenisQuiz, id: string, d: EditTerkunci) {
-    const s = soalList.find((x) => x.id === id);
-    if (!s) return "Soal tidak ditemukan.";
-    const kunciBerubah = s.kunci !== d.kunci;
-    const teksBerubah = s.pertanyaan !== d.pertanyaan || s.pembahasan !== d.pembahasan;
-    if (!kunciBerubah && !teksBerubah) return null;
+async function editTerkunci(jenis: JenisQuiz, id: string, d: EditTerkunci) {
+  const s = soalList.find((x) => x.id === id);
+  if (!s) return "Soal tidak ditemukan.";
+  if (d.opsi.length !== s.opsi.length) return "Jumlah opsi tidak boleh berubah.";
+  const kunciBerubah = s.kunci !== d.kunci;
+  const teksBerubah =
+    s.pertanyaan !== d.pertanyaan ||
+    s.pembahasan !== d.pembahasan ||
+    s.opsi.some((o, j) => o !== d.opsi[j]);
+  if (!kunciBerubah && !teksBerubah) return null;
 
-    const r = await simpanSoalQuiz(kg.id, jenis, id, {
-      pertanyaan: d.pertanyaan,
-      opsi: s.opsi,
-      kunci: d.kunci,
-      pembahasan: d.pembahasan,
-    });
-    if (!r.ok) return r.pesan;
-    setPesan(kunciBerubah ? "Soal diperbarui, nilai OPD dihitung ulang." : "Soal diperbarui.");
-    return null;
-  }
+  const r = await simpanSoalQuiz(kg.id, jenis, id, {
+    pertanyaan: d.pertanyaan,
+    opsi: d.opsi,
+    kunci: d.kunci,
+    pembahasan: d.pembahasan,
+  });
+  if (!r.ok) return r.pesan;
+  setPesan(kunciBerubah ? "Soal diperbarui, nilai OPD dihitung ulang." : "Soal diperbarui.");
+  return null;
+}
 
   async function ubahAktif(id: string, aktif: boolean) {
     const r = await ubahAktifSoalQuiz(id, aktif);

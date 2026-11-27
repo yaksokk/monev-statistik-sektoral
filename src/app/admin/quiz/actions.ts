@@ -65,8 +65,8 @@ export async function simpanPengaturanQuiz(
 
 export type MasukanSoalAksi = { pertanyaan: string; opsi: string[]; kunci: number; pembahasan: string };
 
-// id kosong = soal baru. Setelah quiz dibuka, server hanya menerima perubahan teks soal, kunci, dan
-// pembahasan (opsi harus sama) dan mencatatnya di log.
+// id kosong = soal baru. Setelah quiz dibuka, server hanya menerima perubahan teks soal, teks opsi,
+// kunci, dan pembahasan (jumlah opsi harus sama) dan mencatatnya di log.
 export async function simpanSoalQuiz(
   kegiatanId: string,
   jenis: JenisQuiz,

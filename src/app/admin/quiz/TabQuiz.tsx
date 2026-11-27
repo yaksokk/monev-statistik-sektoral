@@ -482,6 +482,15 @@ export default function TabQuiz({
         lulus,
       )
     : null;
+  const dampakHapus =
+  dihapus && hasil.length > 0
+    ? dampakPerubahan(
+        soal,
+        soal.map((s) => (s.id === dihapus.id ? { ...s, aktif: false } : s)),
+        hasil,
+        lulus,
+      )
+    : null;
   // soal baru aktif, dan dihitung salah bagi pegawai yang belum menjawabnya
   const dampakTambah =
     tertunda && hasil.length > 0 && soal.length > 0
@@ -628,7 +637,7 @@ export default function TabQuiz({
         {modeKoreksi && (
           <p className="mt-3 text-sm text-ink-muted">
             Soal terkunci karena quiz sudah dibuka atau sudah ada pegawai yang mengerjakan. Yang masih bisa:
-            tambah soal, edit teks soal, teks opsi, pembahasan, dan kunci, serta nonaktifkan soal.
+            tambah soal, edit teks soal, teks opsi, pembahasan, dan kunci, nonaktifkan soal, serta hapus soal.
           </p>
         )}
         {!dialogTerbuka && galatAksi && <div className="mt-3">{pesanGalat}</div>}
@@ -720,6 +729,17 @@ export default function TabQuiz({
                         >
                           <Pencil className="size-4" aria-hidden />
                           Edit soal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setGalatAksi(null);
+                            setHapusId(s.id); 
+                          }}
+                          className={tombolSekunder}
+                        >
+                          <Trash2 className="size-4" aria-hidden />
+                          Hapus
                         </button>
                         <button
                           type="button"
@@ -950,6 +970,15 @@ export default function TabQuiz({
               {dampakToggle.statusBerubah !== null &&
                 ` ${dampakToggle.statusBerubah} pegawai statusnya berubah (lulus atau tidak lulus).`}
             </p>
+            {dampakHapus && (
+              <p role="status" className="text-sm text-ink-muted">
+                {dampakHapus.nilaiBerubah === 0
+                  ? "Tidak ada pegawai yang nilainya berubah."
+                  : `${dampakHapus.nilaiBerubah} pegawai nilainya berubah.`}
+                {dampakHapus.statusBerubah !== null &&
+                  ` ${dampakHapus.statusBerubah} pegawai statusnya berubah (lulus atau tidak lulus).`}
+              </p>
+            )}
             {pesanGalat}
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={tutupDialog} disabled={proses} className={tombolSekunder}>

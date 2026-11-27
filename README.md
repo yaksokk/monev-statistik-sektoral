@@ -71,15 +71,22 @@ Buka http://localhost:3000.
 
 ## Database
 
-Skema dan migrasi ada di folder `supabase/`. Jalankan di SQL Editor Supabase sesuai urutan:
+Struktur database ada di folder `supabase/`:
 
-1. `skema.sql`
-2. Data awal
-3. File migrasi bernomor (`migrasi-*.sql`) secara berurutan
+```
+supabase/
+  skema.sql     tabel, fungsi, trigger, RLS, dan bucket Storage
+  migrasi/      arsip perubahan skema untuk database yang sudah berjalan
+```
+
+Untuk database baru yang kosong, cukup jalankan `skema.sql` di SQL Editor Supabase. File ini sudah memuat semua isi folder `migrasi/`, jadi file migrasi tidak perlu dijalankan lagi.
+
+Setelah itu:
+
+1. Buat akun admin pertama. Langkahnya ada di bagian paling bawah `skema.sql` (Authentication, lalu satu baris di tabel `profil`).
+2. Isi data awal sendiri lewat aplikasi atau SQL Editor: OPD, kegiatan, item dokumen, modul, soal quiz, dan data monev. Data awal tidak disertakan di repository.
 
 Semua tabel memakai Row Level Security. Dokumen disimpan di bucket privat `dokumen-opd` dan dibuka lewat signed URL.
-
-Profil admin pertama dibuat manual di Supabase (Auth, lalu baris di tabel `profil`).
 
 ## Struktur Folder (ringkas)
 
